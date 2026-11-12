@@ -7,21 +7,28 @@ import { AsteroidPanel } from './AsteroidPanel'
 import { HazardPanel } from './HazardPanel'
 import { QuakePanel } from './QuakePanel'
 import { Tabs } from '@/shared/ui'
+import { useT } from '../i18n'
 
 const ITEMS = [
-  { id: 'sea', label: '해수면', content: <SeaLevelPanel /> },
-  { id: 'volcano', label: '화산', content: <EruptionPanel /> },
-  { id: 'tsunami', label: '쓰나미', content: <TsunamiPanel /> },
-  { id: 'quake', label: '지진', content: <QuakePanel /> },
-  { id: 'asteroid', label: '소행성', content: <AsteroidPanel /> },
-  { id: 'hazard', label: '산불·가뭄', content: <HazardPanel /> },
-  { id: 'build', label: '구조물', content: <BuildPanel /> },
+  { id: 'sea', label: 'tabs.sea' as const, content: <SeaLevelPanel /> },
+  { id: 'volcano', label: 'tabs.volcano' as const, content: <EruptionPanel /> },
+  { id: 'tsunami', label: 'tabs.tsunami' as const, content: <TsunamiPanel /> },
+  { id: 'quake', label: 'tabs.quake' as const, content: <QuakePanel /> },
+  {
+    id: 'asteroid',
+    label: 'tabs.asteroid' as const,
+    content: <AsteroidPanel />,
+  },
+  { id: 'hazard', label: 'tabs.hazard' as const, content: <HazardPanel /> },
+  { id: 'build', label: 'tabs.build' as const, content: <BuildPanel /> },
 ]
 
 /** 환경 요소·재해·구조물을 다루는 탭 제어판 */
 export function ControlPanel() {
   const [tab, setTab] = useState('sea')
+  const { t } = useT()
+  const items = ITEMS.map((item) => ({ ...item, label: t(item.label) }))
   return (
-    <Tabs label="지구 관리 항목" items={ITEMS} value={tab} onChange={setTab} />
+    <Tabs label={t('tabs.label')} items={items} value={tab} onChange={setTab} />
   )
 }

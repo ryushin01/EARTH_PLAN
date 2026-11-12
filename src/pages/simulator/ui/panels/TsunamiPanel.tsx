@@ -1,14 +1,11 @@
 import { useState } from 'react'
-import { TRENCHES, getSite } from '../../model/site/data'
+import { TRENCHES } from '../../model/site/data'
+import { EMPTY_TEXT, regionName, siteName, siteNote } from '../../model/text'
 import { useWorld } from '../../model/world/store'
+import { useT } from '../i18n'
 import { Button, RangeField, SelectField, StatusMessage } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
 
-const OUTCOME_LABEL = {
-  hit: '큰 피해',
-  minor: '경미',
-  blocked: '방벽이 막음',
-} as const
 const OUTCOME_STYLE = {
   hit: 'text-danger',
   minor: 'text-warn',
@@ -16,44 +13,49 @@ const OUTCOME_STYLE = {
 } as const
 
 export function TsunamiPanel() {
+  const { t, pick, locale } = useT()
   const selectedSiteId = useWorld((s) => s.selectedSiteId)
   const tsunamis = useWorld((s) => s.tsunamis)
   const select = useWorld((s) => s.select)
   const triggerTsunami = useWorld((s) => s.triggerTsunami)
 
-  const [sourceId, setTrenchId] = useState(TRENCHES[0].id)
+  const [trenchId, setTrenchId] = useState(TRENCHES[0].id)
   const [magnitude, setMagnitude] = useState(9)
-  const [result, setResult] = useState({ message: '', ok: true })
+  const [result, setResult] = useState({ message: EMPTY_TEXT, ok: true })
 
-  const current = TRENCHES.find((t) => t.id === selectedSiteId)?.id ?? sourceId
-  const trench = TRENCHES.find((t) => t.id === current) ?? TRENCHES[0]
+  const current =
+    TRENCHES.find((tr) => tr.id === selectedSiteId)?.id ?? trenchId
+  const trench = TRENCHES.find((tr) => tr.id === current) ?? TRENCHES[0]
   const latest = tsunamis.at(-1)
 
   return (
     <div className="grid gap-5">
       <SelectField
-        label="진원 (섭입대)"
+        label={t('tsunami.source')}
         value={trench.id}
         onChange={(id) => {
           setTrenchId(id)
           select(id)
         }}
-        options={TRENCHES.map((t) => ({
-          value: t.id,
-          label: t.name,
-          group: t.region,
+        options={TRENCHES.map((tr) => ({
+          value: tr.id,
+          label: siteName(tr, locale),
+          group: regionName(tr.region, locale),
         }))}
-        description={`${trench.note} · 기록상 최대 규모 ${trench.historicMagnitude}`}
+        description={t('tsunami.note', {
+          note: siteNote(trench, locale),
+          m: trench.historicMagnitude,
+        })}
       />
       <RangeField
-        label="지진 규모 (Mw)"
+        label={t('tsunami.magnitude')}
         min={7.5}
         max={9.5}
         step={0.1}
         value={magnitude}
         onChange={setMagnitude}
-        valueText={`규모 ${magnitude.toFixed(1)}`}
-        description="쓰나미는 시속 약 700km로 퍼집니다. 화면에서는 1초가 1시간입니다. 같은 바다에 접한 도시만 계산합니다."
+        valueText={t('common.magnitude', { m: magnitude.toFixed(1) })}
+        description={t('tsunami.help')}
       />
       <Button
         variant="danger"
@@ -62,16 +64,16 @@ export function TsunamiPanel() {
           select(trench.id)
         }}
       >
-        {trench.name} 지진 일으키기
+        {t('tsunami.trigger', { name: siteName(trench, locale) })}
       </Button>
       <StatusMessage
-        message={result.message}
+        message={pick(result.message)}
         tone={result.ok ? 'info' : 'error'}
       />
       {latest ? (
         <section aria-labelledby="tsunami-impacts" className="grid gap-2">
           <h3 id="tsunami-impacts" className="label-caps">
-            최근 쓰나미 도달 예상
+            {t('tsunami.latest')}
           </h3>
           <div
             className="max-h-56 overflow-y-auto"
@@ -80,22 +82,20 @@ export function TsunamiPanel() {
             aria-labelledby="tsunami-impacts"
           >
             <table className="w-full text-left text-sm">
-              <caption className="sr-only">
-                도시별 쓰나미 도달 시간, 파고, 결과
-              </caption>
+              <caption className="sr-only">{t('tsunami.caption')}</caption>
               <thead className="label-caps">
                 <tr>
                   <th scope="col" className="py-1 font-semibold">
-                    도시
+                    {t('tsunami.col.city')}
                   </th>
                   <th scope="col" className="py-1 font-semibold">
-                    도달
+                    {t('tsunami.col.arrival')}
                   </th>
                   <th scope="col" className="py-1 font-semibold">
-                    파고
+                    {t('tsunami.col.height')}
                   </th>
                   <th scope="col" className="py-1 font-semibold">
-                    결과
+                    {t('tsunami.col.result')}
                   </th>
                 </tr>
               </thead>
@@ -103,10 +103,12 @@ export function TsunamiPanel() {
                 {latest.impacts.map((impact) => (
                   <tr key={impact.cityId} className="border-t border-line">
                     <th scope="row" className="py-1.5 font-normal">
-                      {getSite(impact.cityId)?.name}
+                      {siteName(impact.cityId, locale)}
                     </th>
                     <td className="display-num">
-                      {formatNumber(impact.arrivalHours, 1)}시간
+                      {t('tsunami.hours', {
+                        h: formatNumber(impact.arrivalHours, 1),
+                      })}
                     </td>
                     <td className="display-num">
                       {formatNumber(impact.waveHeight, 1)}m
@@ -114,7 +116,7 @@ export function TsunamiPanel() {
                     <td
                       className={`font-semibold ${OUTCOME_STYLE[impact.outcome]}`}
                     >
-                      {OUTCOME_LABEL[impact.outcome]}
+                      {t(`tsunami.outcome.${impact.outcome}`)}
                     </td>
                   </tr>
                 ))}

@@ -2,6 +2,7 @@ import type { BuiltStructure } from '../structure/types'
 import type { ScenarioId } from './scenario'
 import type { SpeedId } from './time'
 import type { MissionState } from './missions'
+import type { Text } from '../text'
 
 export type EventTone = 'info' | 'good' | 'warn' | 'danger'
 
@@ -9,7 +10,7 @@ export interface WorldEvent {
   id: number
   year: number
   tone: EventTone
-  text: string
+  text: Text
 }
 
 export interface Eruption {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CITIES, OCEANS, REGIONS } from '../../model/site/data'
+import { EMPTY_TEXT, regionName, siteName } from '../../model/text'
 import {
   blastRadiusKm,
   deflectedDiameter,
@@ -8,28 +9,14 @@ import {
   thermalRadiusKm,
 } from '../../model/world/hazards'
 import { formatDiameter, formatEnergy, useWorld } from '../../model/world/store'
+import { useT } from '../i18n'
 import { Button, RangeField, SelectField, StatusMessage } from '@/shared/ui'
+import { formatNumber } from '@/shared/lib'
 
-const SIZES = [
-  { diameterM: 50, example: '1908년 퉁구스카 (숲 2,000km² 쓰러짐)' },
-  { diameterM: 140, example: 'NASA가 추적하는 "도시 파괴급" 기준' },
-  { diameterM: 340, example: '아포피스 크기, 2029년 지구 근접 통과' },
-  { diameterM: 1000, example: '문명을 흔드는 규모, 충돌 겨울 시작' },
-  { diameterM: 5000, example: '대륙 규모 피해' },
-  { diameterM: 10000, example: '6,600만 년 전 칙술루브, 공룡 멸종' },
-]
-
-const TARGET_OPTIONS = [
-  ...OCEANS.map((o) => ({ value: o.id, label: o.name, group: '바다' })),
-  ...REGIONS.map((r) => ({ value: r.id, label: r.name, group: '지역' })),
-  ...CITIES.map((c) => ({
-    value: c.id,
-    label: c.name,
-    group: `도시 · ${c.region}`,
-  })),
-]
+const SIZES = [50, 140, 340, 1000, 5000, 10000] as const
 
 export function AsteroidPanel() {
+  const { t, pick, locale } = useT()
   const selectedSiteId = useWorld((s) => s.selectedSiteId)
   const structures = useWorld((s) => s.structures)
   const year = useWorld((s) => s.year)
@@ -38,60 +25,78 @@ export function AsteroidPanel() {
 
   const [targetId, setTargetId] = useState(OCEANS[0].id)
   const [sizeIndex, setSizeIndex] = useState(3)
-  const [result, setResult] = useState({ message: '', ok: true })
+  const [result, setResult] = useState({ message: EMPTY_TEXT, ok: true })
 
-  const current = TARGET_OPTIONS.some((o) => o.value === selectedSiteId)
+  const options = [
+    ...OCEANS.map((o) => ({
+      value: o.id,
+      label: siteName(o, locale),
+      group: t('kind.ocean'),
+    })),
+    ...REGIONS.map((r) => ({
+      value: r.id,
+      label: siteName(r, locale),
+      group: t('kind.region'),
+    })),
+    ...CITIES.map((c) => ({
+      value: c.id,
+      label: siteName(c, locale),
+      group: `${t('kind.city')} · ${regionName(c.region, locale)}`,
+    })),
+  ]
+  const current = options.some((o) => o.value === selectedSiteId)
     ? (selectedSiteId as string)
     : targetId
-  const target =
-    TARGET_OPTIONS.find((o) => o.value === current) ?? TARGET_OPTIONS[0]
-  const size = SIZES[sizeIndex]
-  const effective = deflectedDiameter(size.diameterM, structures, year)
+  const target = options.find((o) => o.value === current) ?? options[0]
+  const diameter = SIZES[sizeIndex]
+  const effective = deflectedDiameter(diameter, structures, year)
   const energy = impactEnergyMt(effective)
   const cooling = impactPeakCooling(effective)
 
   return (
     <div className="grid gap-5">
       <SelectField
-        label="충돌 지점"
+        label={t('asteroid.target')}
         value={target.value}
         onChange={(id) => {
           setTargetId(id)
           select(id)
         }}
-        options={TARGET_OPTIONS}
-        description="바다에 떨어지면 거대한 쓰나미가 생깁니다."
+        options={options}
+        description={t('asteroid.targetHelp')}
       />
       <RangeField
-        label="소행성 지름"
+        label={t('asteroid.diameter')}
         min={0}
         max={SIZES.length - 1}
         step={1}
         value={sizeIndex}
         onChange={setSizeIndex}
-        valueText={formatDiameter(size.diameterM)}
-        description={`${size.example}. 암석질, 초속 20km로 가정합니다.`}
+        valueText={formatDiameter(diameter, locale)}
+        description={`${t(`asteroid.size${diameter}`)}. ${t('asteroid.assume')}`}
       />
       <div className="rounded-xs border border-line p-3 text-sm leading-relaxed">
         {effective === 0 ? (
-          <p className="text-accent">
-            행성 방위 요격망이 이 소행성을 빗나가게 합니다.
-          </p>
+          <p className="text-accent">{t('asteroid.deflected')}</p>
         ) : (
           <>
             <p>
-              에너지 약{' '}
-              <strong className="display-num">{formatEnergy(energy)}</strong>
-              {effective < size.diameterM
-                ? ` (요격으로 ${formatDiameter(effective)})`
+              {t('asteroid.energy')}{' '}
+              <strong className="display-num">
+                {formatEnergy(energy, locale)}
+              </strong>
+              {effective < diameter
+                ? ` ${t('asteroid.intercepted', { size: formatDiameter(effective, locale) })}`
                 : ''}
             </p>
             <p className="text-muted">
-              폭풍 반경{' '}
-              {Math.round(blastRadiusKm(energy)).toLocaleString('ko-KR')}km ·
-              열복사 반경{' '}
-              {Math.round(thermalRadiusKm(energy)).toLocaleString('ko-KR')}km
-              {cooling > 0 ? ` · 충돌 겨울 최대 −${cooling.toFixed(1)}°C` : ''}
+              {t('asteroid.radii', {
+                blast: formatNumber(blastRadiusKm(energy), 0),
+                thermal: formatNumber(thermalRadiusKm(energy), 0),
+              })}
+              {cooling > 0
+                ? ` · ${t('asteroid.winter', { c: cooling.toFixed(1) })}`
+                : ''}
             </p>
           </>
         )}
@@ -99,14 +104,14 @@ export function AsteroidPanel() {
       <Button
         variant="danger"
         onClick={() => {
-          setResult(triggerImpact(target.value, size.diameterM))
+          setResult(triggerImpact(target.value, diameter))
           select(target.value)
         }}
       >
-        {target.label}에 충돌시키기
+        {t('asteroid.trigger', { name: target.label })}
       </Button>
       <StatusMessage
-        message={result.message}
+        message={pick(result.message)}
         tone={result.ok ? 'info' : 'error'}
       />
     </div>

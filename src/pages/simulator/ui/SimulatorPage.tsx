@@ -1,4 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react'
+import { useLocale, useLocaleSync } from '@/shared/i18n'
+import { cn } from '@/shared/lib'
+import { useT } from './i18n'
 import { ClientOnly } from '@tanstack/react-router'
 import { loadFloodCurve } from '../api/loadFloodCurve'
 import { useWorld } from '../model/world/store'
@@ -24,12 +27,49 @@ const panel = 'rounded-xs border border-line bg-panel p-4 backdrop-blur-md'
 const anchor = 'scroll-mt-[calc(45svh+0.5rem)] lg:scroll-mt-0'
 
 const MOBILE_LINKS = [
-  { href: '#controls', label: '지구 관리' },
-  { href: '#mission', label: '미션' },
-  { href: '#status', label: '지구 상태' },
-]
+  { href: '#controls', label: 'page.controls' },
+  { href: '#mission', label: 'page.mission' },
+  { href: '#status', label: 'page.status' },
+] as const
+
+/** 한국어 / English 전환 */
+function LanguageSwitch() {
+  const { t, locale } = useT()
+  const setLocale = useLocale((s) => s.setLocale)
+  return (
+    <div role="group" aria-label={t('page.language')} className="flex gap-1">
+      {(
+        [
+          ['ko', '한국어'],
+          ['en', 'English'],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          lang={value}
+          aria-pressed={locale === value}
+          onClick={() => setLocale(value)}
+          className={cn(
+            'min-h-9 rounded-xs border px-2.5 font-display text-xs font-semibold tracking-[0.04em]',
+            locale === value
+              ? 'border-accent bg-accent/15 text-ice'
+              : 'border-line-strong text-muted hover:text-ice',
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 export function SimulatorPage() {
+  useLocaleSync()
+  const { t, locale } = useT()
+  useEffect(() => {
+    document.title = `EARTH PLAN · ${t('page.tagline')}`
+  }, [locale, t])
   useSimulationClock()
   const setFloodCurve = useWorld((s) => s.setFloodCurve)
 
@@ -38,7 +78,10 @@ export function SimulatorPage() {
     const code = new URLSearchParams(window.location.search).get(SHARE_PARAM)
     if (!code) return
     const snapshot = decodeSnapshot(code)
-    if (snapshot) useWorld.getState().loadSnapshot(snapshot, '공유 링크의')
+    if (snapshot)
+      useWorld
+        .getState()
+        .loadSnapshot(snapshot, { ko: '공유 링크의', en: 'a shared link' })
   }, [])
 
   useEffect(() => {
@@ -55,7 +98,7 @@ export function SimulatorPage() {
         href="#controls"
         className="sr-only z-50 rounded-xs bg-accent px-4 py-3 font-semibold text-black focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
       >
-        제어판으로 건너뛰기
+        {t('page.skip')}
       </a>
 
       <header className="relative z-20 flex items-center justify-between gap-4 px-4 pt-4 lg:absolute lg:inset-x-0 lg:top-0 lg:pointer-events-none">
@@ -63,9 +106,10 @@ export function SimulatorPage() {
           <h1 className="font-display text-2xl font-semibold uppercase leading-none tracking-[-0.03em]">
             Earth<span className="text-accent">_</span>Plan
           </h1>
-          <p className="mt-1 text-xs text-muted">
-            지구 환경·재해 대응 시뮬레이터
-          </p>
+          <p className="mt-1 text-xs text-muted">{t('page.tagline')}</p>
+        </div>
+        <div className="lg:pointer-events-auto">
+          <LanguageSwitch />
         </div>
       </header>
 
@@ -75,14 +119,18 @@ export function SimulatorPage() {
           className="sticky top-0 z-30 flex h-[45svh] flex-col bg-space lg:fixed lg:inset-0 lg:z-auto lg:block lg:h-auto lg:bg-transparent"
         >
           <h2 id="globe-title" className="sr-only">
-            3D 지구
+            {t('page.globe')}
           </h2>
           <div className="relative min-h-0 flex-1 lg:absolute lg:inset-0">
             <ClientOnly
-              fallback={<p className="p-6 label-caps">3D 지구 준비 중</p>}
+              fallback={
+                <p className="p-6 label-caps">{t('page.globeLoading')}</p>
+              }
             >
               <Suspense
-                fallback={<p className="p-6 label-caps">3D 지구 준비 중</p>}
+                fallback={
+                  <p className="p-6 label-caps">{t('page.globeLoading')}</p>
+                }
               >
                 <GlobeViewport hintId="globe-hint" />
               </Suspense>
@@ -93,8 +141,7 @@ export function SimulatorPage() {
             id="globe-hint"
             className="sr-only text-center text-xs text-muted lg:not-sr-only lg:pointer-events-none lg:absolute lg:inset-x-0 lg:bottom-3 lg:z-10"
           >
-            끌어서 돌리기 · 휠이나 두 손가락으로 확대 · 지구를 선택한 뒤 화살표
-            키로 돌리고 +, − 키로 확대
+            {t('page.hint')}
           </p>
         </section>
 
@@ -109,7 +156,7 @@ export function SimulatorPage() {
               id="controls-title"
               className="mb-3 font-display text-lg font-semibold uppercase tracking-[-0.02em]"
             >
-              지구 관리
+              {t('page.controls')}
             </h2>
             <ControlPanel />
           </section>
@@ -123,7 +170,7 @@ export function SimulatorPage() {
               id="status-title"
               className="font-display text-lg font-semibold uppercase tracking-[-0.02em]"
             >
-              지구 상태
+              {t('page.status')}
             </h2>
             <TimeControls />
             <MissionPanel />
@@ -136,7 +183,7 @@ export function SimulatorPage() {
       </main>
       {/* 모바일 화면 이동 */}
       <nav
-        aria-label="화면 이동"
+        aria-label={t('page.mobileNav')}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-panel-solid/95 backdrop-blur lg:hidden"
       >
         <ul className="grid grid-cols-3">
@@ -146,7 +193,7 @@ export function SimulatorPage() {
                 href={link.href}
                 className="flex min-h-14 items-center justify-center font-display text-sm font-semibold uppercase tracking-[0.04em] text-ice hover:text-accent"
               >
-                {link.label}
+                {t(link.label)}
               </a>
             </li>
           ))}

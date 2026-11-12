@@ -4,6 +4,8 @@ import { Quaternion, Vector3 } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { latLonToVector3 } from '@/shared/lib'
 import type { Site, SiteKind } from '../../model/site/types'
+import { siteName } from '../../model/text'
+import { useLocale } from '@/shared/i18n'
 
 export type MarkerTone = 'normal' | 'safe' | 'warn' | 'danger' | 'protected'
 
@@ -53,6 +55,7 @@ export function SiteMarkers({
   onSelect,
 }: SiteMarkersProps) {
   const [hoverId, setHoverId] = useState<string | null>(null)
+  const locale = useLocale((st) => st.locale)
 
   const placed = useMemo(
     () =>
@@ -114,7 +117,7 @@ export function SiteMarkers({
                   aria-hidden="true"
                   className="pointer-events-none ml-3 -mt-3 whitespace-nowrap rounded-xs border border-line-strong bg-panel px-2 py-1 font-display text-xs font-semibold uppercase tracking-[0.04em] text-ice"
                 >
-                  {site.name}
+                  {siteName(site, locale)}
                 </div>
               </Html>
             ))

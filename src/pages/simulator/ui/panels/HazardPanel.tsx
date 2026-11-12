@@ -1,20 +1,24 @@
 import { useState } from 'react'
 import { REGIONS } from '../../model/site/data'
+import { EMPTY_TEXT, regionName, siteName, siteNote } from '../../model/text'
 import { warming } from '../../model/world/engine'
 import {
   SEVERITY_LABEL,
+  SEVERITY_LABEL_EN,
   droughtEffects,
   isInDrought,
   wildfireArea,
 } from '../../model/world/hazards'
 import { useWorld } from '../../model/world/store'
-import { decimalYearToDate } from '@/shared/lib'
+import { useT } from '../i18n'
+import { decimalYearToDate, formatNumber } from '@/shared/lib'
 import { Button, ChoiceGroup, SelectField, StatusMessage } from '@/shared/ui'
 
 type Severity = '1' | '2' | '3'
 
 /** 산불과 가뭄 */
 export function HazardPanel() {
+  const { t, pick, locale } = useT()
   const selectedSiteId = useWorld((s) => s.selectedSiteId)
   const structures = useWorld((s) => s.structures)
   const year = useWorld((s) => s.year)
@@ -26,28 +30,32 @@ export function HazardPanel() {
 
   const [regionId, setRegionId] = useState(REGIONS[0].id)
   const [severity, setSeverity] = useState<Severity>('2')
-  const [fireResult, setFireResult] = useState({ message: '', ok: true })
-  const [droughtResult, setDroughtResult] = useState({ message: '', ok: true })
+  const [fireResult, setFireResult] = useState({
+    message: EMPTY_TEXT,
+    ok: true,
+  })
+  const [droughtResult, setDroughtResult] = useState({
+    message: EMPTY_TEXT,
+    ok: true,
+  })
 
   const region =
     REGIONS.find((r) => r.id === selectedSiteId) ??
     REGIONS.find((r) => r.id === regionId) ??
     REGIONS[0]
+  const name = siteName(region, locale)
   const inDrought = isInDrought(region.id, droughts, year)
   const area = wildfireArea(region, warmingC, structures, year, inDrought)
-  const effects = droughtEffects(
-    region,
-    Number(severity) as 1 | 2 | 3,
-    structures,
-    year,
-    warmingC,
-  )
+  const level = Number(severity) as 1 | 2 | 3
+  const effects = droughtEffects(region, level, structures, year, warmingC)
   const active = droughts.filter((d) => year < d.year + d.durationYears)
+  const severityLabel = (s: 1 | 2 | 3) =>
+    locale === 'en' ? SEVERITY_LABEL_EN[s] : SEVERITY_LABEL[s]
 
   return (
     <div className="grid gap-5">
       <SelectField
-        label="지역"
+        label={t('hazard.region')}
         value={region.id}
         onChange={(id) => {
           setRegionId(id)
@@ -55,10 +63,13 @@ export function HazardPanel() {
         }}
         options={REGIONS.map((r) => ({
           value: r.id,
-          label: r.name,
-          group: r.region,
+          label: siteName(r, locale),
+          group: regionName(r.region, locale),
         }))}
-        description={`${region.note} · 인구 약 ${region.population}백만 명`}
+        description={t('hazard.regionNote', {
+          note: siteNote(region, locale),
+          pop: region.population,
+        })}
       />
 
       <section
@@ -66,15 +77,12 @@ export function HazardPanel() {
         className="grid gap-3 border-t border-line pt-4"
       >
         <h3 id="fire-title" className="label-caps">
-          산불
+          {t('hazard.fire')}
         </h3>
         <p className="text-sm leading-relaxed text-muted">
-          지금 나면 약{' '}
-          <strong className="display-num text-ice">
-            {Math.round(area).toLocaleString('ko-KR')}km²
-          </strong>
-          가 탑니다{inDrought ? ' (가뭄 중이라 1.8배)' : ''}. 기온이 오를수록
-          커지고, 재생하면 산불이 잘 나는 지역에서 저절로도 납니다.
+          {t('hazard.fireArea', { area: formatNumber(area, 0) })}
+          {inDrought ? ` ${t('hazard.fireDrought')}` : ''}{' '}
+          {t('hazard.fireHelp')}
         </p>
         <Button
           variant="danger"
@@ -83,10 +91,10 @@ export function HazardPanel() {
             select(region.id)
           }}
         >
-          {region.name} 산불 일으키기
+          {t('hazard.fireTrigger', { name })}
         </Button>
         <StatusMessage
-          message={fireResult.message}
+          message={pick(fireResult.message)}
           tone={fireResult.ok ? 'info' : 'error'}
         />
       </section>
@@ -96,39 +104,39 @@ export function HazardPanel() {
         className="grid gap-3 border-t border-line pt-4"
       >
         <h3 id="drought-title" className="label-caps">
-          가뭄
+          {t('hazard.drought')}
         </h3>
         <ChoiceGroup<Severity>
-          legend="가뭄 정도"
+          legend={t('hazard.severity')}
           value={severity}
           onChange={setSeverity}
           columns={3}
           choices={(['1', '2', '3'] as const).map((s) => ({
             value: s,
-            label: SEVERITY_LABEL[Number(s) as 1 | 2 | 3],
-            hint: `${Number(s) + 1}년`,
+            label: severityLabel(Number(s) as 1 | 2 | 3),
+            hint: t('hazard.years', { n: Number(s) + 1 }),
           }))}
         />
         <p className="text-sm leading-relaxed text-muted">
-          약 {effects.affectedMillions.toFixed(1)}백만 명 물 부족, 농작물{' '}
-          {Math.round(effects.cropLoss)}% 감소. 가뭄 동안 산불이 더 크게 납니다.
+          {t('hazard.droughtEffect', {
+            people: effects.affectedMillions.toFixed(1),
+            crop: Math.round(effects.cropLoss),
+          })}
         </p>
         <Button
           variant="danger"
           disabled={inDrought}
           onClick={() => {
-            setDroughtResult(
-              startDrought(region.id, Number(severity) as 1 | 2 | 3),
-            )
+            setDroughtResult(startDrought(region.id, level))
             select(region.id)
           }}
         >
           {inDrought
-            ? `${region.name} 가뭄 진행 중`
-            : `${region.name} 가뭄 일으키기`}
+            ? t('hazard.droughtActive', { name })
+            : t('hazard.droughtTrigger', { name })}
         </Button>
         <StatusMessage
-          message={droughtResult.message}
+          message={pick(droughtResult.message)}
           tone={droughtResult.ok ? 'info' : 'error'}
         />
         {active.length ? (
@@ -139,12 +147,14 @@ export function HazardPanel() {
                 className="flex justify-between border-t border-line py-1.5"
               >
                 <span>
-                  {REGIONS.find((r) => r.id === d.regionId)?.name} ·{' '}
-                  {SEVERITY_LABEL[d.severity]}
+                  {siteName(d.regionId, locale)} · {severityLabel(d.severity)}
                 </span>
                 <span className="text-warn">
-                  {decimalYearToDate(d.year + d.durationYears).getUTCFullYear()}
-                  년까지
+                  {t('hazard.until', {
+                    year: decimalYearToDate(
+                      d.year + d.durationYears,
+                    ).getUTCFullYear(),
+                  })}
                 </span>
               </li>
             ))}

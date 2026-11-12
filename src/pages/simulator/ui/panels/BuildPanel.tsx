@@ -4,13 +4,28 @@ import {
   STRUCTURES,
   STRUCTURE_LIST,
   TARGET_LABEL,
+  TARGET_LABEL_EN,
+  structureName,
+  structureSummary,
 } from '../../model/structure/catalog'
-import type { StructureKind } from '../../model/structure/catalog'
+import type {
+  StructureKind,
+  StructureTarget,
+} from '../../model/structure/catalog'
+import {
+  EMPTY_TEXT,
+  nameList,
+  regionName,
+  siteName,
+  siteNote,
+} from '../../model/text'
 import { useWorld } from '../../model/world/store'
+import { useT } from '../i18n'
 import { decimalYearToDate, formatBillions } from '@/shared/lib'
 import { Button, ChoiceGroup, SelectField, StatusMessage } from '@/shared/ui'
 
 export function BuildPanel() {
+  const { t, pick, locale } = useT()
   const budget = useWorld((s) => s.budget)
   const year = useWorld((s) => s.year)
   const structures = useWorld((s) => s.structures)
@@ -24,10 +39,12 @@ export function BuildPanel() {
     Partial<Record<StructureKind, string>>
   >({})
   const [instant, setInstant] = useState(false)
-  const [result, setResult] = useState({ message: '', ok: true })
+  const [result, setResult] = useState({ message: EMPTY_TEXT, ok: true })
   const instantId = useId()
 
   const spec = STRUCTURES[kind]
+  const targetLabel = (target: StructureTarget) =>
+    locale === 'en' ? TARGET_LABEL_EN[target] : TARGET_LABEL[target]
   const candidates = ALL_SITES.filter((site) => site.kind === spec.target)
   const selected = candidates.find((c) => c.id === selectedSiteId)
   const siteId =
@@ -36,27 +53,48 @@ export function BuildPanel() {
       : (selected?.id ?? siteByKind[kind] ?? candidates.at(0)?.id ?? '')
   const affordable = budget >= spec.cost
 
+  const describe = () => {
+    const site = getSite(siteId)
+    if (!site) return undefined
+    const note = siteNote(site, locale)
+    if (site.kind === 'strait')
+      return t('build.strait', { note, list: nameList(site.protects, locale) })
+    if (site.kind === 'glacier')
+      return t('build.glacier', { note, m: site.potentialRise })
+    if (site.kind === 'region')
+      return t('build.region', { note, pop: site.population })
+    if (site.kind === 'city')
+      return t('build.city', { m: site.elevation, pop: site.population })
+    return note
+  }
+
   return (
     <div className="grid gap-5">
       <p className="flex items-baseline justify-between">
-        <span className="label-caps">사용 가능 예산</span>
+        <span className="label-caps">{t('build.budget')}</span>
         <span className="display-num text-xl">{formatBillions(budget)}</span>
       </p>
       <ChoiceGroup<StructureKind>
-        legend="거대 구조물"
+        legend={t('build.structures')}
         value={kind}
         onChange={setKind}
         columns={2}
         choices={STRUCTURE_LIST.map((s) => ({
           value: s.kind,
-          label: s.name,
-          hint: `${formatBillions(s.cost)} · ${s.buildYears}년 · ${TARGET_LABEL[s.target]}`,
+          label: structureName(s.kind, locale),
+          hint: t('build.hint', {
+            cost: formatBillions(s.cost),
+            years: s.buildYears,
+            target: targetLabel(s.target),
+          }),
         }))}
       />
-      <p className="text-sm leading-relaxed text-muted">{spec.summary}</p>
+      <p className="text-sm leading-relaxed text-muted">
+        {structureSummary(kind, locale)}
+      </p>
       {spec.target === 'orbit' ? null : (
         <SelectField
-          label={`설치할 ${TARGET_LABEL[spec.target]}`}
+          label={t('build.where', { target: targetLabel(spec.target) })}
           value={siteId}
           onChange={(id) => {
             setSiteByKind((m) => ({ ...m, [kind]: id }))
@@ -64,28 +102,14 @@ export function BuildPanel() {
           }}
           options={candidates.map((c) => ({
             value: c.id,
-            label: c.name,
-            group: c.region,
+            label: siteName(c, locale),
+            group: regionName(c.region, locale),
           }))}
-          description={(() => {
-            const site = getSite(siteId)
-            if (!site) return undefined
-            if (site.kind === 'strait')
-              return `${site.note}. 보호 도시: ${site.protects.map((id) => getSite(id)?.name).join(', ')}`
-            if (site.kind === 'glacier')
-              return `${site.note}. 다 녹으면 해수면 +${site.potentialRise}m`
-            if (site.kind === 'region')
-              return `${site.note}. 인구 약 ${site.population}백만 명`
-            if (site.kind === 'city')
-              return `저지대 고도 약 ${site.elevation}m, 도시권 인구 약 ${site.population}백만 명`
-            return site.note
-          })()}
+          description={describe()}
         />
       )}
       {inMission ? (
-        <p className="text-sm text-muted">
-          미션 중에는 건설 기간이 그대로 적용됩니다.
-        </p>
+        <p className="text-sm text-muted">{t('build.missionRule')}</p>
       ) : (
         <div className="flex min-h-11 items-center gap-3">
           <input
@@ -96,7 +120,7 @@ export function BuildPanel() {
             className="size-5 accent-accent"
           />
           <label htmlFor={instantId} className="text-sm">
-            건설 기간 없이 바로 완공 (실험용)
+            {t('build.instant')}
           </label>
         </div>
       )}
@@ -108,25 +132,27 @@ export function BuildPanel() {
           setResult(build(kind, siteId, { instant: instant && !inMission }))
         }
       >
-        {spec.name} 짓기 · {formatBillions(spec.cost)}
+        {t('build.action', {
+          name: structureName(kind, locale),
+          cost: formatBillions(spec.cost),
+        })}
       </Button>
       {affordable ? null : (
         <p id={`${instantId}-budget`} className="text-sm text-warn">
-          예산이 {formatBillions(spec.cost - budget)} 모자랍니다. 시간을
-          재생하면 매년 $150B씩 늘어납니다.
+          {t('build.short', { amount: formatBillions(spec.cost - budget) })}
         </p>
       )}
       <StatusMessage
-        message={result.message}
+        message={pick(result.message)}
         tone={result.ok ? 'info' : 'error'}
       />
 
       <section aria-labelledby="built-list" className="grid gap-2">
         <h3 id="built-list" className="label-caps">
-          지은 구조물 {structures.length}개
+          {t('build.built', { count: structures.length })}
         </h3>
         {structures.length === 0 ? (
-          <p className="text-sm text-muted">아직 없습니다.</p>
+          <p className="text-sm text-muted">{t('build.none')}</p>
         ) : (
           <ul className="grid gap-1">
             {structures.map((s) => {
@@ -137,16 +163,23 @@ export function BuildPanel() {
                   className="flex items-center justify-between gap-2 border-t border-line py-2 text-sm"
                 >
                   <span>
-                    {STRUCTURES[s.kind].name}
+                    {structureName(s.kind, locale)}
                     <span className="text-muted">
                       {' '}
-                      · {getSite(s.siteId)?.name ?? '궤도'}
+                      ·{' '}
+                      {s.siteId === 'orbit'
+                        ? targetLabel('orbit')
+                        : siteName(s.siteId, locale)}
                     </span>
                   </span>
                   <span className={active ? 'text-accent' : 'text-warn'}>
                     {active
-                      ? '가동 중'
-                      : `${decimalYearToDate(s.completeYear).getUTCFullYear()}년 완공 예정`}
+                      ? t('build.active')
+                      : t('build.pending', {
+                          year: decimalYearToDate(
+                            s.completeYear,
+                          ).getUTCFullYear(),
+                        })}
                   </span>
                 </li>
               )

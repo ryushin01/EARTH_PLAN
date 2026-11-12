@@ -23,7 +23,7 @@ describe('열대 저기압 상륙', () => {
       year: 2030,
     })
     expect(first.damaged).toBe(1)
-    expect(first.events[0].text).toContain('마닐라에 상륙')
+    expect(first.events[0].text.ko).toContain('마닐라에 상륙')
     const again = stormLandfalls(first.storms, {
       seaLevel: 0,
       structures: [],
@@ -118,7 +118,7 @@ describe('미션', () => {
     expect(s.mission?.status).toBe('failed')
     expect(s.running).toBe(false)
     expect(s.impacts[0].targetId).toBe('tokyo')
-    expect(s.events.some((e) => e.text.startsWith('미션 실패'))).toBe(true)
+    expect(s.events.some((e) => e.text.ko.startsWith('미션 실패'))).toBe(true)
   })
 
   it('행성 방위 요격망을 바로 지으면 소행성 미션에 성공한다', () => {
@@ -129,7 +129,7 @@ describe('미션', () => {
     runUntil(2040)
     expect(useWorld.getState().mission?.status).toBe('success')
     expect(
-      MISSION_BY_ID['asteroid-2032'].evaluate(useWorld.getState()).detail,
+      MISSION_BY_ID['asteroid-2032'].evaluate(useWorld.getState()).detail.ko,
     ).toContain('빗나가게')
   })
 })

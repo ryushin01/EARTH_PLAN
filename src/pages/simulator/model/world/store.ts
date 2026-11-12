@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { getSite } from '../site/data'
-import { STRUCTURES } from '../structure/catalog'
+import { STRUCTURES, STRUCTURE_EN } from '../structure/catalog'
 import type { StructureKind } from '../structure/catalog'
 import { formatBillions } from '@/shared/lib'
 import {
@@ -29,6 +29,7 @@ import {
 import type { SpeedId } from './time'
 import {
   SEVERITY_LABEL,
+  SEVERITY_LABEL_EN,
   WILDFIRE_YEARS,
   blastRadiusKm,
   deflectedDiameter,
@@ -44,13 +45,16 @@ import {
   wildfireArea,
 } from './hazards'
 import { MISSION_BY_ID } from './missions'
+import { both, compose, nameList, num, siteName } from '../text'
+import type { Text } from '../text'
+import type { Locale } from '@/shared/i18n'
 import { snapshotStructures } from './snapshot'
 import type { Snapshot } from './snapshot'
 import type { WorldState } from './types'
 
 export interface ActionResult {
   ok: boolean
-  message: string
+  message: Text
 }
 
 interface WorldActions {
@@ -87,7 +91,8 @@ interface WorldActions {
     now?: number,
   ) => ActionResult
   startDrought: (regionId: string, severity: 1 | 2 | 3) => ActionResult
-  loadSnapshot: (snapshot: Snapshot, source: string) => void
+  /** source: 어디서 불러왔는지 (예: 공유 링크) */
+  loadSnapshot: (snapshot: Snapshot, source: Text) => void
   startMission: (id: string) => void
   quitMission: () => void
   select: (siteId: string | null) => void
@@ -127,16 +132,28 @@ function initialState(): WorldState {
   return { ...state, history: touchHistory([], state) }
 }
 
-export function formatDiameter(m: number): string {
-  return m >= 1000 ? `${(m / 1000).toLocaleString('ko-KR')}km` : `${m}m`
+export function formatDiameter(m: number, locale: Locale = 'ko'): string {
+  return m >= 1000
+    ? `${num(m / 1000, locale, m % 1000 ? 1 : 0)} km`.replace(
+        ' km',
+        locale === 'ko' ? 'km' : ' km',
+      )
+    : `${m}${locale === 'ko' ? 'm' : ' m'}`
 }
 
-export function formatEnergy(mt: number): string {
-  if (mt >= 1e6)
-    return `TNT ${(mt / 1e6).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}조 톤`
-  if (mt >= 100)
-    return `TNT ${(mt / 100).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}억 톤`
-  return `TNT ${mt.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}메가톤`
+export function formatEnergy(mt: number, locale: Locale = 'ko'): string {
+  const f = (v: number) =>
+    v.toLocaleString(locale === 'ko' ? 'ko-KR' : 'en-US', {
+      maximumFractionDigits: 1,
+    })
+  if (locale === 'en') {
+    if (mt >= 1e6) return `${f(mt / 1e6)} teratons of TNT`
+    if (mt >= 1e3) return `${f(mt / 1e3)} gigatons of TNT`
+    return `${f(mt)} megatons of TNT`
+  }
+  if (mt >= 1e6) return `TNT ${f(mt / 1e6)}조 톤`
+  if (mt >= 100) return `TNT ${f(mt / 100)}억 톤`
+  return `TNT ${f(mt)}메가톤`
 }
 
 const nowMs = () => (typeof performance === 'undefined' ? 0 : performance.now())
@@ -160,7 +177,15 @@ export const useWorld = create<WorldStore>()((set, get) => {
           firedIds: [...state.mission.firedIds, item.id],
         },
       }))
-      log([{ tone: 'warn', text: `미션 사건: ${item.warning}` }])
+      log([
+        {
+          tone: 'warn',
+          text: compose(
+            (l) =>
+              `${l === 'ko' ? '미션 사건' : 'Mission event'}: ${item.warning[l]}`,
+          ),
+        },
+      ])
       const h = item.hazard
       if (h.kind === 'impact') get().triggerImpact(h.targetId, h.diameterM)
       if (h.kind === 'tsunami') get().triggerTsunami(h.sourceId, h.magnitude)
@@ -178,7 +203,11 @@ export const useWorld = create<WorldStore>()((set, get) => {
     log([
       {
         tone: result.ok ? 'good' : 'danger',
-        text: `미션 ${result.ok ? '성공' : '실패'}: ${mission.title}. ${result.detail}`,
+        text: compose((l) =>
+          l === 'ko'
+            ? `미션 ${result.ok ? '성공' : '실패'}: ${mission.title.ko}. ${result.detail.ko}`
+            : `Mission ${result.ok ? 'accomplished' : 'failed'}: ${mission.title.en}. ${result.detail.en}`,
+        ),
       },
     ])
   }
@@ -238,7 +267,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       log([
         {
           tone: 'info',
-          text: `배출 시나리오: ${SCENARIOS[scenario].label} (${SCENARIOS[scenario].code})`,
+          text: both(
+            `배출 시나리오: ${SCENARIOS[scenario].label} (${SCENARIOS[scenario].code})`,
+            `Emissions scenario: ${SCENARIOS[scenario].labelEn} (${SCENARIOS[scenario].code})`,
+          ),
         },
       ])
     },
@@ -265,7 +297,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       if (spec.target !== 'orbit' && site?.kind !== spec.target) {
         return {
           ok: false,
-          message: `${spec.name}은(는) 이 위치에 지을 수 없습니다.`,
+          message: both(
+            `${spec.name}은(는) 이 위치에 지을 수 없습니다.`,
+            `${STRUCTURE_EN[kind].name} can't be built here.`,
+          ),
         }
       }
       if (
@@ -273,13 +308,19 @@ export const useWorld = create<WorldStore>()((set, get) => {
       ) {
         return {
           ok: false,
-          message: `${site?.name ?? '궤도'}에는 이미 ${spec.name}이(가) 있습니다.`,
+          message: both(
+            `${site ? siteName(site, 'ko') : '궤도'}에는 이미 ${spec.name}이(가) 있습니다.`,
+            `${site ? siteName(site, 'en') : 'Orbit'} already has a ${STRUCTURE_EN[kind].name}.`,
+          ),
         }
       }
       if (state.budget < spec.cost) {
         return {
           ok: false,
-          message: `예산이 ${formatBillions(spec.cost - state.budget)} 모자랍니다. 시간을 진행하면 매년 예산이 늘어납니다.`,
+          message: both(
+            `예산이 ${formatBillions(spec.cost - state.budget)} 모자랍니다. 시간을 진행하면 매년 예산이 늘어납니다.`,
+            `You are ${formatBillions(spec.cost - state.budget)} short. The budget grows every year while time runs.`,
+          ),
         }
       }
       // 미션 중에는 바로 완공을 쓸 수 없음
@@ -300,10 +341,19 @@ export const useWorld = create<WorldStore>()((set, get) => {
           },
         ],
       })
-      const where = site ? `${site.name}에 ` : ''
-      const message = instant
-        ? `${where}${spec.name}을(를) 완공했습니다.`
-        : `${where}${spec.name} 건설을 시작했습니다. ${spec.buildYears}년 뒤 완공됩니다.`
+      const message = compose((l) => {
+        if (l === 'ko') {
+          const where = site ? `${siteName(site, l)}에 ` : ''
+          return instant
+            ? `${where}${spec.name}을(를) 완공했습니다.`
+            : `${where}${spec.name} 건설을 시작했습니다. ${spec.buildYears}년 뒤 완공됩니다.`
+        }
+        const where = site ? ` in ${siteName(site, l)}` : ''
+        const name = STRUCTURE_EN[kind].name
+        return instant
+          ? `${name} completed${where}.`
+          : `Construction of ${name}${where} has begun. It will be finished in ${spec.buildYears} years.`
+      })
       log([{ tone: 'good', text: message }])
       // 즉시 완공이면 침수 상태를 다시 계산
       if (instant) get().setSeaLevel(get().seaLevel)
@@ -314,7 +364,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       const state = get()
       const volcano = getSite(volcanoId)
       if (volcano?.kind !== 'volcano')
-        return { ok: false, message: '화산을 선택하세요.' }
+        return {
+          ok: false,
+          message: both('화산을 선택하세요.', 'Choose a volcano.'),
+        }
       const effective = effectiveVei(
         volcanoId,
         vei,
@@ -338,12 +391,27 @@ export const useWorld = create<WorldStore>()((set, get) => {
           },
         ],
       })
-      const reduced =
-        effective < vei ? ` (감압 시추로 VEI ${vei} → ${effective})` : ''
-      const people = affected.length
-        ? ` 화산재 반경 ${radius.toLocaleString('ko-KR')}km 안 도시 ${affected.length}곳, 약 ${totalPopulation(affected).toFixed(1)}백만 명 영향.`
-        : ` 화산재 반경 ${radius.toLocaleString('ko-KR')}km 안에 주요 도시는 없습니다.`
-      const message = `${volcano.name} 분화, VEI ${effective}${reduced}.${people}`
+      const pop = totalPopulation(affected).toFixed(1)
+      const message = compose((l) => {
+        const name = siteName(volcano, l)
+        const r = num(radius, l)
+        if (l === 'ko') {
+          const reduced =
+            effective < vei ? ` (감압 시추로 VEI ${vei} → ${effective})` : ''
+          const people = affected.length
+            ? ` 화산재 반경 ${r}km 안 도시 ${affected.length}곳, 약 ${pop}백만 명 영향.`
+            : ` 화산재 반경 ${r}km 안에 주요 도시는 없습니다.`
+          return `${name} 분화, VEI ${effective}${reduced}.${people}`
+        }
+        const reduced =
+          effective < vei
+            ? ` (relief drilling lowered VEI ${vei} → ${effective})`
+            : ''
+        const people = affected.length
+          ? ` ${affected.length} cities and about ${pop} million people within the ${r} km ash radius.`
+          : ` No major city within the ${r} km ash radius.`
+        return `${name} erupts at VEI ${effective}${reduced}.${people}`
+      })
       log([{ tone: effective >= 6 ? 'danger' : 'warn', text: message }])
       return { ok: true, message }
     },
@@ -352,7 +420,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       const state = get()
       const trench = getSite(sourceId)
       if (trench?.kind !== 'trench')
-        return { ok: false, message: '해구를 선택하세요.' }
+        return {
+          ok: false,
+          message: both('해구를 선택하세요.', 'Choose a trench.'),
+        }
       const impacts = tsunamiImpacts(
         sourceId,
         magnitude,
@@ -375,10 +446,15 @@ export const useWorld = create<WorldStore>()((set, get) => {
       const hit = impacts.filter((i) => i.outcome === 'hit')
       const blocked = impacts.filter((i) => i.outcome === 'blocked')
       const first = hit[0] as (typeof hit)[number] | undefined
-      const message =
-        `${trench.name} 규모 ${magnitude.toFixed(1)} 지진, 쓰나미 발생. ` +
-        `큰 피해 ${hit.length}곳${first ? ` (가장 먼저 ${getSite(first.cityId)?.name}, 약 ${first.arrivalHours.toFixed(1)}시간 뒤 ${first.waveHeight.toFixed(1)}m)` : ''}` +
-        `, 방벽으로 막은 곳 ${blocked.length}곳.`
+      const message = compose((l) =>
+        l === 'ko'
+          ? `${siteName(trench, l)} 규모 ${magnitude.toFixed(1)} 지진, 쓰나미 발생. ` +
+            `큰 피해 ${hit.length}곳${first ? ` (가장 먼저 ${siteName(first.cityId, l)}, 약 ${first.arrivalHours.toFixed(1)}시간 뒤 ${first.waveHeight.toFixed(1)}m)` : ''}` +
+            `, 방벽으로 막은 곳 ${blocked.length}곳.`
+          : `M${magnitude.toFixed(1)} earthquake on the ${siteName(trench, l)} triggers a tsunami. ` +
+            `${hit.length} cities badly hit${first ? ` (first: ${siteName(first.cityId, l)} in about ${first.arrivalHours.toFixed(1)} h, ${first.waveHeight.toFixed(1)} m)` : ''}` +
+            `, ${blocked.length} protected by barriers.`,
+      )
       log([{ tone: hit.length ? 'danger' : 'warn', text: message }])
       return { ok: true, message }
     },
@@ -386,15 +462,21 @@ export const useWorld = create<WorldStore>()((set, get) => {
     triggerImpact: (targetId, diameterM, now = nowMs()) => {
       const state = get()
       const target = getSite(targetId)
-      if (!target) return { ok: false, message: '충돌 지점을 선택하세요.' }
+      if (!target)
+        return {
+          ok: false,
+          message: both('충돌 지점을 선택하세요.', 'Choose an impact site.'),
+        }
       const effective = deflectedDiameter(
         diameterM,
         state.structures,
         state.year,
       )
-      const size = formatDiameter(diameterM)
       if (effective === 0) {
-        const message = `지름 ${size} 소행성을 행성 방위 요격망이 궤도를 바꿔 빗나가게 했습니다.`
+        const message = both(
+          `지름 ${formatDiameter(diameterM)} 소행성을 행성 방위 요격망이 궤도를 바꿔 빗나가게 했습니다.`,
+          `The planetary defense network deflected the ${formatDiameter(diameterM, 'en')} asteroid.`,
+        )
         set({
           impacts: [
             ...state.impacts.slice(-3),
@@ -440,7 +522,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
           },
         ],
       })
-      let tsunamiText = ''
+      let tsunamiHits: number | null = null
       if (ocean) {
         const magnitude = impactTsunamiMagnitude(energyMt)
         const impacts = tsunamiImpacts(
@@ -462,17 +544,39 @@ export const useWorld = create<WorldStore>()((set, get) => {
             },
           ],
         })
-        const hit = impacts.filter((i) => i.outcome === 'hit').length
-        tsunamiText = ` 충돌 쓰나미가 도시 ${hit}곳을 덮칩니다.`
+        tsunamiHits = impacts.filter((i) => i.outcome === 'hit').length
       }
-      const reduced =
-        effective < diameterM
-          ? ` (요격으로 ${formatDiameter(effective)}로 줄어듦)`
-          : ''
-      const people = affected.length
-        ? ` 열복사 반경 ${Math.round(thermal).toLocaleString('ko-KR')}km 안 도시 ${affected.length}곳, 약 ${totalPopulation(affected).toFixed(1)}백만 명 피해.`
-        : ` 폭풍 반경 ${Math.round(blast).toLocaleString('ko-KR')}km 안에 주요 도시는 없습니다.`
-      const message = `${target.name}에 지름 ${size} 소행성 충돌${reduced}, 약 ${formatEnergy(energyMt)}.${people}${tsunamiText}`
+      const pop = totalPopulation(affected).toFixed(1)
+      const message = compose((l) => {
+        const name = siteName(target, l)
+        const size = formatDiameter(diameterM, l)
+        if (l === 'ko') {
+          const reduced =
+            effective < diameterM
+              ? ` (요격으로 ${formatDiameter(effective)}로 줄어듦)`
+              : ''
+          const people = affected.length
+            ? ` 열복사 반경 ${num(thermal, l)}km 안 도시 ${affected.length}곳, 약 ${pop}백만 명 피해.`
+            : ` 폭풍 반경 ${num(blast, l)}km 안에 주요 도시는 없습니다.`
+          const wave =
+            tsunamiHits === null
+              ? ''
+              : ` 충돌 쓰나미가 도시 ${tsunamiHits}곳을 덮칩니다.`
+          return `${name}에 지름 ${size} 소행성 충돌${reduced}, 약 ${formatEnergy(energyMt)}.${people}${wave}`
+        }
+        const reduced =
+          effective < diameterM
+            ? ` (interception cut it to ${formatDiameter(effective, l)})`
+            : ''
+        const people = affected.length
+          ? ` ${affected.length} cities and about ${pop} million people inside the ${num(thermal, l)} km thermal radius.`
+          : ` No major city inside the ${num(blast, l)} km blast radius.`
+        const wave =
+          tsunamiHits === null
+            ? ''
+            : ` The impact tsunami strikes ${tsunamiHits} cities.`
+        return `A ${size} asteroid hits ${name}${reduced}: about ${formatEnergy(energyMt, l)}.${people}${wave}`
+      })
       log([{ tone: effective >= 140 ? 'danger' : 'warn', text: message }])
       return { ok: true, message }
     },
@@ -480,7 +584,11 @@ export const useWorld = create<WorldStore>()((set, get) => {
     startWildfire: (regionId, now = nowMs()) => {
       const state = get()
       const region = regionOf(regionId)
-      if (!region) return { ok: false, message: '지역을 선택하세요.' }
+      if (!region)
+        return {
+          ok: false,
+          message: both('지역을 선택하세요.', 'Choose a region.'),
+        }
       const drought = isInDrought(regionId, state.droughts, state.year)
       const burnedKm2 = wildfireArea(
         region,
@@ -504,9 +612,11 @@ export const useWorld = create<WorldStore>()((set, get) => {
         ],
       })
       const smoke = region.population * 0.3
-      const message =
-        `${region.name} 대형 산불, 약 ${Math.round(burnedKm2).toLocaleString('ko-KR')}km² 소실` +
-        `${drought ? ' (가뭄으로 커짐)' : ''}. 연기 영향 약 ${smoke.toFixed(1)}백만 명.`
+      const message = compose((l) =>
+        l === 'ko'
+          ? `${siteName(region, l)} 대형 산불, 약 ${num(burnedKm2, l)}km² 소실${drought ? ' (가뭄으로 커짐)' : ''}. 연기 영향 약 ${smoke.toFixed(1)}백만 명.`
+          : `Major wildfire in ${siteName(region, l)}: about ${num(burnedKm2, l)} km² burned${drought ? ' (worse because of drought)' : ''}. Smoke affects about ${smoke.toFixed(1)} million people.`,
+      )
       log([{ tone: 'warn', text: message }])
       return { ok: true, message }
     },
@@ -515,7 +625,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       const state = get()
       const fault = getSite(faultId)
       if (fault?.kind !== 'fault')
-        return { ok: false, message: '단층을 선택하세요.' }
+        return {
+          ok: false,
+          message: both('단층을 선택하세요.', 'Choose a fault.'),
+        }
       const impacts = quakeImpacts(
         fault,
         magnitude,
@@ -539,17 +652,35 @@ export const useWorld = create<WorldStore>()((set, get) => {
       })
       const severe = impacts.filter((i) => i.outcome === 'severe')
       const reduced = impacts.filter((i) => i.outcome === 'reduced')
-      const names = (list: typeof impacts) =>
-        list.map((i) => getSite(i.cityId)?.name).join(', ')
-      const message =
-        `${fault.name} 규모 ${magnitude.toFixed(1)} 지진. ` +
-        (impacts.length
-          ? `큰 피해 ${severe.length}곳${severe.length ? ` (${names(severe)})` : ''}, 흔들림 ${impacts.length}곳, 약 ${totalPopulation(impacts.map((i) => i.cityId)).toFixed(1)}백만 명 영향` +
+      const pop = totalPopulation(impacts.map((i) => i.cityId)).toFixed(1)
+      const message = compose((l) => {
+        const list = (items: typeof impacts) =>
+          nameList(
+            items.map((i) => i.cityId),
+            l,
+          )
+        const name = siteName(fault, l)
+        if (l === 'ko') {
+          if (!impacts.length)
+            return `${name} 규모 ${magnitude.toFixed(1)} 지진. 강한 흔들림 범위 안에 주요 도시는 없습니다.`
+          return (
+            `${name} 규모 ${magnitude.toFixed(1)} 지진. 큰 피해 ${severe.length}곳${severe.length ? ` (${list(severe)})` : ''}, 흔들림 ${impacts.length}곳, 약 ${pop}백만 명 영향` +
             (reduced.length
-              ? `. 내진 보강으로 버틴 곳: ${names(reduced)}`
+              ? `. 내진 보강으로 버틴 곳: ${list(reduced)}`
               : '') +
             '.'
-          : '강한 흔들림 범위 안에 주요 도시는 없습니다.')
+          )
+        }
+        if (!impacts.length)
+          return `M${magnitude.toFixed(1)} earthquake on the ${name}. No major city within strong shaking.`
+        return (
+          `M${magnitude.toFixed(1)} earthquake on the ${name}. ${severe.length} cities badly damaged${severe.length ? ` (${list(severe)})` : ''}, ${impacts.length} shaken, about ${pop} million people affected` +
+          (reduced.length
+            ? `. Held up thanks to retrofits: ${list(reduced)}`
+            : '') +
+          '.'
+        )
+      })
       log([{ tone: severe.length ? 'danger' : 'warn', text: message }])
       return { ok: true, message }
     },
@@ -557,11 +688,18 @@ export const useWorld = create<WorldStore>()((set, get) => {
     startDrought: (regionId, severity) => {
       const state = get()
       const region = regionOf(regionId)
-      if (!region) return { ok: false, message: '지역을 선택하세요.' }
+      if (!region)
+        return {
+          ok: false,
+          message: both('지역을 선택하세요.', 'Choose a region.'),
+        }
       if (isInDrought(regionId, state.droughts, state.year)) {
         return {
           ok: false,
-          message: `${region.name}은(는) 이미 가뭄 중입니다.`,
+          message: both(
+            `${siteName(region, 'ko')}은(는) 이미 가뭄 중입니다.`,
+            `${siteName(region, 'en')} is already in drought.`,
+          ),
         }
       }
       const effects = droughtEffects(
@@ -583,9 +721,11 @@ export const useWorld = create<WorldStore>()((set, get) => {
           },
         ],
       })
-      const message =
-        `${region.name} ${SEVERITY_LABEL[severity]} 가뭄 ${effects.durationYears}년. ` +
-        `약 ${effects.affectedMillions.toFixed(1)}백만 명 물 부족, 농작물 ${Math.round(effects.cropLoss)}% 감소.`
+      const message = compose((l) =>
+        l === 'ko'
+          ? `${siteName(region, l)} ${SEVERITY_LABEL[severity]} 가뭄 ${effects.durationYears}년. 약 ${effects.affectedMillions.toFixed(1)}백만 명 물 부족, 농작물 ${Math.round(effects.cropLoss)}% 감소.`
+          : `${SEVERITY_LABEL_EN[severity]} drought in ${siteName(region, l)} for ${effects.durationYears} years. About ${effects.affectedMillions.toFixed(1)} million people short of water, crops down ${Math.round(effects.cropLoss)}%.`,
+      )
       log([{ tone: severity >= 3 ? 'danger' : 'warn', text: message }])
       return { ok: true, message }
     },
@@ -611,7 +751,15 @@ export const useWorld = create<WorldStore>()((set, get) => {
         floodedCityIds,
         history: touchHistory([], { ...base, floodedCityIds }),
       })
-      log([{ tone: 'info', text: `${source} 시나리오를 불러왔습니다.` }])
+      log([
+        {
+          tone: 'info',
+          text: both(
+            `${source.ko} 시나리오를 불러왔습니다.`,
+            `Loaded the scenario from ${source.en}.`,
+          ),
+        },
+      ])
     },
 
     startMission: (id) => {
@@ -631,7 +779,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       log([
         {
           tone: 'info',
-          text: `미션 시작: ${mission.title}. 목표: ${mission.goal}`,
+          text: both(
+            `미션 시작: ${mission.title.ko}. 목표: ${mission.goal.ko}`,
+            `Mission started: ${mission.title.en}. Goal: ${mission.goal.en}`,
+          ),
         },
       ])
     },
@@ -643,7 +794,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       log([
         {
           tone: 'info',
-          text: '미션을 그만두었습니다. 지금 상태에서 자유롭게 이어 갑니다.',
+          text: both(
+            '미션을 그만두었습니다. 지금 상태에서 자유롭게 이어 갑니다.',
+            'Mission abandoned. Carry on freely from here.',
+          ),
         },
       ])
     },
@@ -655,7 +809,15 @@ export const useWorld = create<WorldStore>()((set, get) => {
     reset: () => {
       const curve = get().floodCurve
       set({ ...initialState(), floodCurve: curve })
-      log([{ tone: 'info', text: '시뮬레이션을 처음 상태로 되돌렸습니다.' }])
+      log([
+        {
+          tone: 'info',
+          text: both(
+            '시뮬레이션을 처음 상태로 되돌렸습니다.',
+            'The simulation was reset.',
+          ),
+        },
+      ])
     },
   }
 })

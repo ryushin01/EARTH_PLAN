@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { HistoryPoint } from '../../model/world/types'
 import { decimalYearToDate, formatSigned } from '@/shared/lib'
+import { useT } from '../i18n'
 
 const W = 320
 const H = 96
@@ -68,7 +69,7 @@ function SeriesChart({ title, unit, points, value, format }: SeriesChartProps) {
         </span>
         <span className="display-num text-sm text-ice">
           {h
-            ? `${yearLabel(h.p.year)}년 ${format(h.v)}`
+            ? `${yearLabel(h.p.year)} · ${format(h.v)}`
             : format(values[values.length - 1])}
         </span>
       </figcaption>
@@ -156,15 +157,14 @@ function SeriesChart({ title, unit, points, value, format }: SeriesChartProps) {
 
 /** 해수면·기온 추이 (작은 그래프 두 개 + 표) */
 export function HistoryChart({ points }: { points: HistoryPoint[] }) {
+  const { t } = useT()
   if (points.length < 2) {
     return (
       <section aria-labelledby="history-title" className="grid gap-2">
         <h3 id="history-title" className="label-caps">
-          추이
+          {t('history.title')}
         </h3>
-        <p className="text-sm text-muted">
-          재생하면 해수면·기온 기록이 쌓여 그래프로 나옵니다.
-        </p>
+        <p className="text-sm text-muted">{t('history.empty')}</p>
       </section>
     )
   }
@@ -175,17 +175,17 @@ export function HistoryChart({ points }: { points: HistoryPoint[] }) {
   return (
     <section aria-labelledby="history-title" className="grid gap-3">
       <h3 id="history-title" className="label-caps">
-        추이
+        {t('history.title')}
       </h3>
       <SeriesChart
-        title="해수면"
+        title={t('hud.sea')}
         unit="m"
         points={points}
         value={(p) => p.seaLevel}
         format={(v) => `${formatSigned(v, 2)}`}
       />
       <SeriesChart
-        title="평균 기온"
+        title={t('hud.temp')}
         unit="°C"
         points={points}
         value={(p) => p.warming}
@@ -193,31 +193,29 @@ export function HistoryChart({ points }: { points: HistoryPoint[] }) {
       />
       <details className="text-sm">
         <summary className="label-caps min-h-11 cursor-pointer content-center">
-          표로 보기
+          {t('history.table')}
         </summary>
         <div
           className="max-h-48 overflow-y-auto"
           tabIndex={0}
           role="region"
-          aria-label="추이 기록 표"
+          aria-label={t('history.tableRegion')}
         >
           <table className="w-full text-left">
-            <caption className="sr-only">
-              연도별 해수면, 평균 기온, 침수 도시 수
-            </caption>
+            <caption className="sr-only">{t('history.caption')}</caption>
             <thead className="label-caps">
               <tr>
                 <th scope="col" className="py-1 font-semibold">
-                  연도
+                  {t('history.year')}
                 </th>
                 <th scope="col" className="py-1 font-semibold">
-                  해수면
+                  {t('hud.sea')}
                 </th>
                 <th scope="col" className="py-1 font-semibold">
-                  기온
+                  {t('history.temp')}
                 </th>
                 <th scope="col" className="py-1 font-semibold">
-                  침수 도시
+                  {t('hud.flooded')}
                 </th>
               </tr>
             </thead>
@@ -233,7 +231,9 @@ export function HistoryChart({ points }: { points: HistoryPoint[] }) {
                   <td className="display-num">
                     {formatSigned(p.warming, 2)}°C
                   </td>
-                  <td className="display-num">{p.floodedCities}곳</td>
+                  <td className="display-num">
+                    {t('hud.count', { n: p.floodedCities })}
+                  </td>
                 </tr>
               ))}
             </tbody>

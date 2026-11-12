@@ -5,6 +5,8 @@
 
 3D 지구 위에서 해수면 상승, 화산 분화, 쓰나미, 소행성 충돌, 산불·가뭄을 일으키고 해협 댐·우주 차양·행성 방위 요격망 같은 거대 구조물로 막아 보는 웹 시뮬레이터입니다.
 
+**[데모 바로 보기](https://ryushin01.github.io/EARTH_PLAN/)** · [Storybook](https://ryushin01.github.io/EARTH_PLAN/storybook/)
+
 > **프로젝트 상태:** 0.2.0까지 만든 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
 
 ## 화면
@@ -52,7 +54,7 @@
 | 스타일     | Tailwind CSS 4, Space Grotesk                                                                      |
 | 품질       | ESLint, Prettier, Steiger(FSD 검사), Vitest + Testing Library, Playwright E2E + axe, Lighthouse CI |
 | 문서       | Storybook 10 (`@storybook/react-vite`, a11y 애드온)                                                |
-| 배포·CI    | Vercel, GitHub Actions                                                                             |
+| 배포·CI    | GitHub Pages, GitHub Actions                                                                       |
 
 ## 시작하기
 
@@ -65,15 +67,15 @@ pnpm install
 pnpm dev    # http://localhost:3000
 ```
 
-| 명령                                   | 설명                                                             |
-| -------------------------------------- | ---------------------------------------------------------------- |
-| `pnpm build` / `pnpm preview`          | 정적 사이트 빌드(`dist/client`) / 빌드 결과 실행                 |
-| `pnpm build:all`                       | 사이트와 Storybook(`dist/client/storybook`)을 함께 빌드 (배포용) |
-| `pnpm lint` / `lint:fsd` / `typecheck` | ESLint / FSD 구조 검사 / 타입 검사                               |
-| `pnpm test`                            | 단위·컴포넌트 테스트                                             |
-| `pnpm test:e2e`                        | 프로덕션 빌드 E2E·접근성 검사 (먼저 `build` 필요)                |
-| `pnpm lighthouse`                      | Lighthouse CI 점수 검사 (먼저 `build` 필요)                      |
-| `pnpm storybook`                       | Storybook 개발 서버 (`http://localhost:6006`)                    |
+| 명령                                   | 설명                                                                  |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `pnpm build` / `pnpm preview`          | 정적 사이트 빌드(`dist/client`) / 빌드 결과 실행                      |
+| `pnpm build:all`                       | 사이트와 Storybook을 함께 빌드 (하위 경로는 `BASE_PATH=/EARTH_PLAN/`) |
+| `pnpm lint` / `lint:fsd` / `typecheck` | ESLint / FSD 구조 검사 / 타입 검사                                    |
+| `pnpm test`                            | 단위·컴포넌트 테스트                                                  |
+| `pnpm test:e2e`                        | 프로덕션 빌드 E2E·접근성 검사 (먼저 `build` 필요)                     |
+| `pnpm lighthouse`                      | Lighthouse CI 점수 검사 (먼저 `build` 필요)                           |
+| `pnpm storybook`                       | Storybook 개발 서버 (`http://localhost:6006`)                         |
 
 ## 프로젝트 구조
 
@@ -99,4 +101,5 @@ src/
 | [개발 가이드](docs/development.md)  | 구조, 시뮬레이션 모델, 셰이더, 테스트, 접근성 |
 | [데이터 출처](docs/data-sources.md) | 고도·텍스처 자료와 라이선스, 변환 방법        |
 | [성능](docs/performance.md)         | Lighthouse 측정 결과와 개선 내용              |
+| [배포](docs/deployment.md)          | GitHub Pages 배포와 하위 경로 설정            |
 | [버전 기록](CHANGELOG.md)           | 버전별 변경 내용                              |

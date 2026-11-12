@@ -7,7 +7,7 @@
 - 거대 구조물 3종 추가: 행성 방위 요격망, 공중 소방 거점, 해수 담수화·수로망
 - 시나리오 저장·공유: 공유 링크(`?s=`) 복사·열기, 브라우저에 이름 붙여 저장
 - 성능: 텍스처 WebP 전환(전송량 3.5MB → 1.9MB), 모바일 LCP 3.9초 → 1.1초, 텍스처 해석·셰이더 컴파일 비동기화
-- Lighthouse CI, Vercel 배포 설정(Storybook은 `/storybook`)
+- Lighthouse CI, GitHub Pages 배포(https://ryushin01.github.io/EARTH_PLAN/, Storybook은 `/storybook/`)
 - 쓰나미 진원 필드 `trenchId` → `sourceId`
 
 ## 0.1.0 - 2026-11-12

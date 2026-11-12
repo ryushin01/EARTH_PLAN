@@ -17,7 +17,11 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+      {
+        rel: 'icon',
+        href: `${import.meta.env.BASE_URL}favicon.svg`,
+        type: 'image/svg+xml',
+      },
     ],
   }),
   shellComponent: RootDocument,

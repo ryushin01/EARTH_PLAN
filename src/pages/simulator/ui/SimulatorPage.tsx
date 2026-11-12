@@ -9,6 +9,7 @@ import { useSimulationClock } from '../model/useSimulationClock'
 import { ControlPanel } from './panels/ControlPanel'
 import { MissionHud } from './status/MissionHud'
 import { SiteFinder } from './status/SiteFinder'
+import { SiteInfoCard } from './status/SiteInfoCard'
 import { TimeControls } from './status/TimeControls'
 import { ScenarioShare } from './status/ScenarioShare'
 import { MissionPanel } from './status/MissionPanel'
@@ -72,6 +73,15 @@ export function SimulatorPage() {
   }, [locale, t])
   useSimulationClock()
   const setFloodCurve = useWorld((s) => s.setFloodCurve)
+
+  // 프로덕션에서만 서비스 워커 등록 (다시 방문할 때 텍스처·코드를 캐시에서)
+  useEffect(() => {
+    if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return
+    const base = import.meta.env.BASE_URL
+    navigator.serviceWorker
+      .register(`${base}sw.js`, { scope: base })
+      .catch(() => {})
+  }, [])
 
   // 공유 링크(?s=...)로 열면 그 시나리오를 불러옴
   useEffect(() => {
@@ -175,6 +185,7 @@ export function SimulatorPage() {
             <TimeControls />
             <MissionPanel />
             <SiteFinder />
+            <SiteInfoCard />
             <MissionHud />
             <HistoryPanel />
             <ScenarioShare />

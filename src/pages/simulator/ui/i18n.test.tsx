@@ -39,7 +39,7 @@ describe('언어 전환', () => {
       '베수비오 분화',
     )
     act(() => useLocale.getState().setLocale('en'))
-    expect(screen.getByRole('tab', { name: 'Sea level' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Sea' })).toBeInTheDocument()
     expect(screen.getByRole('list', { name: 'Event log' })).toHaveTextContent(
       'Vesuvius erupts at VEI 5',
     )

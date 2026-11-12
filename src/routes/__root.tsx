@@ -22,6 +22,14 @@ export const Route = createRootRoute({
         href: `${import.meta.env.BASE_URL}favicon.svg`,
         type: 'image/svg+xml',
       },
+      {
+        rel: 'manifest',
+        href: `${import.meta.env.BASE_URL}manifest.webmanifest`,
+      },
+      {
+        rel: 'apple-touch-icon',
+        href: `${import.meta.env.BASE_URL}apple-touch-icon.png`,
+      },
     ],
   }),
   shellComponent: RootDocument,

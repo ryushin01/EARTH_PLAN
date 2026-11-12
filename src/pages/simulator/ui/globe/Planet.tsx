@@ -13,7 +13,7 @@ import {
 } from 'three'
 import type { DirectionalLight, Group, ShaderMaterial } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
-import { TEXTURES } from '@/shared/config'
+import { TEXTURES, TEXTURES_SMALL, prefersSmallTextures } from '@/shared/config'
 import { latLonToVector3 } from '@/shared/lib'
 import type { LatLon, Vec3 } from '@/shared/lib'
 import {
@@ -40,11 +40,13 @@ interface PlanetProps {
   onSurfaceClick?: (point: Vec3) => void
 }
 
+// 처음 불러올 때 한 번 정함 (도중에 바꾸면 텍스처를 다시 받아야 하므로)
+const TEXTURE_SET = prefersSmallTextures() ? TEXTURES_SMALL : TEXTURES
 const TEXTURE_URLS = [
-  TEXTURES.albedo,
-  TEXTURES.lights,
-  TEXTURES.elevation,
-  TEXTURES.clouds,
+  TEXTURE_SET.albedo,
+  TEXTURE_SET.lights,
+  TEXTURE_SET.elevation,
+  TEXTURE_SET.clouds,
 ]
 
 const vec4s = (n: number) => Array.from({ length: n }, () => new Vector4())

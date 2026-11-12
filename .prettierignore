@@ -8,3 +8,4 @@ storybook-static
 playwright-report
 test-results
 lhci-report
+public/sw.js

@@ -128,7 +128,10 @@ test.describe('시뮬레이션 흐름', () => {
       page.getByRole('tabpanel', { name: '화산' }).getByRole('status'),
     ).toContainText('베수비오 분화')
     await expect(
-      page.getByRole('complementary').getByRole('listitem').first(),
+      page
+        .getByRole('list', { name: '사건 기록' })
+        .getByRole('listitem')
+        .first(),
     ).toContainText('베수비오 분화')
   })
 
@@ -195,7 +198,10 @@ test.describe('저장·공유', () => {
       other.getByRole('slider', { name: '해수면 (2020년 대비)' }),
     ).toHaveValue('22')
     await expect(
-      other.getByRole('complementary').getByRole('listitem').first(),
+      other
+        .getByRole('list', { name: '사건 기록' })
+        .getByRole('listitem')
+        .first(),
     ).toContainText('공유 링크의 시나리오를 불러왔습니다')
   })
 
@@ -206,5 +212,31 @@ test.describe('저장·공유', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByRole('radio', { name: /중간/ })).toBeChecked()
     expect(errors).toEqual([])
+  })
+})
+
+test.describe('미션과 추이', () => {
+  test('요격망을 지으면 2032년 소행성 미션에 성공하고 추이 기록이 쌓인다', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    const aside = page.getByRole('complementary', { name: '지구 상태' })
+    await aside.getByRole('button', { name: '2032년 소행성 막기 시작' }).click()
+    await page.getByRole('tab', { name: '구조물' }).click()
+    await page
+      .getByRole('radio', { name: /행성 방위 요격망/ })
+      .check({ force: true })
+    await page.getByRole('button', { name: /행성 방위 요격망 짓기/ }).click()
+    await aside.getByRole('radio', { name: '10년' }).check({ force: true })
+    await aside.getByRole('button', { name: '재생' }).click()
+    await expect(aside.getByRole('region', { name: '미션' })).toContainText(
+      '성공',
+      { timeout: 15_000 },
+    )
+    await expect(aside.getByRole('button', { name: '재생' })).toBeVisible()
+    await aside.getByText('표로 보기').click()
+    await expect(
+      aside.getByRole('table', { name: /해수면, 평균 기온/ }),
+    ).toContainText('2031.')
   })
 })

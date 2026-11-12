@@ -15,6 +15,7 @@ import { SCENARIOS, baselineRiseRate, baselineWarming } from './scenario'
 import type {
   CityState,
   Eruption,
+  HistoryPoint,
   EventTone,
   Storm,
   Tsunami,
@@ -338,7 +339,8 @@ export function stepStorms(
       let lon = s.lon + lonSpeed * dtDays
       if (lon > 180) lon -= 360
       if (lon < -180) lon += 360
-      const lat = s.lat + s.hemisphere * (recurved ? 1.6 : 0.8) * dtDays
+      const lat =
+        s.lat + s.hemisphere * (recurved ? 1.6 : (s.poleward ?? 0.8)) * dtDays
       return { ...s, lat, lon }
     })
     .filter((s) => Math.abs(s.lat) < 55)
@@ -369,9 +371,114 @@ export function stepStorms(
       bornYear: year,
       lifeDays: 6 + random() * 6,
       hemisphere: basin.hemisphere,
+      // 일찍 북상해 꺾이는 폭풍(일본·한반도·미국 동부 쪽)과 서쪽으로 곧장 가는 폭풍이 섞이도록
+      poleward: 0.5 + random() * 1.8,
     })
   }
   return moved
+}
+
+// ── 열대 저기압 상륙 ──────────────────────────────────
+
+/** 폭풍 해일 높이 (m) */
+export function stormSurge(category: number): number {
+  return 0.5 + category * 0.9
+}
+
+/** 폭풍이 해안 도시를 덮치는 반경 (km) */
+export function stormReachKm(category: number): number {
+  return 120 + category * 40
+}
+
+export function stormLandfalls(
+  storms: Storm[],
+  state: Pick<WorldState, 'seaLevel' | 'structures' | 'year'>,
+): { storms: Storm[]; events: NewEvent[]; damaged: number } {
+  const events: NewEvent[] = []
+  let damaged = 0
+  const next = storms.map((storm) => {
+    const hit = new Set(storm.hitCityIds ?? [])
+    for (const city of CITIES) {
+      if (
+        !city.coastal ||
+        hit.has(city.id) ||
+        city.basins.includes('mediterranean')
+      )
+        continue
+      if (distanceKm(storm, city) > stormReachKm(storm.category)) continue
+      hit.add(city.id)
+      if (storm.category < 3) continue
+      const surge = stormSurge(storm.category)
+      // 기록은 4등급 이상만 남기고, 피해 횟수는 3등급부터 셉니다
+      const loud = storm.category >= 4
+      const protection = Math.max(
+        city.defense - state.seaLevel,
+        seaProtection(city.id, state.structures, state.year) - state.seaLevel,
+        waveProtection(city.id, state.structures, state.year),
+      )
+      if (surge <= protection) {
+        if (loud)
+          events.push({
+            tone: 'good',
+            text: `${storm.category}등급 열대 저기압의 해일 ${surge.toFixed(1)}m를 ${city.name} 방어 시설이 막았습니다.`,
+          })
+      } else {
+        damaged++
+        if (loud)
+          events.push({
+            tone: 'danger',
+            text: `${storm.category}등급 열대 저기압이 ${city.name}에 상륙, 해일 ${surge.toFixed(1)}m 피해.`,
+          })
+      }
+    }
+    return hit.size === (storm.hitCityIds?.length ?? 0)
+      ? storm
+      : { ...storm, hitCityIds: [...hit] }
+  })
+  return { storms: next, events, damaged }
+}
+
+// ── 추이 기록 ─────────────────────────────────────────
+
+export const HISTORY_INTERVAL = 0.1
+const MAX_HISTORY = 400
+
+/** 0.1년마다 한 점씩 기록하고, 너무 많아지면 하나씩 건너 솎아 냅니다 */
+export function recordHistory(
+  history: HistoryPoint[],
+  point: HistoryPoint,
+): HistoryPoint[] {
+  const last = history.at(-1)
+  if (last && point.year - last.year < HISTORY_INTERVAL) return history
+  const next = [...history, point]
+  if (next.length <= MAX_HISTORY) return next
+  return next.filter((_, i) => i % 2 === 0 || i === next.length - 1)
+}
+
+/** 시간이 멈춘 채 값이 바뀌면 마지막 기록점을 고칩니다 */
+export function touchHistory(
+  history: HistoryPoint[],
+  state: Pick<
+    WorldState,
+    | 'year'
+    | 'seaLevel'
+    | 'scenario'
+    | 'structures'
+    | 'eruptions'
+    | 'impacts'
+    | 'floodedCityIds'
+  >,
+): HistoryPoint[] {
+  const point = {
+    year: state.year,
+    seaLevel: state.seaLevel,
+    warming: warming(state),
+    floodedCities: state.floodedCityIds.length,
+  }
+  const last = history.at(-1)
+  if (last && state.year - last.year < HISTORY_INTERVAL)
+    return [...history.slice(0, -1), point]
+  return [...history, point]
 }
 
 // ── 시간 진행 ──────────────────────────────────────────
@@ -412,14 +519,22 @@ export function step(
   const flooding = detectFlooding(state.floodedCityIds, next)
   events.push(...flooding.events)
 
-  const storms = stepStorms(state.storms, year, dtYears, warming(next), random)
-  for (const storm of storms) {
-    if (!state.storms.some((s) => s.id === storm.id) && storm.category >= 5) {
-      events.push({
-        tone: 'warn',
-        text: `5등급 초강력 열대 저기압 발생 (${storm.lat.toFixed(0)}°, ${storm.lon.toFixed(0)}°)`,
-      })
-    }
+  // 빠른 속도에서도 폭풍이 도시를 건너뛰지 않도록 반나절 단위로 나눠 진행
+  const substeps = Math.min(
+    400,
+    Math.max(1, Math.ceil((dtYears * DAYS_PER_YEAR) / 0.5)),
+  )
+  const subDt = dtYears / substeps
+  const warmingNow = warming(next)
+  let storms = state.storms
+  let stormDamage = state.stormDamage
+  for (let k = 1; k <= substeps; k++) {
+    const subYear = state.year + subDt * k
+    storms = stepStorms(storms, subYear, subDt, warmingNow, random)
+    const landfall = stormLandfalls(storms, { ...next, year: subYear })
+    storms = landfall.storms
+    stormDamage += landfall.damaged
+    events.push(...landfall.events)
   }
 
   const droughts = state.droughts.filter((d) => year < d.year + d.durationYears)
@@ -448,6 +563,13 @@ export function step(
       seaLevel,
       budget,
       storms,
+      stormDamage,
+      history: recordHistory(state.history, {
+        year,
+        seaLevel,
+        warming: warming(next),
+        floodedCities: flooding.floodedCityIds.length,
+      }),
       wildfires,
       droughts,
       floodedCityIds: flooding.floodedCityIds,

@@ -16,6 +16,7 @@ export function BuildPanel() {
   const structures = useWorld((s) => s.structures)
   const selectedSiteId = useWorld((s) => s.selectedSiteId)
   const build = useWorld((s) => s.build)
+  const inMission = useWorld((s) => s.mission?.status === 'active')
   const select = useWorld((s) => s.select)
 
   const [kind, setKind] = useState<StructureKind>('sea-wall')
@@ -81,23 +82,31 @@ export function BuildPanel() {
           })()}
         />
       )}
-      <div className="flex min-h-11 items-center gap-3">
-        <input
-          id={instantId}
-          type="checkbox"
-          checked={instant}
-          onChange={(e) => setInstant(e.target.checked)}
-          className="size-5 accent-accent"
-        />
-        <label htmlFor={instantId} className="text-sm">
-          건설 기간 없이 바로 완공 (실험용)
-        </label>
-      </div>
+      {inMission ? (
+        <p className="text-sm text-muted">
+          미션 중에는 건설 기간이 그대로 적용됩니다.
+        </p>
+      ) : (
+        <div className="flex min-h-11 items-center gap-3">
+          <input
+            id={instantId}
+            type="checkbox"
+            checked={instant}
+            onChange={(e) => setInstant(e.target.checked)}
+            className="size-5 accent-accent"
+          />
+          <label htmlFor={instantId} className="text-sm">
+            건설 기간 없이 바로 완공 (실험용)
+          </label>
+        </div>
+      )}
       <Button
         variant="primary"
         disabled={!affordable}
         aria-describedby={affordable ? undefined : `${instantId}-budget`}
-        onClick={() => setResult(build(kind, siteId, { instant }))}
+        onClick={() =>
+          setResult(build(kind, siteId, { instant: instant && !inMission }))
+        }
       >
         {spec.name} 짓기 · {formatBillions(spec.cost)}
       </Button>

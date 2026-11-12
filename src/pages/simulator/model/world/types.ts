@@ -1,6 +1,7 @@
 import type { BuiltStructure } from '../structure/types'
 import type { ScenarioId } from './scenario'
 import type { SpeedId } from './time'
+import type { MissionState } from './missions'
 
 export type EventTone = 'info' | 'good' | 'warn' | 'danger'
 
@@ -91,6 +92,18 @@ export interface Storm {
   bornYear: number
   lifeDays: number
   hemisphere: 1 | -1
+  /** 전향 전 북상(남반구는 남하) 속도 (°/일) */
+  poleward?: number
+  /** 이미 해일 피해를 계산한 도시 */
+  hitCityIds?: string[]
+}
+
+/** 추이 그래프용 기록 한 점 */
+export interface HistoryPoint {
+  year: number
+  seaLevel: number
+  warming: number
+  floodedCities: number
 }
 
 export type CityState = 'safe' | 'at-risk' | 'protected' | 'flooded'
@@ -111,6 +124,11 @@ export interface WorldState {
   wildfires: Wildfire[]
   droughts: Drought[]
   storms: Storm[]
+  history: HistoryPoint[]
+  /** 열대 저기압 해일로 큰 피해를 입은 횟수 */
+  stormDamage: number
+  /** 진행 중이거나 끝난 미션 */
+  mission: MissionState | null
   events: WorldEvent[]
   /** 해수면으로 잠긴 적이 있는 도시 (알림 중복 방지) */
   floodedCityIds: string[]

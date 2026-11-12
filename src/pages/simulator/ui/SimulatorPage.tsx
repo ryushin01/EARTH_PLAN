@@ -8,6 +8,8 @@ import { MissionHud } from './status/MissionHud'
 import { SiteFinder } from './status/SiteFinder'
 import { TimeControls } from './status/TimeControls'
 import { ScenarioShare } from './status/ScenarioShare'
+import { MissionPanel } from './status/MissionPanel'
+import { HistoryPanel } from './status/HistoryPanel'
 import { SHARE_PARAM, decodeSnapshot } from '../model/world/snapshot'
 
 // three.js는 브라우저에서만 불러옵니다
@@ -115,8 +117,10 @@ export function SimulatorPage() {
               지구 상태
             </h2>
             <TimeControls />
+            <MissionPanel />
             <SiteFinder />
             <MissionHud />
+            <HistoryPanel />
             <ScenarioShare />
           </aside>
         </div>

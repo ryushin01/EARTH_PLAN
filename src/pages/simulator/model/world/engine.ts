@@ -1,7 +1,7 @@
 import { CITIES, getSite } from '../site/data'
 import type { City, Strait } from '../site/types'
 import { STRUCTURES, STRUCTURE_EN } from '../structure/catalog'
-import { isActive } from '../structure/types'
+import { effectFactor, isActive } from '../structure/types'
 import type { BuiltStructure } from '../structure/types'
 import type { StructureKind } from '../structure/catalog'
 import {
@@ -48,7 +48,10 @@ export function riseReduction(
   year: number,
 ): number {
   const total = activeOf(structures, year).reduce(
-    (sum, s) => sum + (STRUCTURES[s.kind].riseReduction ?? 0),
+    (sum, s) =>
+      sum +
+      (STRUCTURES[s.kind].riseReduction ?? 0) *
+        effectFactor(s, year, STRUCTURES[s.kind].rampYears),
     0,
   )
   return Math.min(0.8, total)
@@ -135,7 +138,10 @@ export function warming(
     Partial<Pick<WorldState, 'impacts'>>,
 ): number {
   const shade = activeOf(state.structures, state.year).reduce(
-    (sum, s) => sum + (STRUCTURES[s.kind].cooling ?? 0),
+    (sum, s) =>
+      sum +
+      (STRUCTURES[s.kind].cooling ?? 0) *
+        effectFactor(s, state.year, STRUCTURES[s.kind].rampYears),
     0,
   )
   return (

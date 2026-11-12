@@ -44,6 +44,12 @@
 
 텍스처는 `ImageBitmapLoader`로 메인 스레드 밖에서 해석하고, 셰이더는 `compileAsync`로 미리 컴파일한 뒤 지구를 보여 줍니다.
 
+## 설치·캐시
+
+- `public/manifest.webmanifest`, 아이콘(192·512·maskable·apple-touch)으로 홈 화면에 설치할 수 있습니다.
+- `public/sw.js`는 프로덕션에서만 등록합니다. 페이지는 네트워크 먼저(끊기면 캐시), `assets/`·`textures/`는 캐시 먼저, Storybook은 건드리지 않습니다. 캐시를 바꾸면 `VERSION`을 올립니다.
+- 작은 화면(767px 이하)이나 메모리 2GB 이하 기기는 `TEXTURES_SMALL`(1024px)을 씁니다. 고도 텍스처는 값이 계산에 쓰이므로 최근접으로 줄이고 무손실로 저장했습니다.
+
 ## 언어
 
 - `shared/i18n`: 언어 상태(zustand, `localStorage`에 기억)와 `<html lang>` 동기화, 보간 함수

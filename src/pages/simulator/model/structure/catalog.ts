@@ -9,9 +9,11 @@ export type StructureKind =
   | 'firefighting-base'
   | 'desalination'
   | 'seismic-retrofit'
+  | 'carbon-capture'
+  | 'renewable-transition'
 
 export type StructureTarget =
-  'city' | 'strait' | 'glacier' | 'volcano' | 'region' | 'orbit'
+  'city' | 'strait' | 'glacier' | 'volcano' | 'region' | 'orbit' | 'global'
 
 export interface StructureSpec {
   kind: StructureKind
@@ -40,6 +42,8 @@ export interface StructureSpec {
   droughtReduction?: number
   /** 지진 피해 감소율 (0~1) */
   quakeReduction?: number
+  /** 완공 뒤 효과가 다 나타나기까지 걸리는 해 (감축 정책) */
+  rampYears?: number
 }
 
 export const STRUCTURES: Record<StructureKind, StructureSpec> = {
@@ -144,6 +148,30 @@ export const STRUCTURES: Record<StructureKind, StructureSpec> = {
     buildYears: 3,
     quakeReduction: 0.7,
   },
+  'carbon-capture': {
+    kind: 'carbon-capture',
+    name: '직접 공기 포집망',
+    summary:
+      '대기에서 이산화탄소를 빨아들여 땅속에 묻는 시설망. 완공 뒤 20년에 걸쳐 기온 0.3°C, 해수면 상승 속도 5%를 줄입니다.',
+    target: 'global',
+    cost: 600,
+    buildYears: 8,
+    cooling: 0.3,
+    riseReduction: 0.05,
+    rampYears: 20,
+  },
+  'renewable-transition': {
+    kind: 'renewable-transition',
+    name: '재생에너지 전환',
+    summary:
+      '발전·수송·산업을 재생에너지로 바꾸는 전 지구 투자. 완공 뒤 25년에 걸쳐 기온 0.6°C, 해수면 상승 속도 10%를 줄입니다.',
+    target: 'global',
+    cost: 1000,
+    buildYears: 10,
+    cooling: 0.6,
+    riseReduction: 0.1,
+    rampYears: 25,
+  },
 }
 
 /** 구조물 영어 이름·설명 */
@@ -195,6 +223,16 @@ export const STRUCTURE_EN: Record<
     summary:
       'Turns seawater into fresh water and pipes it inland. Cuts drought damage in the region by 50%.',
   },
+  'carbon-capture': {
+    name: 'Direct Air Capture Network',
+    summary:
+      'Pulls CO₂ out of the air and stores it underground. Over 20 years after completion it cools the planet by 0.3°C and slows sea-level rise by 5%.',
+  },
+  'renewable-transition': {
+    name: 'Renewable Energy Transition',
+    summary:
+      'A global shift of power, transport and industry to renewables. Over 25 years after completion it cools the planet by 0.6°C and slows sea-level rise by 10%.',
+  },
   'seismic-retrofit': {
     name: 'Seismic Retrofit',
     summary:
@@ -223,6 +261,7 @@ export const TARGET_LABEL_EN: Record<StructureTarget, string> = {
   volcano: 'Volcano',
   region: 'Region',
   orbit: 'Orbit',
+  global: 'Global',
 }
 
 export const STRUCTURE_LIST = Object.values(STRUCTURES)
@@ -234,4 +273,5 @@ export const TARGET_LABEL: Record<StructureTarget, string> = {
   volcano: '화산',
   region: '지역',
   orbit: '궤도',
+  global: '전 지구',
 }

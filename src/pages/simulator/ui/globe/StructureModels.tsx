@@ -184,6 +184,8 @@ function Model({
       )
     case 'solar-shade':
     case 'planetary-defense':
+    case 'carbon-capture':
+    case 'renewable-transition':
       return null
   }
 }
@@ -253,6 +255,8 @@ export function StructureModels({
       structures.flatMap((structure) => {
         if (
           structure.kind === 'solar-shade' ||
+          structure.kind === 'carbon-capture' ||
+          structure.kind === 'renewable-transition' ||
           structure.kind === 'planetary-defense'
         )
           return []

@@ -84,7 +84,9 @@ export function parseSnapshot(value: unknown): Snapshot | null {
     if (typeof siteId !== 'string') return null
     const target = STRUCTURES[kind as StructureKind].target
     if (
-      target === 'orbit' ? siteId !== 'orbit' : getSite(siteId)?.kind !== target
+      target === 'orbit' || target === 'global'
+        ? siteId !== target
+        : getSite(siteId)?.kind !== target
     )
       return null
     if (!isNumber(start, 1900, 3000) || !isNumber(complete, 1900, 3100))

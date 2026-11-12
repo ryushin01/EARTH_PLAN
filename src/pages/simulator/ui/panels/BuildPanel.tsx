@@ -48,8 +48,8 @@ export function BuildPanel() {
   const candidates = ALL_SITES.filter((site) => site.kind === spec.target)
   const selected = candidates.find((c) => c.id === selectedSiteId)
   const siteId =
-    spec.target === 'orbit'
-      ? 'orbit'
+    spec.target === 'orbit' || spec.target === 'global'
+      ? spec.target
       : (selected?.id ?? siteByKind[kind] ?? candidates.at(0)?.id ?? '')
   const affordable = budget >= spec.cost
 
@@ -92,7 +92,7 @@ export function BuildPanel() {
       <p className="text-sm leading-relaxed text-muted">
         {structureSummary(kind, locale)}
       </p>
-      {spec.target === 'orbit' ? null : (
+      {spec.target === 'orbit' || spec.target === 'global' ? null : (
         <SelectField
           label={t('build.where', { target: targetLabel(spec.target) })}
           value={siteId}
@@ -167,8 +167,8 @@ export function BuildPanel() {
                     <span className="text-muted">
                       {' '}
                       ·{' '}
-                      {s.siteId === 'orbit'
-                        ? targetLabel('orbit')
+                      {s.siteId === 'orbit' || s.siteId === 'global'
+                        ? targetLabel(s.siteId)
                         : siteName(s.siteId, locale)}
                     </span>
                   </span>

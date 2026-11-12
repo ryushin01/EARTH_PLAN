@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { getSite } from '../site/data'
-import { STRUCTURES, STRUCTURE_EN } from '../structure/catalog'
+import {
+  STRUCTURES,
+  STRUCTURE_EN,
+  TARGET_LABEL,
+  TARGET_LABEL_EN,
+} from '../structure/catalog'
 import type { StructureKind } from '../structure/catalog'
 import { formatBillions } from '@/shared/lib'
 import {
@@ -293,8 +298,9 @@ export const useWorld = create<WorldStore>()((set, get) => {
     build: (kind, siteId, options) => {
       const state = get()
       const spec = STRUCTURES[kind]
-      const site = spec.target === 'orbit' ? null : getSite(siteId)
-      if (spec.target !== 'orbit' && site?.kind !== spec.target) {
+      const placeless = spec.target === 'orbit' || spec.target === 'global'
+      const site = placeless ? null : getSite(siteId)
+      if (placeless ? siteId !== spec.target : site?.kind !== spec.target) {
         return {
           ok: false,
           message: both(
@@ -309,8 +315,8 @@ export const useWorld = create<WorldStore>()((set, get) => {
         return {
           ok: false,
           message: both(
-            `${site ? siteName(site, 'ko') : '궤도'}에는 이미 ${spec.name}이(가) 있습니다.`,
-            `${site ? siteName(site, 'en') : 'Orbit'} already has a ${STRUCTURE_EN[kind].name}.`,
+            `${site ? siteName(site, 'ko') : TARGET_LABEL[spec.target]}에는 이미 ${spec.name}이(가) 있습니다.`,
+            `${site ? siteName(site, 'en') : TARGET_LABEL_EN[spec.target]} already has a ${STRUCTURE_EN[kind].name}.`,
           ),
         }
       }

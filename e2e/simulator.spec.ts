@@ -289,7 +289,7 @@ test.describe('언어', () => {
     await expect(
       page.getByRole('heading', { name: 'Earth Control' }),
     ).toBeVisible()
-    await expect(page.getByRole('tab', { name: 'Sea level' })).toHaveAttribute(
+    await expect(page.getByRole('tab', { name: 'Sea' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
@@ -309,5 +309,33 @@ test.describe('언어', () => {
     )
     await page.getByRole('button', { name: '한국어' }).click()
     await expect(page.locator('html')).toHaveAttribute('lang', 'ko')
+  })
+})
+
+test.describe('설치와 지점 정보', () => {
+  test('매니페스트를 연결하고 서비스 워커를 등록한다', async ({ page }) => {
+    await page.goto('/')
+    const href = await page.locator('link[rel="manifest"]').getAttribute('href')
+    expect(href).toBeTruthy()
+    const manifest = await (await page.request.get(href!)).json()
+    expect(manifest.short_name).toBe('EARTH PLAN')
+    await expect
+      .poll(() =>
+        page.evaluate(
+          async () => (await navigator.serviceWorker.getRegistrations()).length,
+        ),
+      )
+      .toBeGreaterThan(0)
+  })
+
+  test('지점을 고르면 정보 카드가 나온다', async ({ page }) => {
+    await page.goto('/')
+    await page
+      .getByRole('combobox', { name: '지점으로 이동' })
+      .selectOption('istanbul')
+    const card = page.getByRole('region', { name: /이스탄불/ })
+    await expect(card).toContainText('인구')
+    await card.getByRole('button', { name: '선택 해제' }).click()
+    await expect(card).toBeHidden()
   })
 })

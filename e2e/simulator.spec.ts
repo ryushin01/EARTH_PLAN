@@ -43,6 +43,8 @@ test.describe('시뮬레이터 첫 화면', () => {
   }
 
   test('모든 탭에서 axe 접근성 검사를 통과한다', async ({ page }) => {
+    // 탭 6개를 차례로 검사하므로 느린 CI에서도 끝나도록 넉넉히
+    test.setTimeout(120_000)
     await page.goto('/')
     await page.locator('canvas').waitFor()
     for (const name of [

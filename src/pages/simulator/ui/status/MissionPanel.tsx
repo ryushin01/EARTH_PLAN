@@ -2,6 +2,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { MISSIONS, MISSION_BY_ID } from '../../model/world/missions'
 import type { Mission } from '../../model/world/missions'
 import { useWorld } from '../../model/world/store'
+import { MissionResultDialog } from './MissionResultDialog'
 import { formatSimDate } from './TimeControls'
 import { Button } from '@/shared/ui'
 import { cn, decimalYearToDate, formatBillions } from '@/shared/lib'
@@ -75,6 +76,7 @@ function ActiveMission({ mission }: { mission: Mission }) {
           ))}
         </ul>
       ) : null}
+      <MissionResultDialog mission={mission} />
       <Button size="sm" onClick={quitMission}>
         {status === 'active' ? '미션 그만두기' : '미션 닫기'}
       </Button>
@@ -89,7 +91,11 @@ export function MissionPanel() {
   const mission = missionId ? MISSION_BY_ID[missionId] : undefined
 
   return (
-    <section aria-labelledby="mission-title" className="grid gap-3">
+    <section
+      id="mission"
+      aria-labelledby="mission-title"
+      className="grid scroll-mt-[calc(45svh+0.5rem)] gap-3 lg:scroll-mt-0"
+    >
       <h3 id="mission-title" className="label-caps">
         미션
       </h3>

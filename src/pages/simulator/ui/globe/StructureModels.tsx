@@ -155,6 +155,33 @@ function Model({
           </mesh>
         </group>
       )
+    case 'seismic-retrofit':
+      return (
+        <group>
+          {[-0.008, 0.008].map((x) => (
+            <mesh key={x} position={[x, 0.012, 0]}>
+              <boxGeometry args={[0.006, 0.024, 0.006]} />
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={0.5}
+                transparent
+                opacity={opacity}
+              />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.012, 0]} rotation={[0, 0, Math.PI / 4]}>
+            <boxGeometry args={[0.024, 0.003, 0.004]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={0.5}
+              transparent
+              opacity={opacity}
+            />
+          </mesh>
+        </group>
+      )
     case 'solar-shade':
     case 'planetary-defense':
       return null

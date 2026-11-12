@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from 'react'
+import { useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { useProgress } from '@react-three/drei'
@@ -109,6 +109,9 @@ export function GlobeViewport({
   const autoRotate = autoRotateChoice ?? !reducedMotion
   const [showClouds, setShowClouds] = useState(true)
   const [showMarkers, setShowMarkers] = useState(true)
+  // 모바일에서는 보기 토글을 접어 둠
+  const [moreOpen, setMoreOpen] = useState(false)
+  const optionsId = useId()
 
   const perform = (action: CameraAction) => {
     setAutoRotate(false)
@@ -125,10 +128,7 @@ export function GlobeViewport({
 
   return (
     <div
-      className={cn(
-        'flex h-full w-full flex-col lg:relative lg:block',
-        className,
-      )}
+      className={cn('relative flex h-full w-full flex-col lg:block', className)}
     >
       {/* 초점을 받으면 화살표 키로 돌리고 +, − 키로 확대합니다 */}
       <div
@@ -165,38 +165,55 @@ export function GlobeViewport({
         </Canvas>
       </div>
       <LoadingStatus />
-      <div className="pointer-events-none flex flex-wrap items-end justify-center gap-2 px-3 pt-2 lg:absolute lg:inset-x-0 lg:bottom-8 lg:gap-3 lg:p-3">
+      <div className="pointer-events-none absolute inset-x-0 bottom-1 flex flex-wrap items-end justify-center gap-2 px-3 lg:bottom-8 lg:gap-3 lg:p-3">
         <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-xs border border-line bg-panel p-1.5 backdrop-blur">
           {BUTTONS.map((button) => (
             <Button
               key={button.action}
               size="sm"
               indicator={false}
-              className="min-w-11 text-base"
+              className="min-w-10 text-base lg:min-w-11"
               aria-label={button.label}
               onClick={() => perform(button.action)}
             >
               {button.symbol}
             </Button>
           ))}
-          <ToggleButton
-            pressed={autoRotate}
-            onClick={() => setAutoRotate(!autoRotate)}
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            aria-controls={optionsId}
+            onClick={() => setMoreOpen((v) => !v)}
+            className="min-h-9 rounded-xs border border-line-strong px-3 font-display text-xs font-semibold uppercase tracking-[0.04em] text-ice lg:hidden"
           >
-            자동 회전
-          </ToggleButton>
-          <ToggleButton
-            pressed={showClouds}
-            onClick={() => setShowClouds((v) => !v)}
+            보기
+          </button>
+          <div
+            id={optionsId}
+            className={cn(
+              'flex-wrap justify-center gap-1.5 lg:flex',
+              moreOpen ? 'flex' : 'hidden',
+            )}
           >
-            구름
-          </ToggleButton>
-          <ToggleButton
-            pressed={showMarkers}
-            onClick={() => setShowMarkers((v) => !v)}
-          >
-            지점
-          </ToggleButton>
+            <ToggleButton
+              pressed={autoRotate}
+              onClick={() => setAutoRotate(!autoRotate)}
+            >
+              자동 회전
+            </ToggleButton>
+            <ToggleButton
+              pressed={showClouds}
+              onClick={() => setShowClouds((v) => !v)}
+            >
+              구름
+            </ToggleButton>
+            <ToggleButton
+              pressed={showMarkers}
+              onClick={() => setShowMarkers((v) => !v)}
+            >
+              지점
+            </ToggleButton>
+          </div>
         </div>
       </div>
     </div>

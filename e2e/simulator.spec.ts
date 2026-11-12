@@ -51,6 +51,7 @@ test.describe('시뮬레이터 첫 화면', () => {
       '해수면',
       '화산',
       '쓰나미',
+      '지진',
       '소행성',
       '산불·가뭄',
       '구조물',
@@ -233,10 +234,47 @@ test.describe('미션과 추이', () => {
       '성공',
       { timeout: 15_000 },
     )
+    const result = page.getByRole('dialog', { name: /미션 성공/ })
+    await expect(result).toBeVisible()
+    await expect(result).toContainText('쓴 예산')
+    await result.getByRole('button', { name: '닫기' }).click()
+    await expect(result).toBeHidden()
     await expect(aside.getByRole('button', { name: '재생' })).toBeVisible()
     await aside.getByText('표로 보기').click()
     await expect(
       aside.getByRole('table', { name: /해수면, 평균 기온/ }),
     ).toContainText('2031.')
+  })
+})
+
+test.describe('지진과 모바일', () => {
+  test('양산 단층 지진이 경주에 피해를 준다', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('tab', { name: '지진' }).click()
+    const panel = page.getByRole('tabpanel', { name: '지진' })
+    await panel.getByRole('combobox', { name: '단층' }).selectOption('yangsan')
+    await panel.getByRole('button', { name: '양산 단층 지진 일으키기' }).click()
+    await expect(
+      panel.getByRole('region', { name: '최근 지진 피해' }),
+    ).toContainText('경주')
+  })
+
+  test('모바일에서 지구는 위에 고정되고 아래 내비게이션으로 이동한다', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/')
+    const nav = page.getByRole('navigation', { name: '화면 이동' })
+    await nav.getByRole('link', { name: '지구 상태' }).click()
+    await expect(
+      page.getByRole('heading', { name: '지구 상태' }),
+    ).toBeInViewport()
+    await expect(
+      page.getByRole('group', { name: '지구본 조작 영역' }),
+    ).toBeInViewport()
+    const more = page.getByRole('button', { name: '보기' })
+    await expect(more).toHaveAttribute('aria-expanded', 'false')
+    await more.click()
+    await expect(page.getByRole('button', { name: '구름' })).toBeVisible()
   })
 })

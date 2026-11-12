@@ -36,6 +36,9 @@ import {
   impactEnergyMt,
   impactTsunamiMagnitude,
   isInDrought,
+  quakeImpacts,
+  quakeSevereRadiusKm,
+  quakeStrongRadiusKm,
   regionOf,
   thermalRadiusKm,
   wildfireArea,
@@ -78,6 +81,11 @@ interface WorldActions {
     now?: number,
   ) => ActionResult
   startWildfire: (regionId: string, now?: number) => ActionResult
+  triggerQuake: (
+    faultId: string,
+    magnitude: number,
+    now?: number,
+  ) => ActionResult
   startDrought: (regionId: string, severity: 1 | 2 | 3) => ActionResult
   loadSnapshot: (snapshot: Snapshot, source: string) => void
   startMission: (id: string) => void
@@ -102,6 +110,7 @@ function initialState(): WorldState {
     eruptions: [],
     tsunamis: [],
     impacts: [],
+    quakes: [],
     wildfires: [],
     droughts: [],
     storms: [],
@@ -112,6 +121,7 @@ function initialState(): WorldState {
     nextEventId: 1,
     history: [],
     stormDamage: 0,
+    spent: 0,
     mission: null,
   }
   return { ...state, history: touchHistory([], state) }
@@ -278,6 +288,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
       const completeYear = instant ? state.year : state.year + spec.buildYears
       set({
         budget: state.budget - spec.cost,
+        spent: state.spent + spec.cost,
         structures: [
           ...state.structures,
           {
@@ -497,6 +508,49 @@ export const useWorld = create<WorldStore>()((set, get) => {
         `${region.name} 대형 산불, 약 ${Math.round(burnedKm2).toLocaleString('ko-KR')}km² 소실` +
         `${drought ? ' (가뭄으로 커짐)' : ''}. 연기 영향 약 ${smoke.toFixed(1)}백만 명.`
       log([{ tone: 'warn', text: message }])
+      return { ok: true, message }
+    },
+
+    triggerQuake: (faultId, magnitude, now = nowMs()) => {
+      const state = get()
+      const fault = getSite(faultId)
+      if (fault?.kind !== 'fault')
+        return { ok: false, message: '단층을 선택하세요.' }
+      const impacts = quakeImpacts(
+        fault,
+        magnitude,
+        state.structures,
+        state.year,
+      )
+      set({
+        quakes: [
+          ...state.quakes.slice(-3),
+          {
+            id: `quake-${state.nextEventId}`,
+            faultId,
+            magnitude,
+            year: state.year,
+            startedAt: now,
+            severeRadiusKm: quakeSevereRadiusKm(magnitude),
+            strongRadiusKm: quakeStrongRadiusKm(magnitude),
+            impacts,
+          },
+        ],
+      })
+      const severe = impacts.filter((i) => i.outcome === 'severe')
+      const reduced = impacts.filter((i) => i.outcome === 'reduced')
+      const names = (list: typeof impacts) =>
+        list.map((i) => getSite(i.cityId)?.name).join(', ')
+      const message =
+        `${fault.name} 규모 ${magnitude.toFixed(1)} 지진. ` +
+        (impacts.length
+          ? `큰 피해 ${severe.length}곳${severe.length ? ` (${names(severe)})` : ''}, 흔들림 ${impacts.length}곳, 약 ${totalPopulation(impacts.map((i) => i.cityId)).toFixed(1)}백만 명 영향` +
+            (reduced.length
+              ? `. 내진 보강으로 버틴 곳: ${names(reduced)}`
+              : '') +
+            '.'
+          : '강한 흔들림 범위 안에 주요 도시는 없습니다.')
+      log([{ tone: severe.length ? 'danger' : 'warn', text: message }])
       return { ok: true, message }
     },
 

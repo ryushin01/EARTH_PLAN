@@ -23,6 +23,11 @@ function Plume({ plume }: { plume: PlumeInput }) {
       quaternion: new Quaternion().setFromUnitVectors(UP, normal),
     }
   }, [plume.center])
+  if (plume.kind === 'quake') {
+    return (
+      <QuakeRings plume={plume} position={position} quaternion={quaternion} />
+    )
+  }
   if (plume.kind === 'impact') {
     return (
       <ImpactBurst plume={plume} position={position} quaternion={quaternion} />
@@ -140,6 +145,72 @@ function ImpactBurst({
             depthWrite={false}
           />
         </mesh>
+      ) : null}
+    </group>
+  )
+}
+
+/** 지진: 멀리 퍼지는 지진파 고리 세 개와, 강한 흔들림 범위(주황 원) */
+function QuakeRings({
+  plume,
+  position,
+  quaternion,
+}: {
+  plume: PlumeInput
+  position: Vector3
+  quaternion: Quaternion
+}) {
+  const strong = Math.max(0.006, plume.size)
+  const waveReach = 0.3 // 약 1,900km
+  const area = Math.max(0, 1 - plume.age / 12)
+  return (
+    <group position={position} quaternion={quaternion}>
+      {[0, 1, 2].map((k) => {
+        const t = (plume.age - k * 0.8) / 3.5
+        if (t < 0 || t > 1) return null
+        const r = waveReach * t
+        return (
+          <mesh
+            key={k}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.002, 0]}
+          >
+            <ringGeometry args={[Math.max(0.0005, r - 0.004), r + 0.002, 96]} />
+            <meshBasicMaterial
+              color="#ffd166"
+              transparent
+              opacity={(1 - t) * 0.85}
+              toneMapped={false}
+              side={2}
+              depthWrite={false}
+            />
+          </mesh>
+        )
+      })}
+      {area > 0 ? (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0015, 0]}>
+            <circleGeometry args={[strong, 64]} />
+            <meshBasicMaterial
+              color="#ff8a3d"
+              transparent
+              opacity={0.28 * area}
+              toneMapped={false}
+              depthWrite={false}
+            />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0016, 0]}>
+            <ringGeometry args={[strong * 0.97, strong, 64]} />
+            <meshBasicMaterial
+              color="#ff8a3d"
+              transparent
+              opacity={0.9 * area}
+              toneMapped={false}
+              side={2}
+              depthWrite={false}
+            />
+          </mesh>
+        </>
       ) : null}
     </group>
   )

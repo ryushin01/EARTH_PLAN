@@ -8,4 +8,5 @@ export const SITE_KIND_LABEL: Record<SiteKind, string> = {
   glacier: '빙하',
   region: '지역',
   ocean: '바다',
+  fault: '단층',
 }

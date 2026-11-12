@@ -1,4 +1,5 @@
 import type {
+  Fault,
   Ocean,
   Region,
   Basin,
@@ -143,6 +144,10 @@ export const CITIES: City[] = [
   ]),
   city('valparaiso', '발파라이소', '중남미', -33.05, -71.62, 8, 1, ['pacific']),
   city('sydney', '시드니', '오세아니아', -33.87, 151.21, 8, 5, ['pacific']),
+  city('kathmandu', '카트만두', '남아시아', 27.72, 85.32, 1400, 3, []),
+  city('tehran', '테헤란', '중동·아프리카', 35.69, 51.39, 1200, 9, []),
+  city('chengdu', '청두', '동아시아', 30.66, 104.07, 500, 16, []),
+  city('gyeongju', '경주', '동아시아', 35.86, 129.22, 50, 0.25, []),
 ]
 
 const volcano = (
@@ -680,6 +685,101 @@ export const OCEANS: Ocean[] = [
   },
 ]
 
+const fault = (
+  id: string,
+  name: string,
+  area: string,
+  lat: number,
+  lon: number,
+  historicMagnitude: number,
+  note: string,
+): Fault => ({
+  kind: 'fault',
+  id,
+  name,
+  region: area,
+  lat,
+  lon,
+  historicMagnitude,
+  note,
+})
+
+/** 활성 단층. 규모는 기록상 또는 추정 최대값입니다. */
+export const FAULTS: Fault[] = [
+  fault(
+    'yangsan',
+    '양산 단층',
+    '동아시아',
+    35.75,
+    129.25,
+    5.8,
+    '2016년 경주 지진(규모 5.8)',
+  ),
+  fault(
+    'tokyo-direct',
+    '수도권 직하',
+    '동아시아',
+    35.65,
+    139.75,
+    7.9,
+    '1923년 간토 대지진',
+  ),
+  fault(
+    'longmenshan',
+    '룽먼산 단층',
+    '동아시아',
+    31.0,
+    103.4,
+    7.9,
+    '2008년 쓰촨 대지진',
+  ),
+  fault(
+    'main-himalayan',
+    '히말라야 주 단층',
+    '남아시아',
+    28.1,
+    84.7,
+    7.8,
+    '2015년 네팔 고르카 지진',
+  ),
+  fault(
+    'north-tehran',
+    '북테헤란 단층',
+    '중동·아프리카',
+    35.8,
+    51.4,
+    7.2,
+    '수도 바로 아래를 지나는 단층',
+  ),
+  fault(
+    'north-anatolian',
+    '북아나톨리아 단층',
+    '유럽',
+    40.75,
+    28.6,
+    7.6,
+    '1999년 이즈미트 지진, 이스탄불 위협',
+  ),
+  fault(
+    'san-andreas',
+    '샌안드레아스 단층 남부',
+    '북아메리카',
+    34.3,
+    -117.6,
+    7.9,
+    '1857년 포트 테혼 지진',
+  ),
+  fault(
+    'hayward',
+    '헤이워드 단층',
+    '북아메리카',
+    37.75,
+    -122.15,
+    7.0,
+    '샌프란시스코만 동쪽',
+  ),
+]
+
 export const ALL_SITES: Site[] = [
   ...CITIES,
   ...VOLCANOES,
@@ -688,6 +788,7 @@ export const ALL_SITES: Site[] = [
   ...GLACIERS,
   ...REGIONS,
   ...OCEANS,
+  ...FAULTS,
 ]
 
 const byId = new Map(ALL_SITES.map((site) => [site.id, site]))

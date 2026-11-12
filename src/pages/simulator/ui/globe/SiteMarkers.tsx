@@ -33,6 +33,8 @@ function Shape({ kind }: { kind: SiteKind }) {
       return <cylinderGeometry args={[0.014, 0.014, 0.003, 6]} />
     case 'ocean':
       return <sphereGeometry args={[0.008, 10, 8]} />
+    case 'fault':
+      return <boxGeometry args={[0.026, 0.004, 0.006]} />
   }
 }
 

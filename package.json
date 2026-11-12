@@ -1,6 +1,6 @@
 {
   "name": "earth-plan",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.16.1",
@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "lighthouse": "lhci autorun",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o dist/client/storybook",
     "data:elevation": "node scripts/build-elevation.mjs"
@@ -38,6 +39,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@feature-sliced/steiger-plugin": "0.8.2",
+    "@lhci/cli": "0.16.1",
     "@playwright/test": "^1.65.0",
     "@storybook/addon-a11y": "10.6.7",
     "@storybook/react-vite": "10.6.7",

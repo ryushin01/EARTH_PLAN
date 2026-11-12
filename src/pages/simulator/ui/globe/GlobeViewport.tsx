@@ -1,4 +1,4 @@
-import { useId, useRef, useState, useSyncExternalStore } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import type { KeyboardEvent } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { useProgress } from '@react-three/drei'
@@ -94,7 +94,14 @@ function ToggleButton({
 }
 
 /** 끌어서 돌리고 확대할 수 있는 3D 지구본 */
-export function GlobeViewport({ className }: { className?: string }) {
+export function GlobeViewport({
+  className,
+  hintId,
+}: {
+  className?: string
+  /** 조작 안내 문구 id (페이지에 미리 그려 둠) */
+  hintId: string
+}) {
   const apiRef = useRef<CameraApi | null>(null)
   const reducedMotion = usePrefersReducedMotion()
   // 사용자가 직접 바꾸기 전에는 '동작 줄이기' 설정을 따름
@@ -102,7 +109,6 @@ export function GlobeViewport({ className }: { className?: string }) {
   const autoRotate = autoRotateChoice ?? !reducedMotion
   const [showClouds, setShowClouds] = useState(true)
   const [showMarkers, setShowMarkers] = useState(true)
-  const hintId = useId()
 
   const perform = (action: CameraAction) => {
     setAutoRotate(false)
@@ -141,7 +147,7 @@ export function GlobeViewport({ className }: { className?: string }) {
             near: 0.05,
             far: 200,
           }}
-          dpr={[1, 2]}
+          dpr={[1, 1.75]}
           gl={{ antialias: true }}
           fallback={
             <p className="p-6 text-sm text-muted">
@@ -159,7 +165,7 @@ export function GlobeViewport({ className }: { className?: string }) {
         </Canvas>
       </div>
       <LoadingStatus />
-      <div className="pointer-events-none flex flex-wrap items-end justify-center gap-2 px-3 pt-2 lg:absolute lg:inset-x-0 lg:bottom-4 lg:gap-3 lg:p-3">
+      <div className="pointer-events-none flex flex-wrap items-end justify-center gap-2 px-3 pt-2 lg:absolute lg:inset-x-0 lg:bottom-8 lg:gap-3 lg:p-3">
         <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-xs border border-line bg-panel p-1.5 backdrop-blur">
           {BUTTONS.map((button) => (
             <Button
@@ -192,13 +198,6 @@ export function GlobeViewport({ className }: { className?: string }) {
             지점
           </ToggleButton>
         </div>
-        <p
-          id={hintId}
-          className="pointer-events-none w-full text-center text-xs text-muted"
-        >
-          끌어서 돌리기 · 휠이나 두 손가락으로 확대 · 지구를 선택한 뒤 화살표
-          키로 돌리고 +, − 키로 확대
-        </p>
       </div>
     </div>
   )

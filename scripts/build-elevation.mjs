@@ -30,10 +30,10 @@ function sample(lo, la) {
     (g(x0, y1) * (1 - tx) + g(x1, y1) * tx) * ty
   )
 }
-// low-res land-elevation grid for CPU stats (512x256, int16, metres; ocean = -32768)
+// 침수 면적 계산용 512×256 Uint8 격자: 0 바다, 1~254 (값 − 51)m, 255 204m 이상
 const SW = 512,
   SH = 256
-const stats = new Int16Array(SW * SH)
+const stats = new Uint8Array(SW * SH)
 for (let y = 0; y < OH; y++)
   for (let x = 0; x < OW; x++) {
     const lo = -180 + ((x + 0.5) / OW) * 360,
@@ -60,12 +60,9 @@ for (let y = 0; y < SH; y++)
     const ox = Math.floor(((x + 0.5) / SW) * OW),
       oy = Math.floor(((y + 0.5) / SH) * OH),
       i = (oy * OW + ox) * 4
-    const lo = -180 + ((x + 0.5) / SW) * 360,
-      la = 90 - ((y + 0.5) / SH) * 180
-    stats[y * SW + x] = png.data[i + 2]
-      ? png.data[i] - 50 + (png.data[i] >= 255 ? 1000 : 0)
-      : -32768
+    stats[y * SW + x] = png.data[i + 2] ? Math.min(255, png.data[i] + 1) : 0
   }
 fs.writeFileSync(out, PNG.sync.write(png))
 fs.writeFileSync(outBin, Buffer.from(stats.buffer))
+// 웹용으로는 무손실 WebP로 바꿉니다: cwebp -lossless -exact -z 9 <out>.png -o earth-elevation.webp
 console.log('done')

@@ -47,6 +47,12 @@ export function MissionHud() {
   const seaLevel = useWorld((s) => s.seaLevel)
   const budget = useWorld((s) => s.budget)
   const storms = useWorld((s) => s.storms.length)
+  const fires = useWorld(
+    (s) => s.wildfires.filter((f) => s.year < f.year + f.durationYears).length,
+  )
+  const droughts = useWorld(
+    (s) => s.droughts.filter((d) => s.year < d.year + d.durationYears).length,
+  )
   const events = useWorld((s) => s.events)
   const summary = useWorld(useShallow(summarize))
   const latest = events.at(0)
@@ -75,6 +81,8 @@ export function MissionHud() {
           note="백만 명, 단순 추정"
         />
         <Stat label="열대 저기압" value={`${storms}개`} note="지금 활동 중" />
+        <Stat label="산불" value={`${fires}곳`} note="지금 타는 곳" />
+        <Stat label="가뭄" value={`${droughts}곳`} note="진행 중인 지역" />
         <Stat
           label="예산"
           value={formatBillions(budget)}

@@ -98,9 +98,7 @@ describe('도시 침수', () => {
 describe('침수 면적', () => {
   it('고도 격자에서 누적 면적을 계산한다', () => {
     // 적도 근처 한 줄: 육지 4칸(0, 10, 50, 300m), 바다 4칸
-    const grid = new Int16Array([
-      0, 10, 50, 1205, -32768, -32768, -32768, -32768,
-    ])
+    const grid = new Uint8Array([51, 61, 101, 255, 0, 0, 0, 0])
     const curve = buildFloodCurve(grid, 8, 1)
     expect(floodedArea(curve, 0)).toBe(0)
     const at20 = floodedArea(curve, 20)

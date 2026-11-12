@@ -1,15 +1,15 @@
 # 데이터 출처
 
-| 파일 (`public/textures/`)                                  | 출처                                                                                                                                    | 라이선스                |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `earth-albedo.jpg`, `earth-lights.png`, `earth-clouds.png` | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160)                                   | MIT (three.js 저장소)   |
-| `earth-elevation.png`, `land-elevation-512x256.i16`        | [NOAA ETOPO1](https://www.ncei.noaa.gov/products/etopo-global-relief-model) (`etopo180`, NOAA CoastWatch ERDDAP에서 1/6° 간격으로 받음) | 미국 정부 저작물 (공개) |
+| 파일 (`public/textures/`)                                     | 출처                                                                                                                                    | 라이선스                |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `earth-albedo.webp`, `earth-lights.webp`, `earth-clouds.webp` | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160)                                   | MIT (three.js 저장소)   |
+| `earth-elevation.webp`, `land-elevation-512x256.u8`           | [NOAA ETOPO1](https://www.ncei.noaa.gov/products/etopo-global-relief-model) (`etopo180`, NOAA CoastWatch ERDDAP에서 1/6° 간격으로 받음) | 미국 정부 저작물 (공개) |
 
-도시 고도·인구, 화산·해구 기록, 해협·빙하 정보는 널리 알려진 대략값을 직접 정리한 것입니다.
+색·불빛·구름 텍스처는 원본(JPG·PNG)을 WebP(손실)로 바꿨습니다. 도시 고도·인구, 화산·해구 기록, 해협·빙하·산불·가뭄 지역 정보는 널리 알려진 대략값을 직접 정리한 것입니다.
 
 ## 고도 텍스처 구성
 
-`earth-elevation.png` (2048×1024, 등장방형 도법, 경도 −180°가 왼쪽)
+`earth-elevation.webp` (2048×1024, 무손실 WebP, 등장방형 도법, 경도 −180°가 왼쪽)
 
 | 채널 | 값                                                                     | 쓰임                  |
 | ---- | ---------------------------------------------------------------------- | --------------------- |
@@ -19,7 +19,7 @@
 
 마스크는 육지인데 ETOPO1 고도가 −8m보다 낮은 곳은 호수 바닥(바다로 처리)이나 남극 빙붕(50m로 처리)입니다.
 
-`land-elevation-512x256.i16`은 같은 R 채널 값을 512×256 Int16 격자로 줄인 것입니다(바다 −32768, 205m 초과는 1205). 브라우저에서 위도별 면적 가중치를 곱해 해수면별 침수 면적 곡선을 만듭니다.
+`land-elevation-512x256.u8`은 같은 R 채널 값을 512×256 Uint8 격자로 줄인 것입니다(0 바다, 1~254는 `값 − 51`m, 255는 204m 이상). 브라우저에서 위도별 면적 가중치를 곱해 해수면별 침수 면적 곡선을 만듭니다.
 
 ## 다시 만들기
 
@@ -29,5 +29,7 @@ curl -o etopo.nc "https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?al
 # 2. three.js 반사 텍스처(바다 마스크) 받기
 curl -o earth_specular_2048.jpg https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/earth_specular_2048.jpg
 # 3. 변환
-pnpm data:elevation etopo.nc earth_specular_2048.jpg public/textures/earth-elevation.png public/textures/land-elevation-512x256.i16
+pnpm data:elevation etopo.nc earth_specular_2048.jpg earth-elevation.png public/textures/land-elevation-512x256.u8
+# 4. 무손실 WebP로 (픽셀 값이 그대로 남아야 침수 계산이 맞음)
+cwebp -lossless -exact -z 9 earth-elevation.png -o public/textures/earth-elevation.webp
 ```

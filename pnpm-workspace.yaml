@@ -1,2 +1,5 @@
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@lhci/cli@0.16.1'
+  - '@lhci/utils@0.16.1'

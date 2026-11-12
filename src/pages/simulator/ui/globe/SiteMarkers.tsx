@@ -29,6 +29,10 @@ function Shape({ kind }: { kind: SiteKind }) {
       return <octahedronGeometry args={[0.013]} />
     case 'glacier':
       return <tetrahedronGeometry args={[0.014]} />
+    case 'region':
+      return <cylinderGeometry args={[0.014, 0.014, 0.003, 6]} />
+    case 'ocean':
+      return <sphereGeometry args={[0.008, 10, 8]} />
   }
 }
 

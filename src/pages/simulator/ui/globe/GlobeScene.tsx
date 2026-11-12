@@ -158,7 +158,7 @@ export function GlobeScene({
       <Stars
         radius={60}
         depth={40}
-        count={5000}
+        count={3000}
         factor={3}
         saturation={0}
         fade

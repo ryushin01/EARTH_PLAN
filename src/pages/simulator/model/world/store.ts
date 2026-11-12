@@ -13,6 +13,7 @@ import {
   step,
   totalPopulation,
   tsunamiImpacts,
+  warming,
 } from './engine'
 import type { NewEvent } from './engine'
 import { SCENARIOS, baselineSeaLevel } from './scenario'
@@ -25,6 +26,21 @@ import {
   withUtcHour,
 } from './time'
 import type { SpeedId } from './time'
+import {
+  SEVERITY_LABEL,
+  WILDFIRE_YEARS,
+  blastRadiusKm,
+  deflectedDiameter,
+  droughtEffects,
+  impactEnergyMt,
+  impactTsunamiMagnitude,
+  isInDrought,
+  regionOf,
+  thermalRadiusKm,
+  wildfireArea,
+} from './hazards'
+import { snapshotStructures } from './snapshot'
+import type { Snapshot } from './snapshot'
 import type { WorldState } from './types'
 
 export interface ActionResult {
@@ -50,10 +66,18 @@ interface WorldActions {
     now?: number,
   ) => ActionResult
   triggerTsunami: (
-    trenchId: string,
+    sourceId: string,
     magnitude: number,
     now?: number,
   ) => ActionResult
+  triggerImpact: (
+    targetId: string,
+    diameterM: number,
+    now?: number,
+  ) => ActionResult
+  startWildfire: (regionId: string, now?: number) => ActionResult
+  startDrought: (regionId: string, severity: 1 | 2 | 3) => ActionResult
+  loadSnapshot: (snapshot: Snapshot, source: string) => void
   select: (siteId: string | null) => void
   setFloodCurve: (curve: Float64Array) => void
   reset: () => void
@@ -73,6 +97,9 @@ function initialState(): WorldState {
     structures: [],
     eruptions: [],
     tsunamis: [],
+    impacts: [],
+    wildfires: [],
+    droughts: [],
     storms: [],
     events: [],
     floodedCityIds: [],
@@ -80,6 +107,18 @@ function initialState(): WorldState {
     floodCurve: null,
     nextEventId: 1,
   }
+}
+
+export function formatDiameter(m: number): string {
+  return m >= 1000 ? `${(m / 1000).toLocaleString('ko-KR')}km` : `${m}m`
+}
+
+export function formatEnergy(mt: number): string {
+  if (mt >= 1e6)
+    return `TNT ${(mt / 1e6).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}조 톤`
+  if (mt >= 100)
+    return `TNT ${(mt / 100).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}억 톤`
+  return `TNT ${mt.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}메가톤`
 }
 
 const nowMs = () => (typeof performance === 'undefined' ? 0 : performance.now())
@@ -98,6 +137,8 @@ export const useWorld = create<WorldStore>()((set, get) => {
       const { patch, events } = step(
         state,
         SPEED_BY_ID[state.speed].yearsPerSecond * dt,
+        Math.random,
+        nowMs(),
       )
       set(patch)
       log(events)
@@ -235,13 +276,13 @@ export const useWorld = create<WorldStore>()((set, get) => {
       return { ok: true, message }
     },
 
-    triggerTsunami: (trenchId, magnitude, now = nowMs()) => {
+    triggerTsunami: (sourceId, magnitude, now = nowMs()) => {
       const state = get()
-      const trench = getSite(trenchId)
+      const trench = getSite(sourceId)
       if (trench?.kind !== 'trench')
         return { ok: false, message: '해구를 선택하세요.' }
       const impacts = tsunamiImpacts(
-        trenchId,
+        sourceId,
         magnitude,
         state.structures,
         state.year,
@@ -251,7 +292,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
           ...state.tsunamis.slice(-3),
           {
             id: `tsunami-${state.nextEventId}`,
-            trenchId,
+            sourceId,
             magnitude,
             year: state.year,
             startedAt: now,
@@ -268,6 +309,190 @@ export const useWorld = create<WorldStore>()((set, get) => {
         `, 방벽으로 막은 곳 ${blocked.length}곳.`
       log([{ tone: hit.length ? 'danger' : 'warn', text: message }])
       return { ok: true, message }
+    },
+
+    triggerImpact: (targetId, diameterM, now = nowMs()) => {
+      const state = get()
+      const target = getSite(targetId)
+      if (!target) return { ok: false, message: '충돌 지점을 선택하세요.' }
+      const effective = deflectedDiameter(
+        diameterM,
+        state.structures,
+        state.year,
+      )
+      const size = formatDiameter(diameterM)
+      if (effective === 0) {
+        const message = `지름 ${size} 소행성을 행성 방위 요격망이 궤도를 바꿔 빗나가게 했습니다.`
+        set({
+          impacts: [
+            ...state.impacts.slice(-3),
+            {
+              id: `impact-${state.nextEventId}`,
+              targetId,
+              diameterM,
+              effectiveDiameterM: 0,
+              year: state.year,
+              startedAt: now,
+              energyMt: 0,
+              blastRadiusKm: 0,
+              thermalRadiusKm: 0,
+              ocean: target.kind === 'ocean',
+              affectedCityIds: [],
+            },
+          ],
+        })
+        log([{ tone: 'good', text: message }])
+        return { ok: true, message }
+      }
+      const energyMt = impactEnergyMt(effective)
+      const blast = blastRadiusKm(energyMt)
+      const thermal = thermalRadiusKm(energyMt)
+      const affected = citiesWithin(target, thermal).map((c) => c.id)
+      const ocean = target.kind === 'ocean'
+      const id = `impact-${state.nextEventId}`
+      set({
+        impacts: [
+          ...state.impacts.slice(-3),
+          {
+            id,
+            targetId,
+            diameterM,
+            effectiveDiameterM: effective,
+            year: state.year,
+            startedAt: now,
+            energyMt,
+            blastRadiusKm: blast,
+            thermalRadiusKm: thermal,
+            ocean,
+            affectedCityIds: affected,
+          },
+        ],
+      })
+      let tsunamiText = ''
+      if (ocean) {
+        const magnitude = impactTsunamiMagnitude(energyMt)
+        const impacts = tsunamiImpacts(
+          targetId,
+          magnitude,
+          state.structures,
+          state.year,
+        )
+        set({
+          tsunamis: [
+            ...get().tsunamis.slice(-3),
+            {
+              id: `tsunami-${id}`,
+              sourceId: targetId,
+              magnitude,
+              year: state.year,
+              startedAt: now,
+              impacts,
+            },
+          ],
+        })
+        const hit = impacts.filter((i) => i.outcome === 'hit').length
+        tsunamiText = ` 충돌 쓰나미가 도시 ${hit}곳을 덮칩니다.`
+      }
+      const reduced =
+        effective < diameterM
+          ? ` (요격으로 ${formatDiameter(effective)}로 줄어듦)`
+          : ''
+      const people = affected.length
+        ? ` 열복사 반경 ${Math.round(thermal).toLocaleString('ko-KR')}km 안 도시 ${affected.length}곳, 약 ${totalPopulation(affected).toFixed(1)}백만 명 피해.`
+        : ` 폭풍 반경 ${Math.round(blast).toLocaleString('ko-KR')}km 안에 주요 도시는 없습니다.`
+      const message = `${target.name}에 지름 ${size} 소행성 충돌${reduced}, 약 ${formatEnergy(energyMt)}.${people}${tsunamiText}`
+      log([{ tone: effective >= 140 ? 'danger' : 'warn', text: message }])
+      return { ok: true, message }
+    },
+
+    startWildfire: (regionId, now = nowMs()) => {
+      const state = get()
+      const region = regionOf(regionId)
+      if (!region) return { ok: false, message: '지역을 선택하세요.' }
+      const drought = isInDrought(regionId, state.droughts, state.year)
+      const burnedKm2 = wildfireArea(
+        region,
+        warming(state),
+        state.structures,
+        state.year,
+        drought,
+      )
+      set({
+        wildfires: [
+          ...state.wildfires.slice(-7),
+          {
+            id: `fire-${state.nextEventId}`,
+            regionId,
+            year: state.year,
+            startedAt: now,
+            burnedKm2,
+            durationYears: WILDFIRE_YEARS,
+            natural: false,
+          },
+        ],
+      })
+      const smoke = region.population * 0.3
+      const message =
+        `${region.name} 대형 산불, 약 ${Math.round(burnedKm2).toLocaleString('ko-KR')}km² 소실` +
+        `${drought ? ' (가뭄으로 커짐)' : ''}. 연기 영향 약 ${smoke.toFixed(1)}백만 명.`
+      log([{ tone: 'warn', text: message }])
+      return { ok: true, message }
+    },
+
+    startDrought: (regionId, severity) => {
+      const state = get()
+      const region = regionOf(regionId)
+      if (!region) return { ok: false, message: '지역을 선택하세요.' }
+      if (isInDrought(regionId, state.droughts, state.year)) {
+        return {
+          ok: false,
+          message: `${region.name}은(는) 이미 가뭄 중입니다.`,
+        }
+      }
+      const effects = droughtEffects(
+        region,
+        severity,
+        state.structures,
+        state.year,
+        warming(state),
+      )
+      set({
+        droughts: [
+          ...state.droughts,
+          {
+            id: `drought-${state.nextEventId}`,
+            regionId,
+            severity,
+            year: state.year,
+            ...effects,
+          },
+        ],
+      })
+      const message =
+        `${region.name} ${SEVERITY_LABEL[severity]} 가뭄 ${effects.durationYears}년. ` +
+        `약 ${effects.affectedMillions.toFixed(1)}백만 명 물 부족, 농작물 ${Math.round(effects.cropLoss)}% 감소.`
+      log([{ tone: severity >= 3 ? 'danger' : 'warn', text: message }])
+      return { ok: true, message }
+    },
+
+    loadSnapshot: (snapshot, source) => {
+      const curve = get().floodCurve
+      const structures = snapshotStructures(snapshot)
+      const base = {
+        ...initialState(),
+        floodCurve: curve,
+        scenario: snapshot.scenario,
+        year: snapshot.year,
+        seaLevel: snapshot.seaLevel,
+        budget: snapshot.budget,
+        speed: snapshot.speed,
+        heldHour: snapshot.heldHour,
+        selectedSiteId: snapshot.selectedSiteId,
+        structures,
+      }
+      const { floodedCityIds } = detectFlooding([], base)
+      set({ ...base, floodedCityIds })
+      log([{ tone: 'info', text: `${source} 시나리오를 불러왔습니다.` }])
     },
 
     select: (siteId) => set({ selectedSiteId: siteId }),

@@ -7,6 +7,8 @@ import { ControlPanel } from './panels/ControlPanel'
 import { MissionHud } from './status/MissionHud'
 import { SiteFinder } from './status/SiteFinder'
 import { TimeControls } from './status/TimeControls'
+import { ScenarioShare } from './status/ScenarioShare'
+import { SHARE_PARAM, decodeSnapshot } from '../model/world/snapshot'
 
 // three.js는 브라우저에서만 불러옵니다
 const GlobeViewport = lazy(() =>
@@ -20,6 +22,14 @@ const panel = 'rounded-xs border border-line bg-panel p-4 backdrop-blur-md'
 export function SimulatorPage() {
   useSimulationClock()
   const setFloodCurve = useWorld((s) => s.setFloodCurve)
+
+  // 공유 링크(?s=...)로 열면 그 시나리오를 불러옴
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get(SHARE_PARAM)
+    if (!code) return
+    const snapshot = decodeSnapshot(code)
+    if (snapshot) useWorld.getState().loadSnapshot(snapshot, '공유 링크의')
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -52,20 +62,30 @@ export function SimulatorPage() {
       <main className="lg:absolute lg:inset-0">
         <section
           aria-labelledby="globe-title"
-          className="relative h-[72svh] lg:fixed lg:inset-0 lg:h-auto"
+          className="relative flex h-[72svh] flex-col lg:fixed lg:inset-0 lg:block lg:h-auto"
         >
           <h2 id="globe-title" className="sr-only">
             3D 지구
           </h2>
-          <ClientOnly
-            fallback={<p className="p-6 label-caps">3D 지구 준비 중</p>}
-          >
-            <Suspense
+          <div className="relative min-h-0 flex-1 lg:absolute lg:inset-0">
+            <ClientOnly
               fallback={<p className="p-6 label-caps">3D 지구 준비 중</p>}
             >
-              <GlobeViewport />
-            </Suspense>
-          </ClientOnly>
+              <Suspense
+                fallback={<p className="p-6 label-caps">3D 지구 준비 중</p>}
+              >
+                <GlobeViewport hintId="globe-hint" />
+              </Suspense>
+            </ClientOnly>
+          </div>
+          {/* 사전 렌더링되도록 3D 묶음 밖에 둠 */}
+          <p
+            id="globe-hint"
+            className="px-3 pt-1 text-center text-xs text-muted lg:pointer-events-none lg:absolute lg:inset-x-0 lg:bottom-3 lg:z-10"
+          >
+            끌어서 돌리기 · 휠이나 두 손가락으로 확대 · 지구를 선택한 뒤 화살표
+            키로 돌리고 +, − 키로 확대
+          </p>
         </section>
 
         <div className="relative z-10 grid gap-4 p-4 lg:pointer-events-none lg:absolute lg:inset-0 lg:top-16 lg:flex lg:items-start lg:justify-between lg:pb-28">
@@ -97,6 +117,7 @@ export function SimulatorPage() {
             <TimeControls />
             <SiteFinder />
             <MissionHud />
+            <ScenarioShare />
           </aside>
         </div>
       </main>

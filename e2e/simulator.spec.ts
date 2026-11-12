@@ -42,15 +42,27 @@ test.describe('시뮬레이터 첫 화면', () => {
     })
   }
 
-  test('axe 접근성 검사를 통과한다', async ({ page }) => {
+  test('모든 탭에서 axe 접근성 검사를 통과한다', async ({ page }) => {
+    // 탭 6개를 차례로 검사하므로 느린 CI에서도 끝나도록 넉넉히
+    test.setTimeout(120_000)
     await page.goto('/')
     await page.locator('canvas').waitFor()
-    const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
-      .analyze()
-    expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual(
-      [],
-    )
+    for (const name of [
+      '해수면',
+      '화산',
+      '쓰나미',
+      '소행성',
+      '산불·가뭄',
+      '구조물',
+    ]) {
+      await page.getByRole('tab', { name }).click()
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+        .analyze()
+      expect(
+        results.violations.map((v) => `${name} ${v.id}: ${v.nodes.length}`),
+      ).toEqual([])
+    }
   })
 })
 
@@ -128,5 +140,71 @@ test.describe('시뮬레이션 흐름', () => {
     await page.getByRole('button', { name: '재생' }).click()
     await expect(date).not.toHaveText(before ?? '', { timeout: 5000 })
     await page.getByRole('button', { name: '일시정지' }).click()
+  })
+
+  test('소행성을 바다에 떨어뜨리면 충돌 쓰나미가 생긴다', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('tab', { name: '소행성' }).click()
+    await page
+      .getByRole('combobox', { name: '충돌 지점' })
+      .selectOption('north-atlantic')
+    await page.getByRole('button', { name: '북대서양에 충돌시키기' }).click()
+    await expect(
+      page.getByRole('tabpanel', { name: '소행성' }).getByRole('status'),
+    ).toContainText('충돌 쓰나미')
+  })
+
+  test('가뭄 중인 지역의 산불이 더 크다', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('tab', { name: '산불·가뭄' }).click()
+    const panel = page.getByRole('tabpanel', { name: '산불·가뭄' })
+    await panel
+      .getByRole('combobox', { name: '지역' })
+      .selectOption('australia-se')
+    await panel
+      .getByRole('button', { name: '호주 남동부 가뭄 일으키기' })
+      .click()
+    await expect(
+      panel.getByRole('button', { name: '호주 남동부 가뭄 진행 중' }),
+    ).toBeDisabled()
+    await panel
+      .getByRole('button', { name: '호주 남동부 산불 일으키기' })
+      .click()
+    await expect(
+      panel.getByRole('region', { name: '산불' }).getByRole('status'),
+    ).toContainText('가뭄으로 커짐')
+  })
+})
+
+test.describe('저장·공유', () => {
+  test('공유 링크로 열면 같은 시나리오가 나온다', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.goto('/')
+    await page.getByRole('slider', { name: '해수면 (2020년 대비)' }).fill('22')
+    await page.getByRole('radio', { name: /고배출/ }).check({ force: true })
+    await page.getByRole('button', { name: '공유 링크 복사' }).click()
+    const link = await page
+      .getByRole('textbox', { name: '공유 링크' })
+      .inputValue()
+    expect(link).toContain('?s=')
+
+    const other = await context.newPage()
+    await other.goto(link)
+    await expect(other.getByRole('radio', { name: /고배출/ })).toBeChecked()
+    await expect(
+      other.getByRole('slider', { name: '해수면 (2020년 대비)' }),
+    ).toHaveValue('22')
+    await expect(
+      other.getByRole('complementary').getByRole('listitem').first(),
+    ).toContainText('공유 링크의 시나리오를 불러왔습니다')
+  })
+
+  test('잘못된 공유 링크는 무시하고 기본 화면을 연다', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.goto('/?s=broken')
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /중간/ })).toBeChecked()
+    expect(errors).toEqual([])
   })
 })

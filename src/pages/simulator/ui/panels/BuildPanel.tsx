@@ -73,6 +73,8 @@ export function BuildPanel() {
               return `${site.note}. 보호 도시: ${site.protects.map((id) => getSite(id)?.name).join(', ')}`
             if (site.kind === 'glacier')
               return `${site.note}. 다 녹으면 해수면 +${site.potentialRise}m`
+            if (site.kind === 'region')
+              return `${site.note}. 인구 약 ${site.population}백만 명`
             if (site.kind === 'city')
               return `저지대 고도 약 ${site.elevation}m, 도시권 인구 약 ${site.population}백만 명`
             return site.note

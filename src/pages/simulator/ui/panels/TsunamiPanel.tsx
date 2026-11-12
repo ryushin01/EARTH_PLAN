@@ -21,11 +21,11 @@ export function TsunamiPanel() {
   const select = useWorld((s) => s.select)
   const triggerTsunami = useWorld((s) => s.triggerTsunami)
 
-  const [trenchId, setTrenchId] = useState(TRENCHES[0].id)
+  const [sourceId, setTrenchId] = useState(TRENCHES[0].id)
   const [magnitude, setMagnitude] = useState(9)
   const [result, setResult] = useState({ message: '', ok: true })
 
-  const current = TRENCHES.find((t) => t.id === selectedSiteId)?.id ?? trenchId
+  const current = TRENCHES.find((t) => t.id === selectedSiteId)?.id ?? sourceId
   const trench = TRENCHES.find((t) => t.id === current) ?? TRENCHES[0]
   const latest = tsunamis.at(-1)
 

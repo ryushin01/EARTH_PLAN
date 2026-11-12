@@ -1,10 +1,11 @@
-import { useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
-import { useTexture } from '@react-three/drei'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import {
   AdditiveBlending,
   BackSide,
+  ImageBitmapLoader,
   NoColorSpace,
+  Texture,
   SRGBColorSpace,
   Vector2,
   Vector3,
@@ -15,7 +16,13 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { TEXTURES } from '@/shared/config'
 import { latLonToVector3 } from '@/shared/lib'
 import type { LatLon, Vec3 } from '@/shared/lib'
-import { MAX_ASHES, MAX_STORMS, MAX_WAVES } from '../../model/planet'
+import {
+  MAX_ASHES,
+  MAX_DROUGHTS,
+  MAX_FIRES,
+  MAX_STORMS,
+  MAX_WAVES,
+} from '../../model/planet'
 import type { PlanetFrame } from '../../model/planet'
 import {
   atmosphereFragment,
@@ -33,6 +40,13 @@ interface PlanetProps {
   onSurfaceClick?: (point: Vec3) => void
 }
 
+const TEXTURE_URLS = [
+  TEXTURES.albedo,
+  TEXTURES.lights,
+  TEXTURES.elevation,
+  TEXTURES.clouds,
+]
+
 const vec4s = (n: number) => Array.from({ length: n }, () => new Vector4())
 const zeros = (n: number) => Array.from({ length: n }, () => 0)
 
@@ -41,17 +55,27 @@ export function Planet({
   showClouds = true,
   onSurfaceClick,
 }: PlanetProps) {
-  const [albedo, lights, elevation, clouds] = useTexture([
-    TEXTURES.albedo,
-    TEXTURES.lights,
-    TEXTURES.elevation,
-    TEXTURES.clouds,
-  ])
-  albedo.colorSpace = SRGBColorSpace
-  lights.colorSpace = SRGBColorSpace
-  elevation.colorSpace = NoColorSpace
-  clouds.colorSpace = NoColorSpace
-  albedo.anisotropy = 8
+  // 이미지 해석을 메인 스레드 밖(ImageBitmap)에서 처리해 첫 화면 멈춤을 줄입니다
+  const bitmaps = useLoader(ImageBitmapLoader, TEXTURE_URLS, (loader) => {
+    loader.setOptions({
+      imageOrientation: 'flipY',
+      premultiplyAlpha: 'none',
+      colorSpaceConversion: 'none',
+    })
+  })
+  const [albedo, lights, elevation, clouds] = useMemo(
+    () =>
+      bitmaps.map((bitmap, i) => {
+        const texture = new Texture(bitmap)
+        texture.flipY = false
+        // 색 텍스처만 sRGB, 고도·구름 양은 값 그대로
+        texture.colorSpace = i < 2 ? SRGBColorSpace : NoColorSpace
+        if (i === 0) texture.anisotropy = 8
+        texture.needsUpdate = true
+        return texture
+      }),
+    [bitmaps],
+  )
 
   const earthRef = useRef<ShaderMaterial>(null)
   const cloudRef = useRef<ShaderMaterial>(null)
@@ -76,6 +100,12 @@ export function Planet({
       uWaveStrength: { value: zeros(MAX_WAVES) },
       uAsh: { value: vec4s(MAX_ASHES) },
       uAshAmount: { value: zeros(MAX_ASHES) },
+      uFires: { value: vec4s(MAX_FIRES) },
+      uFireInfo: {
+        value: Array.from({ length: MAX_FIRES }, () => new Vector2()),
+      },
+      uDroughts: { value: vec4s(MAX_DROUGHTS) },
+      uDroughtAmount: { value: zeros(MAX_DROUGHTS) },
     }),
     [albedo, lights, elevation],
   )
@@ -126,6 +156,16 @@ export function Planet({
         if (a) u.uAsh.value[i].set(...a.center, a.radius)
         u.uAshAmount.value[i] = a?.amount ?? 0
       }
+      for (let i = 0; i < MAX_FIRES; i++) {
+        const f = frame.fires.at(i)
+        if (f) u.uFires.value[i].set(...f.center, f.radius)
+        u.uFireInfo.value[i].set(f?.intensity ?? 0, f?.scar ?? 0)
+      }
+      for (let i = 0; i < MAX_DROUGHTS; i++) {
+        const d = frame.droughts.at(i)
+        if (d) u.uDroughts.value[i].set(...d.center, d.radius)
+        u.uDroughtAmount.value[i] = d?.amount ?? 0
+      }
     }
     const cloud = cloudRef.current
     if (cloud) {
@@ -144,8 +184,28 @@ export function Planet({
     sunRef.current?.position.copy(sun).multiplyScalar(10)
   })
 
+  // 셰이더를 병렬로 미리 컴파일한 뒤 보여 줘 첫 화면에서 메인 스레드가 오래 멈추지 않게 함
+  const rootRef = useRef<Group>(null)
+  const [compiled, setCompiled] = useState(false)
+  const gl = useThree((state) => state.gl)
+  const camera = useThree((state) => state.camera)
+  const scene = useThree((state) => state.scene)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    let cancelled = false
+    gl.compileAsync(root, camera, scene)
+      .catch(() => undefined)
+      .then(() => {
+        if (!cancelled) setCompiled(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [gl, camera, scene])
+
   return (
-    <group>
+    <group ref={rootRef} visible={compiled}>
       {/* 태양 방향 (구조물 조명·우주 차양 위치 기준) */}
       <group ref={sunRef} name="sun-light" />
       <SunLight />

@@ -56,7 +56,7 @@ export function Tabs({ items, value, onChange, label, className }: TabsProps) {
         onKeyDown={onKeyDown}
         className="grid border-b border-line"
         style={{
-          gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${items.length > 4 ? Math.ceil(items.length / 2) : items.length}, minmax(0, 1fr))`,
         }}
       >
         {items.map((item, index) => {

@@ -105,9 +105,86 @@ function Model({
           ))}
         </group>
       )
+    case 'firefighting-base':
+      return (
+        <group>
+          <mesh position={[0, 0.01, 0]}>
+            <boxGeometry args={[0.014, 0.02, 0.014]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={0.5}
+              transparent
+              opacity={opacity}
+            />
+          </mesh>
+          <mesh position={[0.02, 0.006, 0]}>
+            <boxGeometry args={[0.02, 0.004, 0.006]} />
+            <meshStandardMaterial
+              color="#ff6b6b"
+              emissive="#ff6b6b"
+              emissiveIntensity={0.4}
+              transparent
+              opacity={opacity}
+            />
+          </mesh>
+        </group>
+      )
+    case 'desalination':
+      return (
+        <group>
+          {[-0.012, 0.012].map((x) => (
+            <mesh key={x} position={[x, 0.008, 0]}>
+              <cylinderGeometry args={[0.008, 0.008, 0.016, 16]} />
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={0.5}
+                transparent
+                opacity={opacity}
+              />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.002, 0.03]}>
+            <boxGeometry args={[0.004, 0.002, 0.05]} />
+            <meshStandardMaterial
+              color="#9fd8ff"
+              transparent
+              opacity={opacity}
+            />
+          </mesh>
+        </group>
+      )
     case 'solar-shade':
+    case 'planetary-defense':
       return null
   }
+}
+
+/** 지구 둘레를 도는 행성 방위 요격 위성 */
+function DefenseSatellites({ active }: { active: boolean }) {
+  const ref = useRef<Group>(null)
+  useFrame((_, delta) => {
+    if (ref.current) ref.current.rotation.y += delta * 0.25
+  })
+  const color = active ? '#00a1ff' : '#fc6a18'
+  return (
+    <group ref={ref} rotation={[0.45, 0, 0.2]}>
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i * Math.PI) / 2
+        return (
+          <mesh key={i} position={[Math.cos(a) * 1.35, 0, Math.sin(a) * 1.35]}>
+            <octahedronGeometry args={[0.018]} />
+            <meshBasicMaterial color={color} toneMapped={false} />
+          </mesh>
+        )
+      })}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.35, 0.0015, 4, 128]} />
+        <meshBasicMaterial color={color} transparent opacity={0.35} />
+      </mesh>
+    </group>
+  )
 }
 
 /** 태양 쪽을 향해 지구 밖에 떠 있는 우주 차양 */
@@ -147,7 +224,11 @@ export function StructureModels({
   const placed = useMemo(
     () =>
       structures.flatMap((structure) => {
-        if (structure.kind === 'solar-shade') return []
+        if (
+          structure.kind === 'solar-shade' ||
+          structure.kind === 'planetary-defense'
+        )
+          return []
         const at = locate(structure.siteId)
         if (!at) return []
         const [x, y, z] = latLonToVector3(at, 1.003)
@@ -160,6 +241,7 @@ export function StructureModels({
     [structures, locate],
   )
   const shade = structures.find((s) => s.kind === 'solar-shade')
+  const defense = structures.find((s) => s.kind === 'planetary-defense')
 
   return (
     <group>
@@ -172,6 +254,9 @@ export function StructureModels({
         </group>
       ))}
       {shade ? <SolarShade active={activeIds.includes(shade.id)} /> : null}
+      {defense ? (
+        <DefenseSatellites active={activeIds.includes(defense.id)} />
+      ) : null}
     </group>
   )
 }

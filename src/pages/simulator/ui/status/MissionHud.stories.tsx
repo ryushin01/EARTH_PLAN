@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MissionHud } from './MissionHud'
 
 const meta = {
-  title: 'widgets/MissionHud',
+  title: 'pages/simulator/MissionHud',
   component: MissionHud,
   decorators: [
     (Story) => (

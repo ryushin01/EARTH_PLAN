@@ -31,8 +31,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm build
-      - run: pnpm build-storybook --quiet
+      # 사이트와 Storybook(dist/client/storybook)을 함께 빌드
+      - run: pnpm build:all
       # 프로덕션 빌드를 띄워 화면 폭별 넘침, 접근성(axe), 키보드, 시뮬레이션 흐름을 검사
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e

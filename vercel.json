@@ -1,0 +1,46 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build:all",
+  "outputDirectory": "dist/client",
+  "trailingSlash": false,
+  "git": {
+    "deploymentEnabled": {
+      "**": false,
+      "main": true
+    }
+  },
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/textures/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/storybook",
+      "destination": "/storybook/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/storybook/",
+      "destination": "/storybook/index.html",
+      "permanent": false
+    }
+  ]
+}

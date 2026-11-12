@@ -1,9 +1,9 @@
 # 데이터 출처
 
-| 파일 (`public/textures/`)                                                      | 출처                                                                                                                                    | 라이선스                |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| 파일 (`public/textures/`)                                  | 출처                                                                                                                                    | 라이선스                |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | `earth-albedo.jpg`, `earth-lights.png`, `earth-clouds.png` | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160)                                   | MIT (three.js 저장소)   |
-| `earth-elevation.png`, `land-elevation-512x256.i16`                            | [NOAA ETOPO1](https://www.ncei.noaa.gov/products/etopo-global-relief-model) (`etopo180`, NOAA CoastWatch ERDDAP에서 1/6° 간격으로 받음) | 미국 정부 저작물 (공개) |
+| `earth-elevation.png`, `land-elevation-512x256.i16`        | [NOAA ETOPO1](https://www.ncei.noaa.gov/products/etopo-global-relief-model) (`etopo180`, NOAA CoastWatch ERDDAP에서 1/6° 간격으로 받음) | 미국 정부 저작물 (공개) |
 
 도시 고도·인구, 화산·해구 기록, 해협·빙하 정보는 널리 알려진 대략값을 직접 정리한 것입니다.
 

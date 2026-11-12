@@ -5,6 +5,12 @@
   "buildCommand": "pnpm build:all",
   "outputDirectory": "dist/client",
   "trailingSlash": false,
+  "git": {
+    "deploymentEnabled": {
+      "**": false,
+      "main": true
+    }
+  },
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -17,7 +23,12 @@
     },
     {
       "source": "/textures/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
     }
   ],
   "redirects": [

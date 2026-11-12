@@ -103,6 +103,21 @@ export function buildFrame(
     }
   }
 
+  // 지진: 진앙에서 퍼지는 충격파 고리 (size = 강한 흔들림 반경, 라디안)
+  for (const quake of state.quakes) {
+    const fault = getSite(quake.faultId)
+    if (!fault) continue
+    const age = (nowMs - quake.startedAt) / 1000
+    if (age > 12) continue
+    plumes.push({
+      id: quake.id,
+      kind: 'quake',
+      center: latLonToVector3(fault),
+      age,
+      size: kmToRadians(quake.strongRadiusKm),
+    })
+  }
+
   const fires = state.wildfires.flatMap((f) => {
     const region = regionOf(f.regionId)
     if (!region) return []

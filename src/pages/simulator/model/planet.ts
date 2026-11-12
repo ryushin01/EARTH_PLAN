@@ -40,7 +40,7 @@ export interface DroughtInput {
 export interface PlumeInput {
   id: string
   /** 화산 분출 기둥 또는 소행성 충돌 불덩이 */
-  kind: 'volcano' | 'impact'
+  kind: 'volcano' | 'impact' | 'quake'
   center: Vec3
   /** 분출 후 지난 시간 (초) */
   age: number

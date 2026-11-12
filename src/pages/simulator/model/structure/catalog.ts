@@ -8,6 +8,7 @@ export type StructureKind =
   | 'planetary-defense'
   | 'firefighting-base'
   | 'desalination'
+  | 'seismic-retrofit'
 
 export type StructureTarget =
   'city' | 'strait' | 'glacier' | 'volcano' | 'region' | 'orbit'
@@ -37,6 +38,8 @@ export interface StructureSpec {
   fireReduction?: number
   /** 가뭄 피해 감소율 (0~1) */
   droughtReduction?: number
+  /** 지진 피해 감소율 (0~1) */
+  quakeReduction?: number
 }
 
 export const STRUCTURES: Record<StructureKind, StructureSpec> = {
@@ -130,6 +133,16 @@ export const STRUCTURES: Record<StructureKind, StructureSpec> = {
     cost: 150,
     buildYears: 4,
     droughtReduction: 0.5,
+  },
+  'seismic-retrofit': {
+    kind: 'seismic-retrofit',
+    name: '도시 내진 보강',
+    summary:
+      '건물·다리·가스관에 내진 설계와 면진 장치를 넣습니다. 그 도시의 지진 피해를 70% 줄입니다.',
+    target: 'city',
+    cost: 30,
+    buildYears: 3,
+    quakeReduction: 0.7,
   },
 }
 

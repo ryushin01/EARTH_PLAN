@@ -20,6 +20,14 @@ const GlobeViewport = lazy(() =>
 )
 
 const panel = 'rounded-xs border border-line bg-panel p-4 backdrop-blur-md'
+/** 모바일에서 위에 고정된 지구에 가리지 않도록 스크롤 위치를 띄움 */
+const anchor = 'scroll-mt-[calc(45svh+0.5rem)] lg:scroll-mt-0'
+
+const MOBILE_LINKS = [
+  { href: '#controls', label: '지구 관리' },
+  { href: '#mission', label: '미션' },
+  { href: '#status', label: '지구 상태' },
+]
 
 export function SimulatorPage() {
   useSimulationClock()
@@ -42,7 +50,7 @@ export function SimulatorPage() {
   }, [setFloodCurve])
 
   return (
-    <div className="relative min-h-svh bg-space text-ice lg:h-svh lg:overflow-hidden">
+    <div className="relative min-h-svh bg-space pb-20 text-ice lg:h-svh lg:overflow-hidden lg:pb-0">
       <a
         href="#controls"
         className="sr-only z-50 rounded-xs bg-accent px-4 py-3 font-semibold text-black focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
@@ -64,7 +72,7 @@ export function SimulatorPage() {
       <main className="lg:absolute lg:inset-0">
         <section
           aria-labelledby="globe-title"
-          className="relative flex h-[72svh] flex-col lg:fixed lg:inset-0 lg:block lg:h-auto"
+          className="sticky top-0 z-30 flex h-[45svh] flex-col bg-space lg:fixed lg:inset-0 lg:z-auto lg:block lg:h-auto lg:bg-transparent"
         >
           <h2 id="globe-title" className="sr-only">
             3D 지구
@@ -83,7 +91,7 @@ export function SimulatorPage() {
           {/* 사전 렌더링되도록 3D 묶음 밖에 둠 */}
           <p
             id="globe-hint"
-            className="px-3 pt-1 text-center text-xs text-muted lg:pointer-events-none lg:absolute lg:inset-x-0 lg:bottom-3 lg:z-10"
+            className="sr-only text-center text-xs text-muted lg:not-sr-only lg:pointer-events-none lg:absolute lg:inset-x-0 lg:bottom-3 lg:z-10"
           >
             끌어서 돌리기 · 휠이나 두 손가락으로 확대 · 지구를 선택한 뒤 화살표
             키로 돌리고 +, − 키로 확대
@@ -95,7 +103,7 @@ export function SimulatorPage() {
             id="controls"
             tabIndex={-1}
             aria-labelledby="controls-title"
-            className={`${panel} lg:pointer-events-auto lg:max-h-full lg:w-[23rem] lg:overflow-y-auto`}
+            className={`${panel} ${anchor} lg:pointer-events-auto lg:max-h-full lg:w-[23rem] lg:overflow-y-auto`}
           >
             <h2
               id="controls-title"
@@ -107,8 +115,9 @@ export function SimulatorPage() {
           </section>
 
           <aside
+            id="status"
             aria-labelledby="status-title"
-            className={`${panel} grid gap-5 lg:pointer-events-auto lg:max-h-full lg:w-[22rem] lg:overflow-y-auto`}
+            className={`${panel} ${anchor} grid gap-5 lg:pointer-events-auto lg:max-h-full lg:w-[22rem] lg:overflow-y-auto`}
           >
             <h2
               id="status-title"
@@ -125,6 +134,24 @@ export function SimulatorPage() {
           </aside>
         </div>
       </main>
+      {/* 모바일 화면 이동 */}
+      <nav
+        aria-label="화면 이동"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-panel-solid/95 backdrop-blur lg:hidden"
+      >
+        <ul className="grid grid-cols-3">
+          {MOBILE_LINKS.map((link) => (
+            <li key={link.href}>
+              <a
+                href={link.href}
+                className="flex min-h-14 items-center justify-center font-display text-sm font-semibold uppercase tracking-[0.04em] text-ice hover:text-accent"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   )
 }

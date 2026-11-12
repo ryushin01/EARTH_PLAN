@@ -1,9 +1,10 @@
-import { REGIONS, getSite } from '../site/data'
+import { CITIES, REGIONS, getSite } from '../site/data'
 import type { Region } from '../site/types'
 import { STRUCTURES } from '../structure/catalog'
 import { isActive } from '../structure/types'
 import type { BuiltStructure } from '../structure/types'
-import type { Drought, Impact, Wildfire } from './types'
+import { distanceKm } from '@/shared/lib'
+import type { Drought, Impact, QuakeImpact, Wildfire } from './types'
 
 function activeAt(structures: BuiltStructure[], year: number) {
   return structures.filter((s) => isActive(s, year))
@@ -197,4 +198,53 @@ export function droughtEffects(
 export function regionOf(id: string): Region | undefined {
   const site = getSite(id)
   return site?.kind === 'region' ? site : undefined
+}
+
+// ── 지진 ──────────────────────────────────────────────
+
+/** 건물이 크게 무너지는 반경 (km): 규모 6 약 10km, 7 약 32km, 8 약 100km */
+export function quakeSevereRadiusKm(magnitude: number): number {
+  return 10 ** (0.5 * magnitude - 2)
+}
+
+/** 강한 흔들림 반경 (km) */
+export function quakeStrongRadiusKm(magnitude: number): number {
+  return quakeSevereRadiusKm(magnitude) * 2.5
+}
+
+export function quakeReduction(
+  cityId: string,
+  structures: BuiltStructure[],
+  year: number,
+): number {
+  return activeAt(structures, year)
+    .filter((s) => s.siteId === cityId)
+    .reduce(
+      (best, s) => Math.max(best, STRUCTURES[s.kind].quakeReduction ?? 0),
+      0,
+    )
+}
+
+/** 단층 지진이 도시에 주는 피해 (가까운 순) */
+export function quakeImpacts(
+  center: { lat: number; lon: number },
+  magnitude: number,
+  structures: BuiltStructure[],
+  year: number,
+): QuakeImpact[] {
+  const severe = quakeSevereRadiusKm(magnitude)
+  const strong = quakeStrongRadiusKm(magnitude)
+  return CITIES.flatMap((city) => {
+    const d = distanceKm(center, city)
+    if (d > strong) return []
+    const reduced = quakeReduction(city.id, structures, year) > 0
+    const raw: QuakeImpact['outcome'] = d <= severe ? 'severe' : 'moderate'
+    // 내진 보강이 피해를 한 단계 낮춤 (심각 → 경미, 경미 → 보강으로 버팀)
+    const outcome: QuakeImpact['outcome'] = reduced
+      ? raw === 'severe'
+        ? 'moderate'
+        : 'reduced'
+      : raw
+    return [{ cityId: city.id, distanceKm: d, outcome }]
+  }).sort((a, b) => a.distanceKm - b.distanceKm)
 }

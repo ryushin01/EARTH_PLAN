@@ -10,7 +10,14 @@ export type Basin =
   | 'mediterranean'
 
 export type SiteKind =
-  'city' | 'volcano' | 'trench' | 'strait' | 'glacier' | 'region' | 'ocean'
+  | 'city'
+  | 'volcano'
+  | 'trench'
+  | 'strait'
+  | 'glacier'
+  | 'region'
+  | 'ocean'
+  | 'fault'
 
 interface SiteBase extends LatLon {
   id: string
@@ -81,4 +88,13 @@ export interface Ocean extends SiteBase {
   note: string
 }
 
-export type Site = City | Volcano | Trench | Strait | Glacier | Region | Ocean
+/** 내륙·연안의 활성 단층 */
+export interface Fault extends SiteBase {
+  kind: 'fault'
+  /** 기록상(또는 추정) 최대 규모 */
+  historicMagnitude: number
+  note: string
+}
+
+export type Site =
+  City | Volcano | Trench | Strait | Glacier | Region | Ocean | Fault

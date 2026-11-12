@@ -58,6 +58,27 @@ export interface Impact {
   affectedCityIds: string[]
 }
 
+export type QuakeOutcome = 'severe' | 'moderate' | 'reduced'
+
+export interface QuakeImpact {
+  cityId: string
+  distanceKm: number
+  outcome: QuakeOutcome
+}
+
+export interface Quake {
+  id: string
+  faultId: string
+  magnitude: number
+  year: number
+  startedAt: number
+  /** 건물이 크게 무너지는 반경 (km) */
+  severeRadiusKm: number
+  /** 강한 흔들림 반경 (km) */
+  strongRadiusKm: number
+  impacts: QuakeImpact[]
+}
+
 export interface Wildfire {
   id: string
   regionId: string
@@ -121,12 +142,15 @@ export interface WorldState {
   eruptions: Eruption[]
   tsunamis: Tsunami[]
   impacts: Impact[]
+  quakes: Quake[]
   wildfires: Wildfire[]
   droughts: Drought[]
   storms: Storm[]
   history: HistoryPoint[]
   /** 열대 저기압 해일로 큰 피해를 입은 횟수 */
   stormDamage: number
+  /** 지금까지 구조물에 쓴 예산 (십억 달러) */
+  spent: number
   /** 진행 중이거나 끝난 미션 */
   mission: MissionState | null
   events: WorldEvent[]

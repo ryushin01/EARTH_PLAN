@@ -21,7 +21,7 @@ describe('시나리오 저장·공유', () => {
     expect(decodeSnapshot(code)).toEqual(snapshot)
 
     useWorld.getState().reset()
-    useWorld.getState().loadSnapshot(snapshot, '테스트')
+    useWorld.getState().loadSnapshot(snapshot, { ko: '테스트', en: 'test' })
     const loaded = useWorld.getState()
     expect(loaded.scenario).toBe('high')
     expect(loaded.seaLevel).toBeCloseTo(12.3)
@@ -30,7 +30,7 @@ describe('시나리오 저장·공유', () => {
       siteId: 'north-sea',
     })
     expect(loaded.floodedCityIds).not.toContain('amsterdam')
-    expect(loaded.events[0].text).toContain('테스트 시나리오를 불러왔습니다')
+    expect(loaded.events[0].text.ko).toContain('테스트 시나리오를 불러왔습니다')
   })
 
   it('망가지거나 조작된 값은 거부한다', () => {

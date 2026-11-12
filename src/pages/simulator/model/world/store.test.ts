@@ -6,7 +6,7 @@ describe('world store', () => {
   it('예산이 모자라면 건설하지 않는다', () => {
     const result = useWorld.getState().build('solar-shade', 'orbit')
     expect(result.ok).toBe(false)
-    expect(result.message).toContain('모자랍니다')
+    expect(result.message.ko).toContain('모자랍니다')
     expect(useWorld.getState().structures).toHaveLength(0)
   })
 
@@ -40,7 +40,7 @@ describe('world store', () => {
     expect(useWorld.getState().triggerEruption('vesuvius', 5, 0).ok).toBe(true)
     expect(useWorld.getState().eruptions[0].affectedCityIds).toContain('naples')
     expect(
-      useWorld.getState().triggerTsunami('japan-trench', 9, 0).message,
+      useWorld.getState().triggerTsunami('japan-trench', 9, 0).message.ko,
     ).toContain('일본 해구')
     expect(useWorld.getState().triggerTsunami('fuji', 9, 0).ok).toBe(false)
   })
@@ -62,7 +62,7 @@ describe('새 재해', () => {
   it('요격망이 있으면 빗나가고 기록한다', () => {
     useWorld.getState().build('planetary-defense', 'orbit', { instant: true })
     const r = useWorld.getState().triggerImpact('tokyo', 340, 0)
-    expect(r.message).toContain('빗나가게')
+    expect(r.message.ko).toContain('빗나가게')
     expect(useWorld.getState().tsunamis).toHaveLength(0)
   })
 

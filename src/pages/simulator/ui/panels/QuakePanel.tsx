@@ -1,19 +1,22 @@
 import { useState } from 'react'
-import { FAULTS, getSite } from '../../model/site/data'
+import { FAULTS } from '../../model/site/data'
+import {
+  EMPTY_TEXT,
+  nameList,
+  regionName,
+  siteName,
+  siteNote,
+} from '../../model/text'
 import {
   quakeImpacts,
   quakeSevereRadiusKm,
   quakeStrongRadiusKm,
 } from '../../model/world/hazards'
 import { useWorld } from '../../model/world/store'
+import { useT } from '../i18n'
 import { Button, RangeField, SelectField, StatusMessage } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
 
-const OUTCOME_LABEL = {
-  severe: '큰 피해',
-  moderate: '흔들림 피해',
-  reduced: '내진 보강으로 버팀',
-} as const
 const OUTCOME_STYLE = {
   severe: 'text-danger',
   moderate: 'text-warn',
@@ -21,6 +24,7 @@ const OUTCOME_STYLE = {
 } as const
 
 export function QuakePanel() {
+  const { t, pick, locale } = useT()
   const selectedSiteId = useWorld((s) => s.selectedSiteId)
   const structures = useWorld((s) => s.structures)
   const year = useWorld((s) => s.year)
@@ -30,7 +34,7 @@ export function QuakePanel() {
 
   const [faultId, setFaultId] = useState(FAULTS[0].id)
   const [magnitude, setMagnitude] = useState(7)
-  const [result, setResult] = useState({ message: '', ok: true })
+  const [result, setResult] = useState({ message: EMPTY_TEXT, ok: true })
 
   const fault =
     FAULTS.find((f) => f.id === selectedSiteId) ??
@@ -42,7 +46,7 @@ export function QuakePanel() {
   return (
     <div className="grid gap-5">
       <SelectField
-        label="단층"
+        label={t('quake.fault')}
         value={fault.id}
         onChange={(id) => {
           setFaultId(id)
@@ -50,36 +54,44 @@ export function QuakePanel() {
         }}
         options={FAULTS.map((f) => ({
           value: f.id,
-          label: f.name,
-          group: f.region,
+          label: siteName(f, locale),
+          group: regionName(f.region, locale),
         }))}
-        description={`${fault.note} · 최대 규모 ${fault.historicMagnitude}`}
+        description={t('quake.note', {
+          note: siteNote(fault, locale),
+          m: fault.historicMagnitude,
+        })}
       />
       <RangeField
-        label="지진 규모"
+        label={t('quake.magnitude')}
         min={5.5}
         max={8.5}
         step={0.1}
         value={magnitude}
         onChange={setMagnitude}
-        valueText={`규모 ${magnitude.toFixed(1)}`}
-        description="규모가 1 오르면 에너지는 약 32배가 됩니다. 바다 밑 해구 지진은 쓰나미 탭에서 일으킵니다."
+        valueText={t('common.magnitude', { m: magnitude.toFixed(1) })}
+        description={t('quake.help')}
       />
       <div className="rounded-xs border border-line p-3 text-sm leading-relaxed">
         <p>
-          큰 피해 반경{' '}
+          {t('quake.severeRadius')}{' '}
           <strong className="display-num">
             {formatNumber(quakeSevereRadiusKm(magnitude), 0)}km
           </strong>{' '}
-          · 강한 흔들림{' '}
+          · {t('quake.strongRadius')}{' '}
           <strong className="display-num">
             {formatNumber(quakeStrongRadiusKm(magnitude), 0)}km
           </strong>
         </p>
         <p className="text-muted">
           {preview.length
-            ? `영향 도시: ${preview.map((i) => getSite(i.cityId)?.name).join(', ')}`
-            : '강한 흔들림 범위 안에 주요 도시가 없습니다.'}
+            ? t('common.affectedCities', {
+                list: nameList(
+                  preview.map((i) => i.cityId),
+                  locale,
+                ),
+              })
+            : t('quake.noCities')}
         </p>
       </div>
       <Button
@@ -89,16 +101,16 @@ export function QuakePanel() {
           select(fault.id)
         }}
       >
-        {fault.name} 지진 일으키기
+        {t('quake.trigger', { name: siteName(fault, locale) })}
       </Button>
       <StatusMessage
-        message={result.message}
+        message={pick(result.message)}
         tone={result.ok ? 'info' : 'error'}
       />
       {latest?.impacts.length ? (
         <section aria-labelledby="quake-impacts" className="grid gap-2">
           <h3 id="quake-impacts" className="label-caps">
-            최근 지진 피해
+            {t('quake.latest')}
           </h3>
           <ul className="grid gap-1 text-sm">
             {latest.impacts.map((impact) => (
@@ -107,15 +119,17 @@ export function QuakePanel() {
                 className="flex justify-between gap-2 border-t border-line py-1.5"
               >
                 <span>
-                  {getSite(impact.cityId)?.name}{' '}
+                  {siteName(impact.cityId, locale)}{' '}
                   <span className="text-xs text-muted">
-                    진앙에서 {formatNumber(impact.distanceKm, 0)}km
+                    {t('quake.distance', {
+                      km: formatNumber(impact.distanceKm, 0),
+                    })}
                   </span>
                 </span>
                 <span
                   className={`font-semibold ${OUTCOME_STYLE[impact.outcome]}`}
                 >
-                  {OUTCOME_LABEL[impact.outcome]}
+                  {t(`quake.outcome.${impact.outcome}`)}
                 </span>
               </li>
             ))}

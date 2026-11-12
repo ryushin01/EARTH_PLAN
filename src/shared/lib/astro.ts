@@ -49,6 +49,17 @@ export function northernSeason(year: number): number {
   return -Math.cos(((2 * Math.PI) / DAYS_PER_YEAR) * (doy + 10))
 }
 
+export type SeasonKey = 'spring' | 'summer' | 'autumn' | 'winter'
+
+/** 북반구 계절 */
+export function seasonKey(year: number): SeasonKey {
+  const month = decimalYearToDate(year).getUTCMonth()
+  if (month >= 2 && month <= 4) return 'spring'
+  if (month >= 5 && month <= 7) return 'summer'
+  if (month >= 8 && month <= 10) return 'autumn'
+  return 'winter'
+}
+
 export function seasonLabel(year: number): string {
   const month = decimalYearToDate(year).getUTCMonth()
   if (month >= 2 && month <= 4) return '봄'

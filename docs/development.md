@@ -44,6 +44,13 @@
 
 텍스처는 `ImageBitmapLoader`로 메인 스레드 밖에서 해석하고, 셰이더는 `compileAsync`로 미리 컴파일한 뒤 지구를 보여 줍니다.
 
+## 언어
+
+- `shared/i18n`: 언어 상태(zustand, `localStorage`에 기억)와 `<html lang>` 동기화, 보간 함수
+- `pages/simulator/ui/messages.ts`: 화면 문구를 키마다 `[한국어, 영어]` 쌍으로 적고 `useT()`의 `t(키, 값)`로 씀. 두 언어의 `{자리}`가 같은지 테스트로 검사
+- `model/site/en.ts`, `STRUCTURE_EN`, `labelEn`: 데이터의 영어 이름·설명
+- 사건 기록·결과 메시지는 생길 때 `{ ko, en }`을 함께 만들고(`model/text.ts`의 `compose`), 화면에서 현재 언어를 고름
+
 ## 테스트
 
 | 명령                   | 범위                                                                                                                                                                                              |

@@ -278,3 +278,36 @@ test.describe('지진과 모바일', () => {
     await expect(page.getByRole('button', { name: '구름' })).toBeVisible()
   })
 })
+
+test.describe('언어', () => {
+  test('영어로 바꾸면 화면·lang이 바뀌고 새로고침해도 유지된다', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'English' }).click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    await expect(
+      page.getByRole('heading', { name: 'Earth Control' }),
+    ).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Sea level' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await page.reload()
+    await expect(
+      page.getByRole('heading', { name: 'Earth Status' }),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'English' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      .analyze()
+    expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual(
+      [],
+    )
+    await page.getByRole('button', { name: '한국어' }).click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ko')
+  })
+})

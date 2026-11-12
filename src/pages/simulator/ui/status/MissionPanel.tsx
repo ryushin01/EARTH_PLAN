@@ -5,19 +5,15 @@ import { useWorld } from '../../model/world/store'
 import { MissionResultDialog } from './MissionResultDialog'
 import { formatSimDate } from './TimeControls'
 import { Button } from '@/shared/ui'
+import { useT } from '../i18n'
 import { cn, decimalYearToDate, formatBillions } from '@/shared/lib'
 
-const STATUS_TEXT = {
-  active: '진행 중',
-  success: '성공',
-  failed: '실패',
-} as const
-
 function ActiveMission({ mission }: { mission: Mission }) {
+  const { t, pick, locale } = useT()
   const status = useWorld((s) => s.mission?.status ?? 'active')
   const firedIds = useWorld(useShallow((s) => s.mission?.firedIds ?? []))
   const year = useWorld((s) => s.year)
-  const detail = useWorld((s) => mission.evaluate(s).detail)
+  const detail = useWorld((s) => mission.evaluate(s).detail[locale])
   const quitMission = useWorld((s) => s.quitMission)
   const startYear = useWorld((s) => s.history[0]?.year ?? s.year)
   const progress = Math.min(
@@ -28,7 +24,9 @@ function ActiveMission({ mission }: { mission: Mission }) {
   return (
     <div className="grid gap-3">
       <p className="flex items-baseline justify-between gap-2">
-        <strong className="font-display text-base">{mission.title}</strong>
+        <strong className="font-display text-base">
+          {pick(mission.title)}
+        </strong>
         <span
           className={cn(
             'text-xs font-semibold',
@@ -39,14 +37,18 @@ function ActiveMission({ mission }: { mission: Mission }) {
                 : 'text-accent',
           )}
         >
-          {STATUS_TEXT[status]}
+          {t(`mission.status.${status}`)}
         </span>
       </p>
-      <p className="text-sm leading-relaxed text-muted">목표: {mission.goal}</p>
+      <p className="text-sm leading-relaxed text-muted">
+        {t('mission.goal', { goal: pick(mission.goal) })}
+      </p>
       <div className="grid gap-1">
         <label htmlFor="mission-progress" className="label-caps">
-          {formatSimDate(year)} /{' '}
-          {decimalYearToDate(mission.endYear).getUTCFullYear()}년
+          {t('mission.progress', {
+            now: formatSimDate(year),
+            end: decimalYearToDate(mission.endYear).getUTCFullYear(),
+          })}
         </label>
         <progress
           id="mission-progress"
@@ -59,17 +61,17 @@ function ActiveMission({ mission }: { mission: Mission }) {
       </div>
       <p className="rounded-xs border border-line p-2 text-sm">{detail}</p>
       {mission.schedule.length ? (
-        <ul className="grid gap-1 text-sm" aria-label="예정된 사건">
+        <ul className="grid gap-1 text-sm" aria-label={t('mission.schedule')}>
           {mission.schedule.map((item) => (
             <li key={item.id} className="flex justify-between gap-2">
-              <span>{item.warning}</span>
+              <span>{pick(item.warning)}</span>
               <span
                 className={
                   firedIds.includes(item.id) ? 'text-muted' : 'text-warn'
                 }
               >
                 {firedIds.includes(item.id)
-                  ? '일어남'
+                  ? t('mission.happened')
                   : formatSimDate(item.year)}
               </span>
             </li>
@@ -78,7 +80,7 @@ function ActiveMission({ mission }: { mission: Mission }) {
       ) : null}
       <MissionResultDialog mission={mission} />
       <Button size="sm" onClick={quitMission}>
-        {status === 'active' ? '미션 그만두기' : '미션 닫기'}
+        {status === 'active' ? t('mission.quit') : t('mission.close')}
       </Button>
     </div>
   )
@@ -86,6 +88,7 @@ function ActiveMission({ mission }: { mission: Mission }) {
 
 /** 목표가 있는 미션 */
 export function MissionPanel() {
+  const { t, pick } = useT()
   const missionId = useWorld((s) => s.mission?.id ?? null)
   const startMission = useWorld((s) => s.startMission)
   const mission = missionId ? MISSION_BY_ID[missionId] : undefined
@@ -97,35 +100,38 @@ export function MissionPanel() {
       className="grid scroll-mt-[calc(45svh+0.5rem)] gap-3 lg:scroll-mt-0"
     >
       <h3 id="mission-title" className="label-caps">
-        미션
+        {t('page.mission')}
       </h3>
       {mission ? (
         <ActiveMission mission={mission} />
       ) : (
         <>
-          <p className="text-sm text-muted">
-            미션을 시작하면 지금 시뮬레이션은 처음 상태로 돌아갑니다.
-          </p>
+          <p className="text-sm text-muted">{t('mission.resetWarning')}</p>
           <ul className="grid gap-2">
             {MISSIONS.map((m) => (
               <li
                 key={m.id}
                 className="grid gap-1.5 rounded-xs border border-line p-3"
               >
-                <strong className="font-display text-sm">{m.title}</strong>
+                <strong className="font-display text-sm">
+                  {pick(m.title)}
+                </strong>
                 <span className="text-sm leading-relaxed text-muted">
-                  {m.brief}
+                  {pick(m.brief)}
                 </span>
                 <span className="text-xs text-ice">
-                  목표: {m.goal} · 예산 {formatBillions(m.budget)}
+                  {t('mission.card', {
+                    goal: pick(m.goal),
+                    budget: formatBillions(m.budget),
+                  })}
                 </span>
                 <Button
                   size="sm"
                   variant="primary"
                   onClick={() => startMission(m.id)}
-                  aria-label={`${m.title} 시작`}
+                  aria-label={t('mission.startNamed', { title: pick(m.title) })}
                 >
-                  시작
+                  {t('mission.start')}
                 </Button>
               </li>
             ))}

@@ -3,6 +3,7 @@ export type ScenarioId = 'low' | 'mid' | 'high' | 'extreme'
 export interface Scenario {
   id: ScenarioId
   label: string
+  labelEn: string
   code: string
   /** 2100년 해수면 상승 (m, 2020년 대비) */
   rise2100: number
@@ -15,6 +16,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   low: {
     id: 'low',
     label: '저배출',
+    labelEn: 'Low',
     code: 'SSP1-2.6',
     rise2100: 0.44,
     temp2100: 1.8,
@@ -22,6 +24,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   mid: {
     id: 'mid',
     label: '중간',
+    labelEn: 'Middle',
     code: 'SSP2-4.5',
     rise2100: 0.56,
     temp2100: 2.7,
@@ -29,6 +32,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   high: {
     id: 'high',
     label: '고배출',
+    labelEn: 'High',
     code: 'SSP5-8.5',
     rise2100: 0.77,
     temp2100: 4.4,
@@ -36,6 +40,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   extreme: {
     id: 'extreme',
     label: '빙상 붕괴',
+    labelEn: 'Ice-sheet collapse',
     code: 'SSP5-8.5+',
     rise2100: 1.6,
     temp2100: 4.4,

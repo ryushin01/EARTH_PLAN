@@ -169,6 +169,11 @@ const DROUGHT_SHARE = { 1: 0.2, 2: 0.45, 3: 0.7 } as const
 const DROUGHT_CROP_LOSS = { 1: 15, 2: 35, 3: 60 } as const
 
 export const SEVERITY_LABEL = { 1: '보통', 2: '심함', 3: '극심' } as const
+export const SEVERITY_LABEL_EN = {
+  1: 'Moderate',
+  2: 'Severe',
+  3: 'Extreme',
+} as const
 
 export function droughtEffects(
   region: Region,

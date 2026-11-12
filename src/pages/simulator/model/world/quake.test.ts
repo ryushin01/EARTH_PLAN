@@ -39,7 +39,7 @@ describe('지진', () => {
   it('지진을 일으키면 기록하고, 단층이 아니면 거부한다', () => {
     const r = useWorld.getState().triggerQuake('main-himalayan', 7.8, 0)
     expect(r.ok).toBe(true)
-    expect(r.message).toContain('카트만두')
+    expect(r.message.ko).toContain('카트만두')
     expect(useWorld.getState().quakes[0].impacts[0].cityId).toBe('kathmandu')
     expect(useWorld.getState().triggerQuake('tokyo', 7, 0).ok).toBe(false)
   })

@@ -10,6 +10,7 @@ import type { Snapshot } from '../../model/world/snapshot'
 import { useWorld } from '../../model/world/store'
 import { formatSimDate } from './TimeControls'
 import { Button, StatusMessage } from '@/shared/ui'
+import { useT } from '../i18n'
 
 const STORAGE_KEY = 'earth-plan:saves'
 const MAX_SAVES = 8
@@ -82,12 +83,16 @@ export function shareUrl(snapshot: Snapshot, base: string): string {
 
 /** 시나리오를 이 브라우저에 저장하고, 링크로 공유합니다 */
 export function ScenarioShare() {
+  const { t } = useT()
   const loadSnapshot = useWorld((s) => s.loadSnapshot)
   const raw = useSyncExternalStore(subscribe, readRaw, () => '[]')
   const saves = useMemo(() => parseSaves(raw), [raw])
   const [name, setName] = useState('')
   const [link, setLink] = useState('')
-  const [status, setStatus] = useState({ message: '', ok: true })
+  const [status, setStatus] = useState<{ message: string; ok: boolean }>({
+    message: '',
+    ok: true,
+  })
   const nameId = useId()
   const linkId = useId()
 
@@ -98,13 +103,12 @@ export function ScenarioShare() {
       await navigator.clipboard.writeText(url)
       setStatus({
         ok: true,
-        message:
-          '공유 링크를 복사했습니다. 링크를 열면 지금 시나리오가 그대로 열립니다.',
+        message: t('share.copied'),
       })
     } catch {
       setStatus({
         ok: false,
-        message: '자동 복사가 막혀 있습니다. 아래 링크 칸에서 직접 복사하세요.',
+        message: t('share.copyBlocked'),
       })
     }
   }
@@ -112,7 +116,8 @@ export function ScenarioShare() {
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const state = useWorld.getState()
-    const label = name.trim() || `${formatSimDate(state.year)} 시나리오`
+    const label =
+      name.trim() || t('share.defaultName', { date: formatSimDate(state.year) })
     const item: SavedItem = {
       id: `${Date.now()}`,
       name: label.slice(0, 40),
@@ -123,31 +128,30 @@ export function ScenarioShare() {
     if (!writeSaves(next)) {
       setStatus({
         ok: false,
-        message:
-          '이 브라우저에서는 저장할 수 없습니다. 공유 링크를 복사해 보관하세요.',
+        message: t('share.saveBlocked'),
       })
       return
     }
     setName('')
-    setStatus({ ok: true, message: `"${item.name}"을(를) 저장했습니다.` })
+    setStatus({ ok: true, message: t('share.saved', { name: item.name }) })
   }
 
   const remove = (item: SavedItem) => {
     const next = saves.filter((s) => s.id !== item.id)
     writeSaves(next)
-    setStatus({ ok: true, message: `"${item.name}"을(를) 지웠습니다.` })
+    setStatus({ ok: true, message: t('share.removed', { name: item.name }) })
   }
 
   return (
     <section aria-labelledby="share-title" className="grid gap-3">
       <h3 id="share-title" className="label-caps">
-        저장·공유
+        {t('share.title')}
       </h3>
-      <Button onClick={copyLink}>공유 링크 복사</Button>
+      <Button onClick={copyLink}>{t('share.copy')}</Button>
       {link ? (
         <div className="grid gap-1">
           <label htmlFor={linkId} className="label-caps">
-            공유 링크
+            {t('share.link')}
           </label>
           <input
             id={linkId}
@@ -160,7 +164,7 @@ export function ScenarioShare() {
       ) : null}
       <form onSubmit={save} className="grid gap-2">
         <label htmlFor={nameId} className="label-caps">
-          저장할 이름
+          {t('share.name')}
         </label>
         <div className="flex gap-2">
           <input
@@ -168,11 +172,11 @@ export function ScenarioShare() {
             value={name}
             maxLength={40}
             onChange={(e) => setName(e.target.value)}
-            placeholder="예: 북해 댐 실험"
+            placeholder={t('share.placeholder')}
             autoComplete="off"
             className="min-h-11 min-w-0 flex-1 rounded-xs border border-line-strong bg-panel-solid px-3 text-sm text-ice placeholder:text-muted"
           />
-          <Button type="submit">저장</Button>
+          <Button type="submit">{t('share.save')}</Button>
         </div>
       </form>
       <StatusMessage
@@ -180,7 +184,7 @@ export function ScenarioShare() {
         tone={status.ok ? 'info' : 'error'}
       />
       {saves.length ? (
-        <ul className="grid gap-1" aria-label="저장한 시나리오">
+        <ul className="grid gap-1" aria-label={t('share.list')}>
           {saves.map((item) => (
             <li
               key={item.id}
@@ -189,29 +193,34 @@ export function ScenarioShare() {
               <span className="min-w-0 flex-1 truncate">
                 {item.name}
                 <span className="block text-xs text-muted">
-                  시뮬레이션 {formatSimDate(item.snapshot.year)} · 구조물{' '}
-                  {item.snapshot.structures.length}개
+                  {t('share.item', {
+                    date: formatSimDate(item.snapshot.year),
+                    n: item.snapshot.structures.length,
+                  })}
                 </span>
               </span>
               <Button
                 size="sm"
-                aria-label={`${item.name} 불러오기`}
+                aria-label={t('share.loadNamed', { name: item.name })}
                 onClick={() => {
-                  loadSnapshot(item.snapshot, `저장한 "${item.name}"`)
+                  loadSnapshot(item.snapshot, {
+                    ko: `저장한 "${item.name}"`,
+                    en: `saved "${item.name}"`,
+                  })
                   setStatus({
                     ok: true,
-                    message: `"${item.name}"을(를) 불러왔습니다.`,
+                    message: t('share.loaded', { name: item.name }),
                   })
                 }}
               >
-                불러오기
+                {t('share.load')}
               </Button>
               <Button
                 size="sm"
-                aria-label={`${item.name} 지우기`}
+                aria-label={t('share.removeNamed', { name: item.name })}
                 onClick={() => remove(item)}
               >
-                지우기
+                {t('share.remove')}
               </Button>
             </li>
           ))}

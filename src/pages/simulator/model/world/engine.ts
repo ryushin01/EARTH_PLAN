@@ -1,6 +1,6 @@
 import { CITIES, getSite } from '../site/data'
 import type { City, Strait } from '../site/types'
-import { STRUCTURES } from '../structure/catalog'
+import { STRUCTURES, STRUCTURE_EN } from '../structure/catalog'
 import { isActive } from '../structure/types'
 import type { BuiltStructure } from '../structure/types'
 import type { StructureKind } from '../structure/catalog'
@@ -11,6 +11,8 @@ import {
   northernSeason,
 } from '@/shared/lib'
 import { impactCooling, stepWildfires } from './hazards'
+import { compose, names, siteName } from '../text'
+import type { Text } from '../text'
 import { SCENARIOS, baselineRiseRate, baselineWarming } from './scenario'
 import type {
   CityState,
@@ -420,14 +422,22 @@ export function stormLandfalls(
         if (loud)
           events.push({
             tone: 'good',
-            text: `${storm.category}등급 열대 저기압의 해일 ${surge.toFixed(1)}m를 ${city.name} 방어 시설이 막았습니다.`,
+            text: compose((l) =>
+              l === 'ko'
+                ? `${storm.category}등급 열대 저기압의 해일 ${surge.toFixed(1)}m를 ${siteName(city, l)} 방어 시설이 막았습니다.`
+                : `${siteName(city, l)} defenses held back a ${surge.toFixed(1)} m surge from a category ${storm.category} storm.`,
+            ),
           })
       } else {
         damaged++
         if (loud)
           events.push({
             tone: 'danger',
-            text: `${storm.category}등급 열대 저기압이 ${city.name}에 상륙, 해일 ${surge.toFixed(1)}m 피해.`,
+            text: compose((l) =>
+              l === 'ko'
+                ? `${storm.category}등급 열대 저기압이 ${siteName(city, l)}에 상륙, 해일 ${surge.toFixed(1)}m 피해.`
+                : `A category ${storm.category} storm made landfall at ${siteName(city, l)}: ${surge.toFixed(1)} m surge damage.`,
+            ),
           })
       }
     }
@@ -485,7 +495,7 @@ export function touchHistory(
 
 export interface NewEvent {
   tone: EventTone
-  text: string
+  text: Text
 }
 
 export interface StepResult {
@@ -510,7 +520,11 @@ export function step(
       const site = getSite(s.siteId)
       events.push({
         tone: 'good',
-        text: `${STRUCTURES[s.kind].name}${site ? ` (${site.name})` : ''} 완공`,
+        text: compose((l) =>
+          l === 'ko'
+            ? `${STRUCTURES[s.kind].name}${site ? ` (${siteName(site, l)})` : ''} 완공`
+            : `${STRUCTURE_EN[s.kind].name}${site ? ` (${siteName(site, l)})` : ''} completed`,
+        ),
       })
     }
   }
@@ -542,7 +556,11 @@ export function step(
     if (!droughts.includes(d)) {
       events.push({
         tone: 'info',
-        text: `${getSite(d.regionId)?.name} 가뭄이 끝났습니다.`,
+        text: compose((l) =>
+          l === 'ko'
+            ? `${siteName(d.regionId, l)} 가뭄이 끝났습니다.`
+            : `The drought in ${siteName(d.regionId, l)} has ended.`,
+        ),
       })
     }
   }
@@ -591,7 +609,11 @@ export function detectFlooding(
     .filter((id) => !before.has(id))
     .map((id) => ({
       tone: 'danger' as const,
-      text: `${getSite(id)?.name} 저지대 침수 (해수면 +${state.seaLevel.toFixed(2)}m)`,
+      text: compose((l) =>
+        l === 'ko'
+          ? `${names(id).ko} 저지대 침수 (해수면 +${state.seaLevel.toFixed(2)}m)`
+          : `Low-lying ${names(id).en} flooded (sea level +${state.seaLevel.toFixed(2)} m)`,
+      ),
     }))
   return { floodedCityIds, events }
 }

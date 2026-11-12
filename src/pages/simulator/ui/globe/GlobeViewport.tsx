@@ -6,6 +6,8 @@ import { Button } from '@/shared/ui'
 import { cn, latLonToVector3 } from '@/shared/lib'
 import type { CameraApi } from '../../model/camera'
 import { GlobeScene } from './GlobeScene'
+import { useT } from '../i18n'
+import type { MessageKey } from '../i18n'
 
 const STEP = Math.PI / 12
 const MOTION_QUERY = '(prefers-reduced-motion: reduce)'
@@ -45,24 +47,28 @@ const KEY_ACTIONS: Partial<Record<string, CameraAction>> = {
   '-': 'out',
 }
 
-const BUTTONS: Array<{ action: CameraAction; label: string; symbol: string }> =
-  [
-    { action: 'left', label: '왼쪽으로 돌리기', symbol: '←' },
-    { action: 'right', label: '오른쪽으로 돌리기', symbol: '→' },
-    { action: 'up', label: '북쪽으로 기울이기', symbol: '↑' },
-    { action: 'down', label: '남쪽으로 기울이기', symbol: '↓' },
-    { action: 'in', label: '확대', symbol: '+' },
-    { action: 'out', label: '축소', symbol: '−' },
-  ]
+const BUTTONS: Array<{
+  action: CameraAction
+  label: MessageKey
+  symbol: string
+}> = [
+  { action: 'left', label: 'globe.left', symbol: '←' },
+  { action: 'right', label: 'globe.right', symbol: '→' },
+  { action: 'up', label: 'globe.up', symbol: '↑' },
+  { action: 'down', label: 'globe.down', symbol: '↓' },
+  { action: 'in', label: 'globe.in', symbol: '+' },
+  { action: 'out', label: 'globe.out', symbol: '−' },
+]
 
 function LoadingStatus() {
   const { active, progress } = useProgress()
+  const { t } = useT()
   return (
     <p
       role="status"
       className="label-caps pointer-events-none absolute inset-x-0 top-1/3 text-center"
     >
-      {active ? `지구를 불러오는 중 ${Math.round(progress)}%` : ''}
+      {active ? t('globe.loading', { percent: Math.round(progress) }) : ''}
     </p>
   )
 }
@@ -103,6 +109,7 @@ export function GlobeViewport({
   hintId: string
 }) {
   const apiRef = useRef<CameraApi | null>(null)
+  const { t } = useT()
   const reducedMotion = usePrefersReducedMotion()
   // 사용자가 직접 바꾸기 전에는 '동작 줄이기' 설정을 따름
   const [autoRotateChoice, setAutoRotate] = useState<boolean | null>(null)
@@ -133,8 +140,8 @@ export function GlobeViewport({
       {/* 초점을 받으면 화살표 키로 돌리고 +, − 키로 확대합니다 */}
       <div
         role="group"
-        aria-roledescription="3D 지구본"
-        aria-label="지구본 조작 영역"
+        aria-roledescription={t('globe.role')}
+        aria-label={t('globe.area')}
         aria-describedby={hintId}
         tabIndex={0}
         onKeyDown={onKeyDown}
@@ -150,9 +157,7 @@ export function GlobeViewport({
           dpr={[1, 1.75]}
           gl={{ antialias: true }}
           fallback={
-            <p className="p-6 text-sm text-muted">
-              이 브라우저에서는 WebGL을 쓸 수 없어 3D 지구를 표시하지 못합니다.
-            </p>
+            <p className="p-6 text-sm text-muted">{t('globe.noWebgl')}</p>
           }
         >
           <GlobeScene
@@ -173,7 +178,7 @@ export function GlobeViewport({
               size="sm"
               indicator={false}
               className="min-w-10 text-base lg:min-w-11"
-              aria-label={button.label}
+              aria-label={t(button.label)}
               onClick={() => perform(button.action)}
             >
               {button.symbol}
@@ -186,7 +191,7 @@ export function GlobeViewport({
             onClick={() => setMoreOpen((v) => !v)}
             className="min-h-9 rounded-xs border border-line-strong px-3 font-display text-xs font-semibold uppercase tracking-[0.04em] text-ice lg:hidden"
           >
-            보기
+            {t('globe.view')}
           </button>
           <div
             id={optionsId}
@@ -199,19 +204,19 @@ export function GlobeViewport({
               pressed={autoRotate}
               onClick={() => setAutoRotate(!autoRotate)}
             >
-              자동 회전
+              {t('globe.autoRotate')}
             </ToggleButton>
             <ToggleButton
               pressed={showClouds}
               onClick={() => setShowClouds((v) => !v)}
             >
-              구름
+              {t('globe.clouds')}
             </ToggleButton>
             <ToggleButton
               pressed={showMarkers}
               onClick={() => setShowMarkers((v) => !v)}
             >
-              지점
+              {t('globe.markers')}
             </ToggleButton>
           </div>
         </div>

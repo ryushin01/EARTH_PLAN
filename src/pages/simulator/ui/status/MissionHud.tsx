@@ -1,3 +1,5 @@
+import { useT } from '../i18n'
+import type { MessageKey } from '../i18n'
 import { useShallow } from 'zustand/react/shallow'
 import { summarize } from '../../model/world/selectors'
 import { useWorld } from '../../model/world/store'
@@ -5,12 +7,12 @@ import type { EventTone } from '../../model/world/types'
 import { formatSimDate } from './TimeControls'
 import { formatBillions, formatNumber, formatSigned, cn } from '@/shared/lib'
 
-const TONE_LABEL: Record<EventTone, string> = {
-  info: '알림',
-  good: '완료',
-  warn: '주의',
-  danger: '경보',
-}
+const TONE_KEY = {
+  info: 'tone.info',
+  good: 'tone.good',
+  warn: 'tone.warn',
+  danger: 'tone.danger',
+} as const satisfies Record<EventTone, MessageKey>
 const TONE_STYLE: Record<EventTone, string> = {
   info: 'text-muted',
   good: 'text-accent',
@@ -44,6 +46,7 @@ function Stat({
 
 /** 지구 상태 수치와 사건 기록 */
 export function MissionHud() {
+  const { t, pick } = useT()
   const seaLevel = useWorld((s) => s.seaLevel)
   const budget = useWorld((s) => s.budget)
   const storms = useWorld((s) => s.storms.length)
@@ -61,47 +64,60 @@ export function MissionHud() {
     <div className="grid gap-4">
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xs border border-line bg-line">
         <Stat
-          label="해수면"
+          label={t('hud.sea')}
           value={`${formatSigned(seaLevel, 2)}m`}
-          note="2020년 대비"
+          note={t('hud.vs2020')}
         />
         <Stat
-          label="평균 기온"
+          label={t('hud.temp')}
           value={`${formatSigned(summary.warming, 2)}°C`}
-          note="산업화 이전 대비"
+          note={t('hud.vsPreindustrial')}
         />
         <Stat
-          label="침수 도시"
-          value={`${summary.floodedCities}곳`}
-          note={`보호 ${summary.protectedCities} · 위험 ${summary.atRiskCities}`}
+          label={t('hud.flooded')}
+          value={t('hud.count', { n: summary.floodedCities })}
+          note={t('hud.floodedNote', {
+            p: summary.protectedCities,
+            r: summary.atRiskCities,
+          })}
         />
         <Stat
-          label="이주 추정"
+          label={t('hud.displaced')}
           value={`${formatNumber(summary.displacedMillions, 1)}M`}
-          note="백만 명, 단순 추정"
+          note={t('hud.displacedNote')}
         />
-        <Stat label="열대 저기압" value={`${storms}개`} note="지금 활동 중" />
-        <Stat label="산불" value={`${fires}곳`} note="지금 타는 곳" />
-        <Stat label="가뭄" value={`${droughts}곳`} note="진행 중인 지역" />
         <Stat
-          label="예산"
+          label={t('hud.storms')}
+          value={t('hud.count', { n: storms })}
+          note={t('hud.stormsNote')}
+        />
+        <Stat
+          label={t('hud.fires')}
+          value={t('hud.count', { n: fires })}
+          note={t('hud.firesNote')}
+        />
+        <Stat
+          label={t('hud.droughts')}
+          value={t('hud.count', { n: droughts })}
+          note={t('hud.droughtsNote')}
+        />
+        <Stat
+          label={t('hud.budget')}
           value={formatBillions(budget)}
-          note="매년 $150B 증가"
+          note={t('hud.budgetNote')}
         />
       </dl>
 
       <section aria-labelledby="event-log-title" className="grid gap-2">
         <h3 id="event-log-title" className="label-caps">
-          사건 기록
+          {t('hud.log')}
         </h3>
         {/* 새 사건을 화면 낭독기에 알림 (내용만 바뀜) */}
         <p role="status" className="sr-only">
-          {latest ? `${TONE_LABEL[latest.tone]}: ${latest.text}` : ''}
+          {latest ? `${t(TONE_KEY[latest.tone])}: ${pick(latest.text)}` : ''}
         </p>
         {events.length === 0 ? (
-          <p className="text-sm text-muted">
-            아직 기록이 없습니다. 재생하거나 재해를 일으켜 보세요.
-          </p>
+          <p className="text-sm text-muted">{t('hud.logEmpty')}</p>
         ) : (
           <ol
             className="grid max-h-64 gap-0 overflow-y-auto pr-1"
@@ -119,12 +135,12 @@ export function MissionHud() {
                     TONE_STYLE[event.tone],
                   )}
                 >
-                  {TONE_LABEL[event.tone]}
+                  {t(TONE_KEY[event.tone])}
                 </span>
                 <span className="mr-2 display-num text-xs text-muted">
                   {formatSimDate(event.year)}
                 </span>
-                {event.text}
+                {pick(event.text)}
               </li>
             ))}
           </ol>

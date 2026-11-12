@@ -1,26 +1,21 @@
 import { useShallow } from 'zustand/react/shallow'
 import { CITIES } from '../../model/site/data'
+import { siteName } from '../../model/text'
 import { SCENARIOS, baselineSeaLevel } from '../../model/world/scenario'
 import { cityStates, summarize } from '../../model/world/selectors'
 import { useWorld } from '../../model/world/store'
 import type { CityState } from '../../model/world/types'
 import type { ScenarioId } from '../../model/world/scenario'
+import { useT } from '../i18n'
 import { formatNumber } from '@/shared/lib'
 import { Button, ChoiceGroup, RangeField } from '@/shared/ui'
 
 const PRESETS = [
-  { label: '그린란드 빙상 전부', meters: 7.4 },
-  { label: '남극 서부 빙상', meters: 3.3 },
-  { label: '남극 빙상 전부', meters: 58 },
-  { label: '지구의 모든 빙하', meters: 70 },
-]
-
-const STATE_LABEL: Record<CityState, string> = {
-  safe: '안전',
-  'at-risk': '위험',
-  protected: '보호 중',
-  flooded: '침수',
-}
+  { label: 'sea.preset.greenland', meters: 7.4 },
+  { label: 'sea.preset.westAntarctica', meters: 3.3 },
+  { label: 'sea.preset.antarctica', meters: 58 },
+  { label: 'sea.preset.all', meters: 70 },
+] as const
 
 const STATE_STYLE: Record<CityState, string> = {
   safe: 'text-muted',
@@ -30,6 +25,7 @@ const STATE_STYLE: Record<CityState, string> = {
 }
 
 export function SeaLevelPanel() {
+  const { t, locale } = useT()
   const scenario = useWorld((s) => s.scenario)
   const seaLevel = useWorld((s) => s.seaLevel)
   const year = useWorld((s) => s.year)
@@ -43,34 +39,36 @@ export function SeaLevelPanel() {
   const watched = CITIES.filter((c) => states[c.id] !== 'safe').sort(
     (a, b) => a.elevation - b.elevation,
   )
+  const scenarioLabel = (id: ScenarioId) =>
+    locale === 'en' ? SCENARIOS[id].labelEn : SCENARIOS[id].label
 
   return (
     <div className="grid gap-6">
       <ChoiceGroup<ScenarioId>
-        legend="온실가스 배출 시나리오"
+        legend={t('sea.scenario')}
         value={scenario}
         onChange={setScenario}
         columns={2}
         choices={Object.values(SCENARIOS).map((s) => ({
           value: s.id,
-          label: s.label,
-          hint: `${s.code} · 2100년 +${s.rise2100}m`,
+          label: scenarioLabel(s.id),
+          hint: t('sea.scenarioHint', { code: s.code, rise: s.rise2100 }),
         }))}
       />
 
       <RangeField
-        label="해수면 (2020년 대비)"
+        label={t('sea.level')}
         min={0}
         max={80}
         step={0.1}
         value={Math.round(seaLevel * 10) / 10}
         onChange={setSeaLevel}
         valueText={`+${formatNumber(seaLevel, 2)} m`}
-        description="재생하면 시나리오 속도대로 오르고, 직접 옮겨 극단적인 상황도 볼 수 있습니다. 고도 자료: NOAA ETOPO1."
+        description={t('sea.levelHelp')}
       />
 
       <div className="grid gap-2">
-        <h3 className="label-caps">빙상이 녹으면</h3>
+        <h3 className="label-caps">{t('sea.ifMelts')}</h3>
         <div className="grid grid-cols-2 gap-1.5">
           <Button
             size="sm"
@@ -78,7 +76,7 @@ export function SeaLevelPanel() {
               setSeaLevel(baselineSeaLevel(2100, SCENARIOS[scenario]))
             }
           >
-            2100년 ({SCENARIOS[scenario].label})
+            {t('sea.preset.2100', { scenario: scenarioLabel(scenario) })}
           </Button>
           {PRESETS.map((preset) => (
             <Button
@@ -86,7 +84,7 @@ export function SeaLevelPanel() {
               size="sm"
               onClick={() => setSeaLevel(preset.meters)}
             >
-              {preset.label} +{preset.meters}m
+              {t(preset.label)} +{preset.meters}m
             </Button>
           ))}
         </div>
@@ -94,29 +92,31 @@ export function SeaLevelPanel() {
 
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xs border border-line bg-line">
         <div className="bg-panel-solid p-3">
-          <dt className="label-caps">새로 잠긴 육지</dt>
+          <dt className="label-caps">{t('sea.newlyFlooded')}</dt>
           <dd className="display-num text-xl">
             {summary.floodedAreaKm2 === null
-              ? '계산 중'
-              : `${formatNumber(summary.floodedAreaKm2 / 1000, 0)}천 km²`}
+              ? t('sea.calculating')
+              : t('sea.area', {
+                  area: formatNumber(summary.floodedAreaKm2 / 1000, 0),
+                })}
           </dd>
         </div>
         <div className="bg-panel-solid p-3">
-          <dt className="label-caps">상승 속도</dt>
+          <dt className="label-caps">{t('sea.rate')}</dt>
           <dd className="display-num text-xl">
-            {formatNumber(summary.riseRateMmPerYear, 1)} mm/년
+            {t('sea.rateValue', {
+              rate: formatNumber(summary.riseRateMmPerYear, 1),
+            })}
           </dd>
         </div>
       </dl>
 
       <section aria-labelledby="sea-cities" className="grid gap-2">
         <h3 id="sea-cities" className="label-caps">
-          영향받는 도시 {watched.length}곳
+          {t('sea.affected', { count: watched.length })}
         </h3>
         {watched.length === 0 ? (
-          <p className="text-sm text-muted">
-            아직 잠기거나 위험한 주요 도시가 없습니다.
-          </p>
+          <p className="text-sm text-muted">{t('sea.noneAffected')}</p>
         ) : (
           <ul className="grid max-h-56 gap-1 overflow-y-auto pr-1">
             {watched.map((city) => (
@@ -127,15 +127,15 @@ export function SeaLevelPanel() {
                   className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xs border border-line px-3 text-left text-sm hover:border-line-strong"
                 >
                   <span>
-                    {city.name}{' '}
+                    {siteName(city, locale)}{' '}
                     <span className="text-xs text-muted">
-                      고도 약 {city.elevation}m
+                      {t('sea.elevation', { m: city.elevation })}
                     </span>
                   </span>
                   <span
                     className={`text-xs font-semibold ${STATE_STYLE[states[city.id]]}`}
                   >
-                    {STATE_LABEL[states[city.id]]}
+                    {t(`city.${states[city.id]}`)}
                   </span>
                 </button>
               </li>

@@ -146,6 +146,85 @@ export const STRUCTURES: Record<StructureKind, StructureSpec> = {
   },
 }
 
+/** 구조물 영어 이름·설명 */
+export const STRUCTURE_EN: Record<
+  StructureKind,
+  { name: string; summary: string }
+> = {
+  'sea-wall': {
+    name: 'Coastal Sea Wall',
+    summary:
+      'A levee along the city shoreline. Holds back 8 m of sea-level rise and 4 m tsunamis.',
+  },
+  'tsunami-barrier': {
+    name: 'Tsunami Barrier',
+    summary: 'A 15 m breakwater with floodgates. Stops tsunamis up to 15 m.',
+  },
+  'strait-dam': {
+    name: 'Strait Dam',
+    summary:
+      'Seals off a whole sea, protecting the coastal cities inside from up to 60 m of sea-level rise.',
+  },
+  'glacier-curtain': {
+    name: 'Glacier Seabed Curtain',
+    summary:
+      'Blocks warm water from reaching under the glacier, slowing sea-level rise by 12%.',
+  },
+  'magma-relief': {
+    name: 'Magma Relief Drilling',
+    summary:
+      'Draws heat and pressure from the magma chamber for geothermal power, lowering eruptions by 2 VEI steps.',
+  },
+  'solar-shade': {
+    name: 'L1 Space Sunshade',
+    summary:
+      'A shade at the Sun–Earth L1 point. Cools the planet by 0.8°C and slows sea-level rise by 20%.',
+  },
+  'planetary-defense': {
+    name: 'Planetary Defense Network',
+    summary:
+      'Survey telescopes and kinetic impactors (DART-style). Deflects asteroids up to 1 km; breaks larger ones to half their size.',
+  },
+  'firefighting-base': {
+    name: 'Aerial Firefighting Base',
+    summary:
+      'Large firefighting aircraft and satellite early warning. Cuts wildfire damage in the region by 60%.',
+  },
+  desalination: {
+    name: 'Desalination & Canal Network',
+    summary:
+      'Turns seawater into fresh water and pipes it inland. Cuts drought damage in the region by 50%.',
+  },
+  'seismic-retrofit': {
+    name: 'Seismic Retrofit',
+    summary:
+      'Earthquake-resistant design and base isolation for buildings, bridges and gas lines. Lowers quake damage by one step.',
+  },
+}
+
+export function structureName(
+  kind: StructureKind,
+  locale: 'ko' | 'en',
+): string {
+  return locale === 'en' ? STRUCTURE_EN[kind].name : STRUCTURES[kind].name
+}
+
+export function structureSummary(
+  kind: StructureKind,
+  locale: 'ko' | 'en',
+): string {
+  return locale === 'en' ? STRUCTURE_EN[kind].summary : STRUCTURES[kind].summary
+}
+
+export const TARGET_LABEL_EN: Record<StructureTarget, string> = {
+  city: 'City',
+  strait: 'Strait',
+  glacier: 'Glacier',
+  volcano: 'Volcano',
+  region: 'Region',
+  orbit: 'Orbit',
+}
+
 export const STRUCTURE_LIST = Object.values(STRUCTURES)
 
 export const TARGET_LABEL: Record<StructureTarget, string> = {

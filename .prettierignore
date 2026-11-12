@@ -1,0 +1,9 @@
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+src/routeTree.gen.ts
+public/textures
+.output
+storybook-static
+playwright-report
+test-results

@@ -12,6 +12,7 @@ import {
   effectiveVei,
   step,
   totalPopulation,
+  touchHistory,
   tsunamiImpacts,
   warming,
 } from './engine'
@@ -39,6 +40,7 @@ import {
   thermalRadiusKm,
   wildfireArea,
 } from './hazards'
+import { MISSION_BY_ID } from './missions'
 import { snapshotStructures } from './snapshot'
 import type { Snapshot } from './snapshot'
 import type { WorldState } from './types'
@@ -78,6 +80,8 @@ interface WorldActions {
   startWildfire: (regionId: string, now?: number) => ActionResult
   startDrought: (regionId: string, severity: 1 | 2 | 3) => ActionResult
   loadSnapshot: (snapshot: Snapshot, source: string) => void
+  startMission: (id: string) => void
+  quitMission: () => void
   select: (siteId: string | null) => void
   setFloodCurve: (curve: Float64Array) => void
   reset: () => void
@@ -86,7 +90,7 @@ interface WorldActions {
 export type WorldStore = WorldState & WorldActions
 
 function initialState(): WorldState {
-  return {
+  const state: WorldState = {
     year: START_YEAR,
     running: false,
     speed: 'day',
@@ -106,7 +110,11 @@ function initialState(): WorldState {
     selectedSiteId: null,
     floodCurve: null,
     nextEventId: 1,
+    history: [],
+    stormDamage: 0,
+    mission: null,
   }
+  return { ...state, history: touchHistory([], state) }
 }
 
 export function formatDiameter(m: number): string {
@@ -127,6 +135,44 @@ export const useWorld = create<WorldStore>()((set, get) => {
   const log = (events: NewEvent[]) =>
     set((state) => appendEvents(state, events))
 
+  /** 미션: 예정된 재해를 일으키고, 마지막 해에 판정 */
+  const runMission = () => {
+    const current = get().mission
+    if (current?.status !== 'active') return
+    const mission = MISSION_BY_ID[current.id] as
+      (typeof MISSION_BY_ID)[string] | undefined
+    if (!mission) return
+    for (const item of mission.schedule) {
+      if (current.firedIds.includes(item.id) || get().year < item.year) continue
+      set((state) => ({
+        mission: state.mission && {
+          ...state.mission,
+          firedIds: [...state.mission.firedIds, item.id],
+        },
+      }))
+      log([{ tone: 'warn', text: `미션 사건: ${item.warning}` }])
+      const h = item.hazard
+      if (h.kind === 'impact') get().triggerImpact(h.targetId, h.diameterM)
+      if (h.kind === 'tsunami') get().triggerTsunami(h.sourceId, h.magnitude)
+      if (h.kind === 'eruption') get().triggerEruption(h.volcanoId, h.vei)
+    }
+    if (get().year < mission.endYear) return
+    const result = mission.evaluate(get())
+    set((state) => ({
+      running: false,
+      mission: state.mission && {
+        ...state.mission,
+        status: result.ok ? 'success' : 'failed',
+      },
+    }))
+    log([
+      {
+        tone: result.ok ? 'good' : 'danger',
+        text: `미션 ${result.ok ? '성공' : '실패'}: ${mission.title}. ${result.detail}`,
+      },
+    ])
+  }
+
   return {
     ...initialState(),
 
@@ -134,14 +180,21 @@ export const useWorld = create<WorldStore>()((set, get) => {
       const state = get()
       if (!state.running) return
       const dt = Math.min(dtSeconds, 0.1)
-      const { patch, events } = step(
-        state,
-        SPEED_BY_ID[state.speed].yearsPerSecond * dt,
-        Math.random,
-        nowMs(),
-      )
+      let dtYears = SPEED_BY_ID[state.speed].yearsPerSecond * dt
+      // 미션 중에는 마지막 해를 넘기지 않음
+      const mission =
+        state.mission?.status === 'active'
+          ? MISSION_BY_ID[state.mission.id]
+          : undefined
+      if (mission)
+        dtYears = Math.min(
+          dtYears,
+          Math.max(0, mission.endYear - state.year) + 1e-9,
+        )
+      const { patch, events } = step(state, dtYears, Math.random, nowMs())
       set(patch)
       log(events)
+      runMission()
     },
 
     setRunning: (running) => set({ running }),
@@ -168,7 +221,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
       })),
 
     setScenario: (scenario) => {
-      set({ scenario })
+      set((state) => ({
+        scenario,
+        history: touchHistory(state.history, { ...state, scenario }),
+      }))
       log([
         {
           tone: 'info',
@@ -184,7 +240,11 @@ export const useWorld = create<WorldStore>()((set, get) => {
         state.floodedCityIds,
         next,
       )
-      set({ seaLevel: meters, floodedCityIds })
+      set({
+        seaLevel: meters,
+        floodedCityIds,
+        history: touchHistory(state.history, { ...next, floodedCityIds }),
+      })
       log(events)
     },
 
@@ -212,9 +272,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
           message: `예산이 ${formatBillions(spec.cost - state.budget)} 모자랍니다. 시간을 진행하면 매년 예산이 늘어납니다.`,
         }
       }
-      const completeYear = options?.instant
-        ? state.year
-        : state.year + spec.buildYears
+      // 미션 중에는 바로 완공을 쓸 수 없음
+      const instant =
+        options?.instant === true && state.mission?.status !== 'active'
+      const completeYear = instant ? state.year : state.year + spec.buildYears
       set({
         budget: state.budget - spec.cost,
         structures: [
@@ -229,12 +290,12 @@ export const useWorld = create<WorldStore>()((set, get) => {
         ],
       })
       const where = site ? `${site.name}에 ` : ''
-      const message = options?.instant
+      const message = instant
         ? `${where}${spec.name}을(를) 완공했습니다.`
         : `${where}${spec.name} 건설을 시작했습니다. ${spec.buildYears}년 뒤 완공됩니다.`
       log([{ tone: 'good', text: message }])
       // 즉시 완공이면 침수 상태를 다시 계산
-      if (options?.instant) get().setSeaLevel(get().seaLevel)
+      if (instant) get().setSeaLevel(get().seaLevel)
       return { ok: true, message }
     },
 
@@ -491,8 +552,46 @@ export const useWorld = create<WorldStore>()((set, get) => {
         structures,
       }
       const { floodedCityIds } = detectFlooding([], base)
-      set({ ...base, floodedCityIds })
+      set({
+        ...base,
+        floodedCityIds,
+        history: touchHistory([], { ...base, floodedCityIds }),
+      })
       log([{ tone: 'info', text: `${source} 시나리오를 불러왔습니다.` }])
+    },
+
+    startMission: (id) => {
+      const mission = MISSION_BY_ID[id] as
+        (typeof MISSION_BY_ID)[string] | undefined
+      if (!mission) return
+      const base = initialState()
+      const state: WorldState = {
+        ...base,
+        floodCurve: get().floodCurve,
+        scenario: mission.scenario,
+        budget: mission.budget,
+        seaLevel: baselineSeaLevel(base.year, SCENARIOS[mission.scenario]),
+        mission: { id, status: 'active', firedIds: [] },
+      }
+      set({ ...state, history: touchHistory([], state) })
+      log([
+        {
+          tone: 'info',
+          text: `미션 시작: ${mission.title}. 목표: ${mission.goal}`,
+        },
+      ])
+    },
+
+    quitMission: () => {
+      const mission = get().mission
+      if (!mission) return
+      set({ mission: null })
+      log([
+        {
+          tone: 'info',
+          text: '미션을 그만두었습니다. 지금 상태에서 자유롭게 이어 갑니다.',
+        },
+      ])
     },
 
     select: (siteId) => set({ selectedSiteId: siteId }),

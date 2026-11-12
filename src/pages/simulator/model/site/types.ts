@@ -9,7 +9,8 @@ export type Basin =
   | 'atlantic'
   | 'mediterranean'
 
-export type SiteKind = 'city' | 'volcano' | 'trench' | 'strait' | 'glacier'
+export type SiteKind =
+  'city' | 'volcano' | 'trench' | 'strait' | 'glacier' | 'region' | 'ocean'
 
 interface SiteBase extends LatLon {
   id: string
@@ -59,4 +60,25 @@ export interface Glacier extends SiteBase {
   note: string
 }
 
-export type Site = City | Volcano | Trench | Strait | Glacier
+/** 산불·가뭄이 일어나는 넓은 지역 */
+export interface Region extends SiteBase {
+  kind: 'region'
+  /** 지역 반경 (km) */
+  radiusKm: number
+  /** 지역 인구 (백만 명, 대략값) */
+  population: number
+  /** 산불이 잘 나는 정도 0~1 */
+  fireProne: number
+  /** 가뭄이 잘 드는 정도 0~1 */
+  droughtProne: number
+  note: string
+}
+
+/** 소행성이 떨어질 수 있는 바다 지점 */
+export interface Ocean extends SiteBase {
+  kind: 'ocean'
+  basin: Basin
+  note: string
+}
+
+export type Site = City | Volcano | Trench | Strait | Glacier | Region | Ocean

@@ -5,9 +5,12 @@ export type StructureKind =
   | 'glacier-curtain'
   | 'magma-relief'
   | 'solar-shade'
+  | 'planetary-defense'
+  | 'firefighting-base'
+  | 'desalination'
 
 export type StructureTarget =
-  'city' | 'strait' | 'glacier' | 'volcano' | 'orbit'
+  'city' | 'strait' | 'glacier' | 'volcano' | 'region' | 'orbit'
 
 export interface StructureSpec {
   kind: StructureKind
@@ -28,6 +31,12 @@ export interface StructureSpec {
   cooling?: number
   /** 화산폭발지수 감소 */
   veiReduction?: number
+  /** 이 지름(m) 이하 소행성은 궤도를 바꿔 빗나가게 함 */
+  deflectDiameter?: number
+  /** 산불 피해 감소율 (0~1) */
+  fireReduction?: number
+  /** 가뭄 피해 감소율 (0~1) */
+  droughtReduction?: number
 }
 
 export const STRUCTURES: Record<StructureKind, StructureSpec> = {
@@ -92,6 +101,36 @@ export const STRUCTURES: Record<StructureKind, StructureSpec> = {
     cooling: 0.8,
     riseReduction: 0.2,
   },
+  'planetary-defense': {
+    kind: 'planetary-defense',
+    name: '행성 방위 요격망',
+    summary:
+      '궤도의 감시 망원경과 충돌 요격선(DART 방식). 지름 1km 이하 소행성은 궤도를 바꿔 빗나가게 하고, 더 큰 것은 부숴 지름을 절반으로 줄입니다.',
+    target: 'orbit',
+    cost: 800,
+    buildYears: 5,
+    deflectDiameter: 1000,
+  },
+  'firefighting-base': {
+    kind: 'firefighting-base',
+    name: '공중 소방 거점',
+    summary:
+      '대형 소방 항공기와 위성 조기 감시망. 그 지역 산불 피해를 60% 줄입니다.',
+    target: 'region',
+    cost: 60,
+    buildYears: 2,
+    fireReduction: 0.6,
+  },
+  desalination: {
+    kind: 'desalination',
+    name: '해수 담수화·수로망',
+    summary:
+      '바닷물을 민물로 바꿔 수로로 보내는 시설. 그 지역 가뭄 피해를 50% 줄입니다.',
+    target: 'region',
+    cost: 150,
+    buildYears: 4,
+    droughtReduction: 0.5,
+  },
 }
 
 export const STRUCTURE_LIST = Object.values(STRUCTURES)
@@ -101,5 +140,6 @@ export const TARGET_LABEL: Record<StructureTarget, string> = {
   strait: '해협',
   glacier: '빙하',
   volcano: '화산',
+  region: '지역',
   orbit: '궤도',
 }

@@ -36,6 +36,8 @@ jobs:
       # 프로덕션 빌드를 띄워 화면 폭별 넘침, 접근성(axe), 키보드, 시뮬레이션 흐름을 검사
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      # 접근성·권장사항·SEO 점수와 레이아웃 이동을 지키고, 성능·용량은 경고로 알림
+      - run: pnpm lighthouse
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -43,4 +45,5 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            lhci-report/
           retention-days: 7

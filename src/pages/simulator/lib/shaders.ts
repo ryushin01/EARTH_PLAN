@@ -1,4 +1,10 @@
-import { MAX_ASHES, MAX_STORMS, MAX_WAVES } from '../model/planet'
+import {
+  MAX_ASHES,
+  MAX_DROUGHTS,
+  MAX_FIRES,
+  MAX_STORMS,
+  MAX_WAVES,
+} from '../model/planet'
 
 export const earthVertex = /* glsl */ `
 varying vec2 vUv;
@@ -19,6 +25,8 @@ void main() {
 export const earthFragment = /* glsl */ `
 #define MAX_WAVES ${MAX_WAVES}
 #define MAX_ASHES ${MAX_ASHES}
+#define MAX_FIRES ${MAX_FIRES}
+#define MAX_DROUGHTS ${MAX_DROUGHTS}
 
 uniform sampler2D uAlbedo;
 uniform sampler2D uLights;
@@ -36,6 +44,10 @@ uniform vec4 uWaves[MAX_WAVES];
 uniform float uWaveStrength[MAX_WAVES];
 uniform vec4 uAsh[MAX_ASHES];
 uniform float uAshAmount[MAX_ASHES];
+uniform vec4 uFires[MAX_FIRES];
+uniform vec2 uFireInfo[MAX_FIRES];
+uniform vec4 uDroughts[MAX_DROUGHTS];
+uniform float uDroughtAmount[MAX_DROUGHTS];
 
 varying vec2 vUv;
 varying vec3 vPos;
@@ -79,6 +91,15 @@ void main() {
   vec3 dry = vec3(0.62, 0.5, 0.32) * (0.45 + dot(albedo, vec3(0.6)));
   color = mix(color, dry, land * green * belt * uArid * 0.85);
 
+  // 가뭄 지역: 초록이 빠지고 땅이 갈라진 듯 누렇게
+  for (int i = 0; i < MAX_DROUGHTS; i++) {
+    if (uDroughtAmount[i] <= 0.0) continue;
+    float d = acos(clamp(dot(vPos, uDroughts[i].xyz), -1.0, 1.0));
+    float a = uDroughtAmount[i] * (1.0 - smoothstep(uDroughts[i].w * 0.6, uDroughts[i].w, d));
+    vec3 parched = vec3(0.7, 0.56, 0.36) * (0.55 + dot(albedo, vec3(0.5)));
+    color = mix(color, parched, land * a * (0.55 + 0.45 * green));
+  }
+
   // 계절 적설과 만년설
   float n = fbm(vUv * vec2(160.0, 80.0));
   float snowN = smoothstep(uSnowN - 3.0, uSnowN + 3.0, lat + (n - 0.5) * 10.0);
@@ -113,6 +134,26 @@ void main() {
     ashCover = max(ashCover, a);
   }
 
+  // 산불: 탄 자리(낮)와 불씨(밤에 빛남), 연기
+  float fireGlow = 0.0;
+  for (int i = 0; i < MAX_FIRES; i++) {
+    float intensity = uFireInfo[i].x;
+    float scar = uFireInfo[i].y;
+    if (intensity <= 0.0 && scar <= 0.0) continue;
+    float d = acos(clamp(dot(vPos, uFires[i].xyz), -1.0, 1.0));
+    float r = uFires[i].w;
+    float inside = 1.0 - smoothstep(r * 0.55, r, d);
+    float pattern = fbm(vUv * vec2(520.0, 260.0) + float(i) * 7.3);
+    float burnt = land * inside * smoothstep(0.32, 0.5, pattern);
+    float front = land * inside * smoothstep(0.5, 0.62, pattern) * (1.0 - smoothstep(0.62, 0.75, pattern));
+    color = mix(color, vec3(0.1, 0.07, 0.05), burnt * max(scar, intensity) * 0.9);
+    float flicker = 0.75 + 0.25 * sin(uTime * 8.0 + pattern * 60.0);
+    fireGlow = max(fireGlow, (front + burnt * 0.35) * intensity * flicker);
+    // 바람에 날리는 연기
+    float smoke = (1.0 - smoothstep(r * 0.4, r * 2.2, d)) * intensity * smoothstep(0.35, 0.7, fbm(vUv * vec2(160.0, 80.0) + uTime * 0.03));
+    color = mix(color, vec3(0.58, 0.52, 0.46), smoke * 0.7);
+  }
+
   // 빛: 태양 방향으로 낮과 밤
   vec3 nrm = normalize(vNormalW);
   float ndl = dot(nrm, uSun);
@@ -126,6 +167,9 @@ void main() {
   // 밤의 도시 불빛 (잠긴 곳과 화산재 아래는 꺼짐)
   vec3 lights = texture2D(uLights, vUv).rgb * (1.0 - flooded) * (1.0 - ashCover * 0.85);
   lit += lights * vec3(1.0, 0.72, 0.4) * (1.0 - day) * 1.3;
+
+  // 산불 불빛 (낮에도 약하게, 밤에는 강하게)
+  lit += vec3(1.0, 0.36, 0.06) * fireGlow * (0.9 + 1.6 * (1.0 - day));
 
   // 밤에도 화산재 장막이 보이도록
   lit = mix(lit, vec3(0.11, 0.1, 0.095), ashCover * 0.55 * (1.0 - day));

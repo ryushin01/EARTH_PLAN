@@ -10,6 +10,7 @@ import {
   distanceKm,
   northernSeason,
 } from '@/shared/lib'
+import { impactCooling, stepWildfires } from './hazards'
 import { SCENARIOS, baselineRiseRate, baselineWarming } from './scenario'
 import type {
   CityState,
@@ -127,7 +128,8 @@ export function volcanicCooling(eruptions: Eruption[], year: number): number {
 
 /** 산업화 이전 대비 지구 평균기온 상승 (°C) */
 export function warming(
-  state: Pick<WorldState, 'year' | 'scenario' | 'structures' | 'eruptions'>,
+  state: Pick<WorldState, 'year' | 'scenario' | 'structures' | 'eruptions'> &
+    Partial<Pick<WorldState, 'impacts'>>,
 ): number {
   const shade = activeOf(state.structures, state.year).reduce(
     (sum, s) => sum + (STRUCTURES[s.kind].cooling ?? 0),
@@ -136,7 +138,8 @@ export function warming(
   return (
     baselineWarming(state.year, SCENARIOS[state.scenario]) -
     shade -
-    volcanicCooling(state.eruptions, state.year)
+    volcanicCooling(state.eruptions, state.year) -
+    impactCooling(state.impacts ?? [], state.year)
   )
 }
 
@@ -144,10 +147,11 @@ export function warming(
 
 /**
  * 512×256 육지 고도 격자로 고도별 누적 면적 비율을 만듭니다.
+ * 격자 값: 0 바다, 1~254 고도 (값 − 51)m, 255 204m 이상
  * curve[i] = 고도가 (i − 50)m 미만인 육지 비율
  */
 export function buildFloodCurve(
-  grid: Int16Array,
+  grid: Uint8Array,
   width: number,
   height: number,
 ): Float64Array {
@@ -157,10 +161,10 @@ export function buildFloodCurve(
     const lat = 90 - ((y + 0.5) / height) * 180
     const weight = Math.cos((lat * Math.PI) / 180)
     for (let x = 0; x < width; x++) {
-      const h = grid[y * width + x]
-      if (h === -32768) continue
+      const v = grid[y * width + x]
+      if (v === 0) continue
       total += weight
-      if (h <= 205) bins[Math.max(0, Math.min(255, h + 50)) + 1] += weight
+      if (v < 255) bins[v - 1 + 1] += weight
     }
   }
   for (let i = 1; i < bins.length; i++) bins[i] += bins[i - 1]
@@ -226,13 +230,14 @@ export function sourceWaveHeight(magnitude: number): number {
 export const TSUNAMI_SPEED_KMH = 700
 
 export function tsunamiImpacts(
-  trenchId: string,
+  sourceId: string,
   magnitude: number,
   structures: BuiltStructure[],
   year: number,
 ): TsunamiImpact[] {
-  const trench = getSite(trenchId)
-  if (trench?.kind !== 'trench') return []
+  const trench = getSite(sourceId)
+  // 해구 지진이나 바다에 떨어진 소행성
+  if (trench?.kind !== 'trench' && trench?.kind !== 'ocean') return []
   const h0 = sourceWaveHeight(magnitude)
   return CITIES.filter((city) => city.basins.includes(trench.basin))
     .map((city) => {
@@ -275,7 +280,8 @@ export interface ClimateVisuals {
 }
 
 export function climateVisuals(
-  state: Pick<WorldState, 'year' | 'scenario' | 'structures' | 'eruptions'>,
+  state: Pick<WorldState, 'year' | 'scenario' | 'structures' | 'eruptions'> &
+    Partial<Pick<WorldState, 'impacts'>>,
 ): ClimateVisuals {
   const w = warming(state)
   const season = northernSeason(state.year)
@@ -385,6 +391,7 @@ export function step(
   state: WorldState,
   dtYears: number,
   random: () => number = Math.random,
+  now = 0,
 ): StepResult {
   const events: NewEvent[] = []
   const year = state.year + dtYears
@@ -415,12 +422,34 @@ export function step(
     }
   }
 
+  const droughts = state.droughts.filter((d) => year < d.year + d.durationYears)
+  for (const d of state.droughts) {
+    if (!droughts.includes(d)) {
+      events.push({
+        tone: 'info',
+        text: `${getSite(d.regionId)?.name} 가뭄이 끝났습니다.`,
+      })
+    }
+  }
+  const wildfires = stepWildfires(
+    state.wildfires,
+    droughts,
+    state.structures,
+    year,
+    dtYears,
+    warming(next),
+    now,
+    random,
+  )
+
   return {
     patch: {
       year,
       seaLevel,
       budget,
       storms,
+      wildfires,
+      droughts,
       floodedCityIds: flooding.floodedCityIds,
     },
     events,

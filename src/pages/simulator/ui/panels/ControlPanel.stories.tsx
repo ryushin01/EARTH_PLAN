@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ControlPanel } from './ControlPanel'
 
 const meta = {
-  title: 'widgets/ControlPanel',
+  title: 'pages/simulator/ControlPanel',
   component: ControlPanel,
   decorators: [
     (Story) => (

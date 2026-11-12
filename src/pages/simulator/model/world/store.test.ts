@@ -45,3 +45,35 @@ describe('world store', () => {
     expect(useWorld.getState().triggerTsunami('fuji', 9, 0).ok).toBe(false)
   })
 })
+
+describe('새 재해', () => {
+  beforeEach(() => useWorld.getState().reset())
+
+  it('바다에 소행성이 떨어지면 쓰나미도 생긴다', () => {
+    const r = useWorld.getState().triggerImpact('north-atlantic', 1000, 0)
+    expect(r.ok).toBe(true)
+    expect(useWorld.getState().impacts[0].ocean).toBe(true)
+    expect(useWorld.getState().tsunamis[0].sourceId).toBe('north-atlantic')
+    expect(
+      useWorld.getState().tsunamis[0].impacts.map((i) => i.cityId),
+    ).toContain('new-york')
+  })
+
+  it('요격망이 있으면 빗나가고 기록한다', () => {
+    useWorld.getState().build('planetary-defense', 'orbit', { instant: true })
+    const r = useWorld.getState().triggerImpact('tokyo', 340, 0)
+    expect(r.message).toContain('빗나가게')
+    expect(useWorld.getState().tsunamis).toHaveLength(0)
+  })
+
+  it('가뭄 중에는 같은 지역에 가뭄을 또 일으킬 수 없고 산불이 커진다', () => {
+    const before = useWorld.getState().startWildfire('australia-se', 0)
+    expect(before.ok).toBe(true)
+    const area1 = useWorld.getState().wildfires[0].burnedKm2
+    expect(useWorld.getState().startDrought('australia-se', 3).ok).toBe(true)
+    expect(useWorld.getState().startDrought('australia-se', 1).ok).toBe(false)
+    useWorld.getState().startWildfire('australia-se', 0)
+    expect(useWorld.getState().wildfires[1].burnedKm2).toBeCloseTo(area1 * 1.8)
+    expect(useWorld.getState().startWildfire('tokyo', 0).ok).toBe(false)
+  })
+})

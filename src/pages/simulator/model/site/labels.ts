@@ -6,4 +6,6 @@ export const SITE_KIND_LABEL: Record<SiteKind, string> = {
   trench: '해구',
   strait: '해협',
   glacier: '빙하',
+  region: '지역',
+  ocean: '바다',
 }

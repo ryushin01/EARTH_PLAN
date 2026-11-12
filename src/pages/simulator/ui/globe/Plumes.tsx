@@ -23,6 +23,11 @@ function Plume({ plume }: { plume: PlumeInput }) {
       quaternion: new Quaternion().setFromUnitVectors(UP, normal),
     }
   }, [plume.center])
+  if (plume.kind === 'impact') {
+    return (
+      <ImpactBurst plume={plume} position={position} quaternion={quaternion} />
+    )
+  }
   const grow = Math.min(1, plume.age / 4)
   const fade = Math.max(0, 1 - Math.max(0, plume.age - 8) / 12)
   if (fade <= 0) return null
@@ -60,6 +65,82 @@ function Plume({ plume }: { plume: PlumeInput }) {
           toneMapped={false}
         />
       </mesh>
+    </group>
+  )
+}
+
+/** 소행성 충돌: 섬광 불덩이, 지표를 따라 퍼지는 충격파 고리, 버섯구름 */
+function ImpactBurst({
+  plume,
+  position,
+  quaternion,
+}: {
+  plume: PlumeInput
+  position: Vector3
+  quaternion: Quaternion
+}) {
+  const t = plume.age
+  if (t > 25) return null
+  const flash = Math.max(0, 1 - t / 1.5)
+  const ball = Math.min(1, t / 1.2)
+  const cool = Math.min(1, t / 6)
+  const fade = Math.max(0, 1 - Math.max(0, t - 10) / 15)
+  const size = 0.02 + plume.size * 0.16
+  const ring = Math.min(1, t / 5) * size * 3
+  const fireColor = `rgb(255, ${Math.round(200 - cool * 150)}, ${Math.round(80 - cool * 70)})`
+  return (
+    <group position={position} quaternion={quaternion}>
+      <mesh scale={[1, 0.6 + ball * 0.6, 1]}>
+        <sphereGeometry
+          args={[
+            size * (0.3 + ball * 0.7),
+            24,
+            16,
+            0,
+            Math.PI * 2,
+            0,
+            Math.PI / 2,
+          ]}
+        />
+        <meshBasicMaterial
+          color={fireColor}
+          transparent
+          opacity={(0.85 - cool * 0.45) * fade}
+          toneMapped={false}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[0, size * (0.6 + cool * 1.4), 0]} scale={[1, 0.5, 1]}>
+        <sphereGeometry args={[size * (0.4 + cool * 0.8), 20, 12]} />
+        <meshBasicMaterial
+          color="#5f5249"
+          transparent
+          opacity={0.7 * cool * fade}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+        <ringGeometry args={[Math.max(0.001, ring * 0.92), ring + 0.002, 48]} />
+        <meshBasicMaterial
+          color="#ffd8a8"
+          transparent
+          opacity={Math.max(0, 1 - t / 5) * 0.9}
+          toneMapped={false}
+          side={2}
+        />
+      </mesh>
+      {flash > 0 ? (
+        <mesh>
+          <sphereGeometry args={[size * 2.5, 16, 12]} />
+          <meshBasicMaterial
+            color="#fff6e0"
+            transparent
+            opacity={flash * 0.8}
+            toneMapped={false}
+            depthWrite={false}
+          />
+        </mesh>
+      ) : null}
     </group>
   )
 }

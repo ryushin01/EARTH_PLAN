@@ -35,11 +35,51 @@ export interface TsunamiImpact {
 
 export interface Tsunami {
   id: string
-  trenchId: string
+  sourceId: string
   magnitude: number
   year: number
   startedAt: number
   impacts: TsunamiImpact[]
+}
+
+export interface Impact {
+  id: string
+  targetId: string
+  diameterM: number
+  /** 요격 후 실제로 떨어진 지름 (빗나가면 0) */
+  effectiveDiameterM: number
+  year: number
+  startedAt: number
+  energyMt: number
+  blastRadiusKm: number
+  thermalRadiusKm: number
+  ocean: boolean
+  affectedCityIds: string[]
+}
+
+export interface Wildfire {
+  id: string
+  regionId: string
+  year: number
+  startedAt: number
+  /** 탄 면적 (km²) */
+  burnedKm2: number
+  /** 지속 기간 (년) */
+  durationYears: number
+  /** 저절로 난 산불인지 */
+  natural: boolean
+}
+
+export interface Drought {
+  id: string
+  regionId: string
+  /** 1 보통 · 2 심함 · 3 극심 */
+  severity: 1 | 2 | 3
+  year: number
+  durationYears: number
+  affectedMillions: number
+  /** 농작물 감소율 (%) */
+  cropLoss: number
 }
 
 export interface Storm {
@@ -67,6 +107,9 @@ export interface WorldState {
   structures: BuiltStructure[]
   eruptions: Eruption[]
   tsunamis: Tsunami[]
+  impacts: Impact[]
+  wildfires: Wildfire[]
+  droughts: Drought[]
   storms: Storm[]
   events: WorldEvent[]
   /** 해수면으로 잠긴 적이 있는 도시 (알림 중복 방지) */

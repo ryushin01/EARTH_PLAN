@@ -3,6 +3,7 @@ import { ashRadiusKm, climateVisuals, TSUNAMI_SPEED_KMH } from './world/engine'
 import { isHourFrozen, SPEED_BY_ID, withUtcHour } from './world/time'
 import type { WorldState } from './world/types'
 import { getSite } from './site/data'
+import { regionOf, wildfireRadiusKm } from './world/hazards'
 import {
   DAYS_PER_YEAR,
   kmToRadians,
@@ -40,7 +41,7 @@ export function buildFrame(
   const climate = climateVisuals(state)
 
   const waves = state.tsunamis.flatMap((t) => {
-    const trench = getSite(t.trenchId)
+    const trench = getSite(t.sourceId)
     if (!trench) return []
     const hours = ((nowMs - t.startedAt) / 1000) * TSUNAMI_HOURS_PER_SECOND
     const radius = kmToRadians(hours * TSUNAMI_SPEED_KMH)
@@ -60,7 +61,13 @@ export function buildFrame(
     const amount = 0.85 * Math.min(realFade, simFade)
     if (amount <= 0) return []
     const center = latLonToVector3(volcano)
-    plumes.push({ id: e.id, center, age, size: (e.vei - 2) / 6 })
+    plumes.push({
+      id: e.id,
+      kind: 'volcano',
+      center,
+      age,
+      size: (e.vei - 2) / 6,
+    })
     return [
       {
         center,
@@ -68,6 +75,69 @@ export function buildFrame(
         amount,
       },
     ]
+  })
+
+  // 소행성 충돌: 불덩이와 잔해(화산재처럼 어두운 범위)
+  for (const impact of state.impacts) {
+    const target = getSite(impact.targetId)
+    if (!target || impact.effectiveDiameterM <= 0) continue
+    const age = (nowMs - impact.startedAt) / 1000
+    const center = latLonToVector3(target)
+    plumes.push({
+      id: impact.id,
+      kind: 'impact',
+      center,
+      age,
+      size: Math.min(1, Math.log10(impact.effectiveDiameterM / 20) / 2.7),
+    })
+    const realFade = age < 40 ? 1 : Math.max(0, 1 - (age - 40) / 20)
+    const simFade = Math.max(0, 1 - (state.year - impact.year) / 5)
+    const amount = 0.9 * Math.min(realFade, simFade)
+    if (amount > 0 && !impact.ocean) {
+      ashes.push({
+        center,
+        radius:
+          kmToRadians(impact.thermalRadiusKm) * Math.min(1, 0.15 + age / 4),
+        amount,
+      })
+    }
+  }
+
+  const fires = state.wildfires.flatMap((f) => {
+    const region = regionOf(f.regionId)
+    if (!region) return []
+    const progress = (state.year - f.year) / f.durationYears
+    const age = (nowMs - f.startedAt) / 1000
+    // 멈춘 상태에서도 직접 일으킨 산불은 30초 동안 타오름
+    const burning = progress < 1 || (!f.natural && age < 30) ? 1 : 0
+    const scar = Math.max(0, 1 - Math.max(0, progress - 1) / 2)
+    if (burning === 0 && scar <= 0) return []
+    return [
+      {
+        center: latLonToVector3(region),
+        radius: kmToRadians(wildfireRadiusKm(region, f.burnedKm2)),
+        intensity: burning * Math.min(1, 0.4 + f.burnedKm2 / 20000),
+        scar,
+      },
+    ]
+  })
+
+  const droughts = state.droughts.flatMap((d) => {
+    const region = regionOf(d.regionId)
+    if (!region) return []
+    const progress = (state.year - d.year) / d.durationYears
+    const amount =
+      Math.min(1, progress * 8 + 0.3, (1 - progress) * 4) *
+      (0.45 + d.severity * 0.18)
+    return amount > 0
+      ? [
+          {
+            center: latLonToVector3(region),
+            radius: kmToRadians(region.radiusKm),
+            amount,
+          },
+        ]
+      : []
   })
 
   const storms = state.storms.map((s) => {
@@ -98,5 +168,7 @@ export function buildFrame(
     ashes: ashes.slice(-6),
     storms,
     plumes,
+    fires: fires.slice(-6),
+    droughts: droughts.slice(-4),
   }
 }

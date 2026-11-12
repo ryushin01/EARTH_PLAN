@@ -1,0 +1,42 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: GitHub Pages 배포
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # 저장소 이름 하위 경로(https://ryushin01.github.io/EARTH_PLAN/)에 맞춰 빌드, Storybook은 /storybook/
+      - run: pnpm build:all
+        env:
+          BASE_PATH: /EARTH_PLAN/
+      # 없는 주소로 들어와도 앱이 열리도록 함
+      - run: cp dist/client/index.html dist/client/404.html
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist/client
+      - id: deployment
+        uses: actions/deploy-pages@v5

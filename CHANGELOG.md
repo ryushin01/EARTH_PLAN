@@ -2,6 +2,7 @@
 
 ## 0.6.1 - 2026-11-13
 
+- 설정: pnpm 전용 `ignore-workspace-root-check`를 `.npmrc`에서 `pnpm-workspace.yaml`로 옮겨 npm 명령마다 나던 경고를 없앰. 이제 하루가 지난 `@lhci` 판의 공개 기간 예외 삭제
 - 정리: 쓰지 않는 코드 삭제(지점 종류 이름표 `site/labels.ts`, `LOCALES`, `PLACELESS_TARGETS`, 지표면 좌표 `surfaceVector`)와 모듈 안에서만 쓰는 값의 내보내기 정리(knip 기준)
 
 ## 0.6.0 - 2026-11-12

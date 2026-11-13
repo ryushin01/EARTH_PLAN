@@ -3,7 +3,6 @@ import { create } from 'zustand'
 
 export type Locale = 'ko' | 'en'
 
-export const LOCALES: Locale[] = ['ko', 'en']
 const STORAGE_KEY = 'earth-plan:locale'
 
 interface LocaleState {

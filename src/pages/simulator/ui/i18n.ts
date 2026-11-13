@@ -6,11 +6,7 @@ import { MESSAGES } from './messages'
 
 export type MessageKey = keyof typeof MESSAGES
 
-export function translate(
-  locale: Locale,
-  key: MessageKey,
-  params?: Params,
-): string {
+function translate(locale: Locale, key: MessageKey, params?: Params): string {
   const [ko, en] = MESSAGES[key]
   return interpolate(locale === 'en' ? en : ko, params)
 }

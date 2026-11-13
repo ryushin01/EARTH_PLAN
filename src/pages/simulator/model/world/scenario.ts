@@ -47,11 +47,11 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   },
 }
 
-export const REFERENCE_YEAR = 2020
+const REFERENCE_YEAR = 2020
 /** 현재 해수면 상승 속도 (m/년) */
-export const CURRENT_RISE_RATE = 0.0037
+const CURRENT_RISE_RATE = 0.0037
 /** 2020년 기온 상승 (°C) */
-export const CURRENT_WARMING = 1.2
+const CURRENT_WARMING = 1.2
 
 function curvature(scenario: Scenario): number {
   const span = 2100 - REFERENCE_YEAR

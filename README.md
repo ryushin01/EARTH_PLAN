@@ -1,7 +1,7 @@
 # EARTH_PLAN - 지구 환경·재해 대응 시뮬레이터
 
 [![CI](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml/badge.svg)](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml)
-![version](https://img.shields.io/badge/version-0.6.0-00a1ff)
+![version](https://img.shields.io/badge/version-0.6.1-00a1ff)
 
 3D 지구 위에서 해수면 상승, 화산 분화, 쓰나미, 지진, 소행성 충돌, 산불·가뭄을 일으키고 해협 댐·우주 차양·행성 방위 요격망 같은 거대 구조물로 막아 보는 웹 시뮬레이터입니다.
 

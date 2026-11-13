@@ -25,7 +25,7 @@ import type {
   WorldState,
 } from './types'
 
-export const INCOME_PER_YEAR = 150
+const INCOME_PER_YEAR = 150
 export const START_BUDGET = 1500
 const MAX_EVENTS = 60
 const MAX_STORMS = 8
@@ -67,7 +67,7 @@ export function riseRate(
 }
 
 /** 도시가 받는 해수면 방어 높이 (m) */
-export function seaProtection(
+function seaProtection(
   cityId: string,
   structures: BuiltStructure[],
   year: number,
@@ -86,7 +86,7 @@ export function seaProtection(
   return best
 }
 
-export function waveProtection(
+function waveProtection(
   cityId: string,
   structures: BuiltStructure[],
   year: number,
@@ -124,7 +124,7 @@ const VOLCANIC_COOLING: Record<number, number> = {
   8: 3.0,
 }
 
-export function volcanicCooling(eruptions: Eruption[], year: number): number {
+function volcanicCooling(eruptions: Eruption[], year: number): number {
   return eruptions.reduce((sum, e) => {
     const age = year - e.year
     if (age < 0) return sum
@@ -327,7 +327,7 @@ const STORM_BASINS: Basin[] = [
 ]
 
 /** 전 세계 연간 열대 저기압 발생 수 (기온이 오르면 조금 늘어남) */
-export function stormsPerYear(warmingC: number): number {
+function stormsPerYear(warmingC: number): number {
   return 85 * (1 + Math.max(0, warmingC - 1.2) * 0.06)
 }
 
@@ -394,7 +394,7 @@ export function stormSurge(category: number): number {
 }
 
 /** 폭풍이 해안 도시를 덮치는 반경 (km) */
-export function stormReachKm(category: number): number {
+function stormReachKm(category: number): number {
   return 120 + category * 40
 }
 
@@ -456,7 +456,7 @@ export function stormLandfalls(
 
 // ── 추이 기록 ─────────────────────────────────────────
 
-export const HISTORY_INTERVAL = 0.1
+const HISTORY_INTERVAL = 0.1
 const MAX_HISTORY = 400
 
 /** 0.1년마다 한 점씩 기록하고, 너무 많아지면 하나씩 건너 솎아 냅니다 */

@@ -9,9 +9,6 @@ export interface BuiltStructure {
   completeYear: number
 }
 
-/** 위치 없이 짓는 대상 (siteId가 대상 이름과 같음) */
-export const PLACELESS_TARGETS = ['orbit', 'global'] as const
-
 /** 완공 뒤 효과가 얼마나 나타났는지 0~1 (감축 정책은 서서히) */
 export function effectFactor(
   structure: BuiltStructure,

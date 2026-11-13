@@ -437,7 +437,7 @@ export const STRAITS: Strait[] = [
   },
 ]
 
-export const GLACIERS: Glacier[] = [
+const GLACIERS: Glacier[] = [
   {
     kind: 'glacier',
     id: 'thwaites',

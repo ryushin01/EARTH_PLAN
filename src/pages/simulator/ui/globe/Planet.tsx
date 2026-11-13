@@ -14,8 +14,7 @@ import {
 import type { DirectionalLight, Group, ShaderMaterial } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import { TEXTURES, TEXTURES_SMALL, prefersSmallTextures } from '@/shared/config'
-import { latLonToVector3 } from '@/shared/lib'
-import type { LatLon, Vec3 } from '@/shared/lib'
+import type { Vec3 } from '@/shared/lib'
 import {
   MAX_ASHES,
   MAX_DROUGHTS,
@@ -271,9 +270,4 @@ function SunLight() {
       <directionalLight ref={ref} intensity={2.2} />
     </>
   )
-}
-
-/** 위경도 → 지구 표면 벡터 (셰이더 입력용) */
-export function surfaceVector(point: LatLon): Vec3 {
-  return latLonToVector3(point, 1)
 }

@@ -5,7 +5,7 @@ export interface LatLon {
 
 export type Vec3 = [number, number, number]
 
-export const EARTH_RADIUS_KM = 6371
+const EARTH_RADIUS_KM = 6371
 /** 지구 육지 면적 (km²) */
 export const EARTH_LAND_AREA_KM2 = 148_940_000
 

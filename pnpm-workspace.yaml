@@ -1,5 +1,4 @@
 allowBuilds:
   esbuild: true
-minimumReleaseAgeExclude:
-  - '@lhci/cli@0.16.1'
-  - '@lhci/utils@0.16.1'
+# 루트에서 pnpm add를 할 때 -w 없이도 되게 합니다(.npmrc에 두면 npm이 모르는 설정이라 경고).
+ignoreWorkspaceRootCheck: true

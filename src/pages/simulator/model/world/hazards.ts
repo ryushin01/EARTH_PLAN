@@ -217,7 +217,7 @@ export function quakeStrongRadiusKm(magnitude: number): number {
   return quakeSevereRadiusKm(magnitude) * 2.5
 }
 
-export function quakeReduction(
+function quakeReduction(
   cityId: string,
   structures: BuiltStructure[],
   year: number,

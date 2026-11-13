@@ -19,7 +19,7 @@ export function dateToDecimalYear(date: Date): number {
 }
 
 /** 1월 1일을 0으로 하는 그 해의 날 수(소수) */
-export function dayOfYear(year: number): number {
+function dayOfYear(year: number): number {
   const date = decimalYearToDate(year)
   return (date.getTime() - Date.UTC(date.getUTCFullYear(), 0, 1)) / 86_400_000
 }

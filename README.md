@@ -117,3 +117,13 @@ src/
 | [성능](docs/performance.md)         | Lighthouse 측정 결과와 개선 내용              |
 | [배포](docs/deployment.md)          | GitHub Pages 배포와 하위 경로 설정            |
 | [버전 기록](CHANGELOG.md)           | 버전별 변경 내용                              |
+
+## 출처
+
+| 자료                     | 저작자                            | 사용 허락              | 원본                                                                                                  |
+| ------------------------ | --------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| Space Grotesk 글꼴       | The Space Grotesk Project Authors | SIL OFL 1.1            | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk)                       |
+| 지구 색·불빛·구름 텍스처 | three.js 기여자                   | MIT                    | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160) |
+| 고도 자료 ETOPO1         | 미국 해양대기청(NOAA)             | 미국 정부 저작물(공개) | [NOAA ETOPO](https://www.ncei.noaa.gov/products/etopo-global-relief-model)                            |
+
+파일별 구성과 변환 방법은 [데이터 출처](docs/data-sources.md)에 있습니다. 도시 고도·인구 등 대략값은 직접 정리했습니다.

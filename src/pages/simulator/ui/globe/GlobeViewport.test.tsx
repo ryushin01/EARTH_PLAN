@@ -1,14 +1,15 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocale } from '@/shared/i18n'
 import type { GlobeCanvasProps } from './GlobeCanvas'
-import { GlobeViewport, IDLE_LOAD_MS } from './GlobeViewport'
+import { GlobeViewport, IDLE_LOAD_MS, PREFETCH_DELAY_MS } from './GlobeViewport'
 
 // WebGL이 없는 jsdom에서는 3D 묶음을 대역으로 바꾸고, 받은 설정과 카메라 조작을 기록함
 const seen = vi.hoisted(() => ({
   canvas: null as null | GlobeCanvasProps,
   api: { rotate: vi.fn(), zoom: vi.fn(), focus: vi.fn() },
   fail: false,
+  preloadGlobe: vi.fn(),
 }))
 
 vi.mock('./GlobeCanvas', () => ({
@@ -18,7 +19,19 @@ vi.mock('./GlobeCanvas', () => ({
     props.apiRef.current = seen.api
     return <div data-testid="canvas" />
   },
+  preloadGlobe: seen.preloadGlobe,
 }))
+
+/** requestIdleCallback을 흉내 내고, 등록된 콜백을 직접 부를 수 있게 함 */
+function stubIdleCallback() {
+  const callbacks: Array<() => void> = []
+  vi.stubGlobal(
+    'requestIdleCallback',
+    vi.fn((callback: () => void) => callbacks.push(callback)),
+  )
+  vi.stubGlobal('cancelIdleCallback', vi.fn())
+  return callbacks
+}
 
 const STEP = Math.PI / 12
 
@@ -62,10 +75,15 @@ describe('GlobeViewport', () => {
     seen.fail = false
     seen.api.rotate.mockClear()
     seen.api.zoom.mockClear()
+    seen.preloadGlobe.mockClear()
   })
   afterEach(() => {
+    // 흉내 낸 전역(requestIdleCallback 등)을 풀기 전에 화면을 정리
+    cleanup()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     vi.useRealTimers()
+    Reflect.deleteProperty(window, '__earthPlanWoke')
     useLocale.setState({ locale: 'ko' })
     window.history.replaceState(null, '', '/')
   })
@@ -82,7 +100,7 @@ describe('GlobeViewport', () => {
     expect(screen.queryByTestId('canvas')).toBeNull()
     // 같은 지구를 보여 주는 꾸밈 이미지라 대체 텍스트는 비움
     expect(poster()).toHaveAttribute('alt', '')
-    expect(poster()?.getAttribute('srcset')).toMatch(/600w, .+ 1200w/)
+    expect(poster()?.getAttribute('srcset')).toMatch(/600w, .+ 800w, .+ 1200w/)
     expect(poster()).toHaveAttribute('fetchpriority', 'high')
     // 상태 알림 영역은 처음부터 있고 비어 있음
     expect(status()).toHaveTextContent('')
@@ -131,6 +149,50 @@ describe('GlobeViewport', () => {
     } finally {
       Reflect.deleteProperty(navigator, 'connection')
     }
+  })
+
+  it('페이지를 다 받고 잠시 뒤 한가할 때 3D 묶음과 텍스처를 미리 받아 두고, 그리지는 않는다', async () => {
+    const idle = stubIdleCallback()
+    vi.useFakeTimers()
+    setup()
+    // 첫 화면을 그리는 동안에는 미루고
+    act(() => vi.advanceTimersByTime(PREFETCH_DELAY_MS - 1))
+    expect(idle).toHaveLength(0)
+    act(() => vi.advanceTimersByTime(1))
+    expect(idle).toHaveLength(1)
+    vi.useRealTimers()
+    act(() => idle[0]())
+    await vi.waitFor(() => expect(seen.preloadGlobe).toHaveBeenCalledTimes(1))
+    expect(screen.queryByTestId('canvas')).toBeNull()
+  })
+
+  it('데이터 절약 모드나 2G 회선에서는 미리 받지 않는다', () => {
+    const idle = stubIdleCallback()
+    vi.useFakeTimers()
+    for (const connection of [
+      { saveData: true },
+      { effectiveType: 'slow-2g' },
+    ]) {
+      Object.defineProperty(navigator, 'connection', {
+        configurable: true,
+        value: connection,
+      })
+      try {
+        const { unmount } = render(<GlobeViewport hintId="hint" />)
+        act(() => vi.advanceTimersByTime(PREFETCH_DELAY_MS * 2))
+        unmount()
+      } finally {
+        Reflect.deleteProperty(navigator, 'connection')
+      }
+    }
+    expect(idle).toHaveLength(0)
+  })
+
+  it('페이지가 준비되기 전에 입력이 있었으면 기다리지 않고 3D를 불러온다', async () => {
+    // EARLY_WAKE_SCRIPT가 남기는 표시
+    Object.assign(window, { __earthPlanWoke: true })
+    setup()
+    expect(await screen.findByTestId('canvas')).toBeInTheDocument()
   })
 
   it('공유 링크로 열면 상태가 처음과 달라 정지 이미지 없이 바로 3D를 불러온다', async () => {

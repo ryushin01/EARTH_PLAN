@@ -24,10 +24,10 @@ test.describe('시뮬레이터 첫 화면', () => {
     await expect(
       page.getByRole('complementary', { name: '지구 상태' }),
     ).toBeVisible()
-    // 처음에는 three.js 묶음 없이 사전 렌더링된 정지 이미지
+    // 처음에는 사전 렌더링된 정지 이미지. 3D 묶음은 한가할 때 미리 받지만 그리지는 않음
     await expect(page.locator(POSTER)).toBeVisible()
+    await expect.poll(() => chunks.length).toBeGreaterThan(0)
     await expect(page.locator('canvas')).toHaveCount(0)
-    expect(chunks).toEqual([])
 
     await page.mouse.move(200, 200)
     await expect(page.locator('canvas')).toBeVisible()
@@ -43,6 +43,25 @@ test.describe('시뮬레이터 첫 화면', () => {
     await page.goto('/')
     await expect(page.locator(POSTER)).toBeVisible()
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('페이지가 준비되기 전에 움직여도 준비되자마자 3D 지구를 불러온다', async ({
+    page,
+  }) => {
+    // 앱 코드를 늦게 받게 해 준비(하이드레이션) 전에 입력이 들어오게 함
+    let released = 0
+    await page.route(/\/assets\/index-[^/]+\.js$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      released = Date.now()
+      await route.continue()
+    })
+    await page.goto('/', { waitUntil: 'commit' })
+    await page.locator(POSTER).waitFor()
+    await page.mouse.move(200, 200)
+    await page.mouse.move(220, 210)
+    await page.locator('canvas').waitFor({ timeout: 15_000 })
+    // 입력 기록이 없으면 준비된 뒤 5초(IDLE_LOAD_MS)를 기다린 다음에야 그림
+    expect(Date.now() - released).toBeLessThan(5_000)
   })
 
   for (const viewport of [

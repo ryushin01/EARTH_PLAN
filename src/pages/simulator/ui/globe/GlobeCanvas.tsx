@@ -6,6 +6,12 @@ import { latLonToVector3 } from '@/shared/lib'
 import type { CameraApi } from '../../model/camera'
 import { useT } from '../i18n'
 import { GlobeScene } from './GlobeScene'
+import { preloadPlanet } from './Planet'
+
+/** 3D를 그리기 전에 텍스처를 미리 받아 둠 (이 묶음을 미리 불러올 때 호출) */
+export function preloadGlobe() {
+  preloadPlanet()
+}
 
 /** 처음 카메라: 동아시아 상공 (정지 이미지도 같은 시점에서 찍음) */
 const CAMERA = {

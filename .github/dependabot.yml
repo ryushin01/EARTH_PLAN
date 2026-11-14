@@ -1,0 +1,40 @@
+# 의존성 업데이트 PR을 매주 월요일에 묶어서 엽니다. CI가 통과하면 검토해 합칩니다.
+version: 2
+updates:
+  # pnpm도 npm 생태계로 지정합니다 (pnpm-lock.yaml과 packageManager의 pnpm 판을 씀)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Seoul
+    # pnpm의 공개 대기 기간(하루)보다 넉넉히, 공개 뒤 3일이 지난 판만 올림
+    cooldown:
+      default-days: 3
+    groups:
+      # 개발 도구의 부·수 버전은 한 PR로
+      development:
+        dependency-type: development
+        update-types: [minor, patch]
+      # 배포되는 의존성(React, three.js 등)의 부·수 버전은 따로 한 PR로
+      production:
+        dependency-type: production
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(deps)'
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Seoul
+    cooldown:
+      default-days: 3
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: 'chore(ci)'

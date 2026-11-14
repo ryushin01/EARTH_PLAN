@@ -223,7 +223,12 @@ export function GlobeViewport({
     if (api)
       for (const action of pending.current.splice(0)) ACTIONS[action](api)
   }, [])
-  const onFailed = useCallback(() => setFailed(true), [])
+  const onFailed = useCallback(() => {
+    setFailed(true)
+    // 지구가 보인 뒤에 멈춰도 정지 이미지를 다시 보여 줌
+    setReady(false)
+    setPosterFaded(false)
+  }, [])
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const action = KEY_ACTIONS[event.key]

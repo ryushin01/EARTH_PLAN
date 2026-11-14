@@ -171,6 +171,23 @@ describe('GlobeViewport', () => {
     expect(poster()).toBeInTheDocument()
   })
 
+  it('지구가 보인 뒤에 3D가 멈춰도 정지 이미지를 다시 보여 준다', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const user = userEvent.setup()
+    const { poster, status } = setup()
+    await wakeAndShow()
+    fireEvent.transitionEnd(poster()!)
+    expect(poster()).toBeNull()
+    // 다시 그릴 때 오류가 나게 함
+    seen.fail = true
+    await user.click(screen.getByRole('button', { name: '구름' }))
+    expect(
+      await screen.findByText(/WebGL을 쓸 수 없어 3D 지구를 표시하지 못합니다/),
+    ).toBe(status())
+    expect(poster()).toBeInTheDocument()
+    expect(poster()).not.toHaveClass('opacity-0')
+  })
+
   it('화살표 키로 돌리고 +, − 키로 확대·축소하며, 자동 회전을 멈춘다', async () => {
     const user = userEvent.setup()
     const { globe, autoRotate } = setup()

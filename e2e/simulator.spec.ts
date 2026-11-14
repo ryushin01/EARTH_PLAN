@@ -1,10 +1,19 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
+/** 3D 전에 먼저 보여 주는 지구 정지 이미지 */
+const POSTER = 'img[srcset*="earth-600"]'
+
 test.describe('시뮬레이터 첫 화면', () => {
-  test('제목·랜드마크와 3D 지구가 나온다', async ({ page }) => {
+  test('제목·랜드마크와 정지 이미지가 먼저 나오고, 움직이면 3D 지구로 바뀐다', async ({
+    page,
+  }) => {
     const errors: string[] = []
+    const chunks: string[] = []
     page.on('pageerror', (e) => errors.push(e.message))
+    page.on('request', (r) => {
+      if (r.url().includes('GlobeCanvas')) chunks.push(r.url())
+    })
     await page.goto('/')
     await expect(page).toHaveTitle(/EARTH PLAN/)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -15,13 +24,25 @@ test.describe('시뮬레이터 첫 화면', () => {
     await expect(
       page.getByRole('complementary', { name: '지구 상태' }),
     ).toBeVisible()
+    // 처음에는 three.js 묶음 없이 사전 렌더링된 정지 이미지
+    await expect(page.locator(POSTER)).toBeVisible()
+    await expect(page.locator('canvas')).toHaveCount(0)
+    expect(chunks).toEqual([])
+
+    await page.mouse.move(200, 200)
     await expect(page.locator('canvas')).toBeVisible()
+    // 지구가 보이면 정지 이미지를 지움
+    await expect(page.locator(POSTER)).toHaveCount(0, { timeout: 30_000 })
     await expect(
       page.getByRole('status').filter({ hasText: '지구를 불러오는 중' }),
-    ).toHaveCount(0, {
-      timeout: 20_000,
-    })
+    ).toHaveCount(0)
     expect(errors).toEqual([])
+  })
+
+  test('상호작용이 없어도 잠시 뒤에는 3D 지구를 불러온다', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator(POSTER)).toBeVisible()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
   })
 
   for (const viewport of [
@@ -204,6 +225,14 @@ test.describe('저장·공유', () => {
         .getByRole('listitem')
         .first(),
     ).toContainText('공유 링크의 시나리오를 불러왔습니다')
+  })
+
+  test('공유 링크로 열면 처음 화면과 상태가 달라 정지 이미지 없이 바로 3D를 불러온다', async ({
+    page,
+  }) => {
+    await page.goto('/?s=x')
+    await expect(page.locator('canvas')).toBeVisible()
+    await expect(page.locator(POSTER)).toHaveCount(0)
   })
 
   test('잘못된 공유 링크는 무시하고 기본 화면을 연다', async ({ page }) => {

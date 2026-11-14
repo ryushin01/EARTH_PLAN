@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect } from 'storybook/test'
+import { expect, waitFor } from 'storybook/test'
 import { useWorld } from '../../model/world/store'
 import { useT } from '../i18n'
 import { GlobeViewport } from './GlobeViewport'
@@ -37,9 +37,14 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** 끌거나 화살표 키로 돌리면 자동 회전이 멈춤 */
+/**
+ * 처음에는 정지 이미지를 보여 주고, 초점을 받거나 움직이면 3D를 불러와 바꿈.
+ * 끌거나 화살표 키로 돌리면 자동 회전이 멈춤
+ */
 export const Default: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const poster = () => canvasElement.querySelector('img')
+    await expect(poster()).toBeInTheDocument()
     const globe = canvas.getByRole('group', { name: '지구본 조작 영역' })
     // 좁은 화면에서는 보기 토글이 접혀 있음
     const view = canvas.queryByRole('button', { name: '보기' })
@@ -49,5 +54,7 @@ export const Default: Story = {
     globe.focus()
     await userEvent.keyboard('{ArrowRight}')
     await expect(autoRotate).toHaveAttribute('aria-pressed', 'false')
+    // 3D 지구가 보이면 정지 이미지가 사라짐
+    await waitFor(() => expect(poster()).toBeNull(), { timeout: 30_000 })
   },
 }

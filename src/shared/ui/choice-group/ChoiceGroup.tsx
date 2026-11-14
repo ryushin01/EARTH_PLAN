@@ -43,10 +43,11 @@ export function ChoiceGroup<T extends string>({
         {choices.map((choice) => {
           const checked = choice.value === value
           return (
+            // relative: 숨긴 입력이 늘 자기 라벨 안에 있게 함 (스크롤되는 패널 안에서도 초점 위치가 라벨과 같음)
             <label
               key={choice.value}
               className={cn(
-                'flex min-h-11 cursor-pointer flex-col justify-center rounded-xs border px-3 py-2 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent',
+                'relative flex min-h-11 cursor-pointer flex-col justify-center rounded-xs border px-3 py-2 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent',
                 checked
                   ? 'border-accent bg-accent/10 text-ice'
                   : 'border-line text-muted hover:border-line-strong hover:text-ice',

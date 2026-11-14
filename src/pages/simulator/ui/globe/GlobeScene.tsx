@@ -41,6 +41,10 @@ interface GlobeSceneProps {
   showClouds: boolean
   showMarkers: boolean
   reducedMotion: boolean
+  /** 별 배경 (정지 이미지를 찍을 때는 끔) */
+  showStars?: boolean
+  /** 지구가 처음 보이게 되면 */
+  onReady?: () => void
 }
 
 export function GlobeScene({
@@ -49,6 +53,8 @@ export function GlobeScene({
   showClouds,
   showMarkers,
   reducedMotion,
+  showStars = true,
+  onReady,
 }: GlobeSceneProps) {
   const camera = useThree((s) => s.camera)
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
@@ -155,20 +161,23 @@ export function GlobeScene({
   return (
     <>
       <color attach="background" args={['#000000']} />
-      <Stars
-        radius={60}
-        depth={40}
-        count={3000}
-        factor={3}
-        saturation={0}
-        fade
-        speed={reducedMotion ? 0 : 0.4}
-      />
+      {showStars ? (
+        <Stars
+          radius={60}
+          depth={40}
+          count={3000}
+          factor={3}
+          saturation={0}
+          fade
+          speed={reducedMotion ? 0 : 0.4}
+        />
+      ) : null}
       <Suspense fallback={null}>
         <Planet
           readFrame={readFrame}
           showClouds={showClouds}
           onSurfaceClick={onSurfaceClick}
+          onReady={onReady}
         />
         <PlumeLayer plumesRef={plumesRef} />
       </Suspense>

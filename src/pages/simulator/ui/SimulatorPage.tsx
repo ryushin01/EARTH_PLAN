@@ -1,8 +1,7 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useLocale, useLocaleSync } from '@/shared/i18n'
 import { cn } from '@/shared/lib'
 import { useT } from './i18n'
-import { ClientOnly } from '@tanstack/react-router'
 import { loadFloodCurve } from '../api/loadFloodCurve'
 import { useWorld } from '../model/world/store'
 import { useSimulationClock } from '../model/useSimulationClock'
@@ -14,16 +13,11 @@ import { TimeControls } from './status/TimeControls'
 import { ScenarioShare } from './status/ScenarioShare'
 import { MissionPanel } from './status/MissionPanel'
 import { HistoryPanel } from './status/HistoryPanel'
+import { GlobeViewport } from './globe/GlobeViewport'
 import { SHARE_PARAM, decodeSnapshot } from '../model/world/snapshot'
 
-// three.js는 브라우저에서만 불러옵니다
-const GlobeViewport = lazy(() =>
-  import('./globe/GlobeViewport').then((m) => ({
-    default: m.GlobeViewport,
-  })),
-)
-
-const panel = 'rounded-xs border border-line bg-panel p-4 backdrop-blur-md'
+// 배경 흐림(backdrop-filter)은 매 프레임 바뀌는 3D 위에서 GPU를 많이 써서 쓰지 않고, 불투명도로 가독성을 맞춤
+const panel = 'rounded-xs border border-line bg-panel p-4'
 /** 모바일에서 위에 고정된 지구에 가리지 않도록 스크롤 위치를 띄움 */
 const anchor = 'scroll-mt-[calc(45svh+0.5rem)] lg:scroll-mt-0'
 
@@ -132,19 +126,8 @@ export function SimulatorPage() {
             {t('page.globe')}
           </h2>
           <div className="relative min-h-0 flex-1 lg:absolute lg:inset-0">
-            <ClientOnly
-              fallback={
-                <p className="p-6 label-caps">{t('page.globeLoading')}</p>
-              }
-            >
-              <Suspense
-                fallback={
-                  <p className="p-6 label-caps">{t('page.globeLoading')}</p>
-                }
-              >
-                <GlobeViewport hintId="globe-hint" />
-              </Suspense>
-            </ClientOnly>
+            {/* 정지 이미지와 조작 버튼은 사전 렌더링하고, three.js 묶음은 필요할 때 받음 */}
+            <GlobeViewport hintId="globe-hint" />
           </div>
           {/* 사전 렌더링되도록 3D 묶음 밖에 둠 */}
           <p
@@ -195,7 +178,7 @@ export function SimulatorPage() {
       {/* 모바일 화면 이동 */}
       <nav
         aria-label={t('page.mobileNav')}
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-panel-solid/95 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-panel-solid/95 lg:hidden"
       >
         <ul className="grid grid-cols-3">
           {MOBILE_LINKS.map((link) => (

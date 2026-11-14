@@ -24,6 +24,7 @@ const seen = vi.hoisted(() => ({
     readFrame: (t: number) => PlanetFrame
     showClouds?: boolean
     onSurfaceClick?: (point: Vec3) => void
+    onReady?: () => void
   },
   controls: null as null | {
     autoRotate?: boolean
@@ -71,7 +72,12 @@ const defaults = {
   reducedMotion: true,
 }
 
-async function render(props: Partial<typeof defaults> = {}) {
+async function render(
+  props: Partial<typeof defaults> & {
+    showStars?: boolean
+    onReady?: () => void
+  } = {},
+) {
   const apiRef = createRef<CameraApi>()
   const cameraRef = createRef<Camera>()
   const renderer = await ReactThreeTestRenderer.create(
@@ -213,5 +219,13 @@ describe('GlobeScene', () => {
     expect(markers).toHaveLength(ALL_SITES.length)
     expect(seen.controls?.enableDamping).toBe(true)
     await on.renderer.unmount()
+  })
+
+  it('정지 이미지를 찍을 때는 별을 빼고, 지구가 보이면 알린다', async () => {
+    const onReady = vi.fn()
+    const { renderer } = await render({ showStars: false, onReady })
+    expect(seen.stars).toBeNull()
+    expect(seen.planet?.onReady).toBe(onReady)
+    await renderer.unmount()
   })
 })

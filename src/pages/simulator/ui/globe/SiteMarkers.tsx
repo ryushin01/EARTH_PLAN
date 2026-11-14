@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { Quaternion, Vector3 } from 'three'
+import { useThree } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
 import { latLonToVector3 } from '@/shared/lib'
 import type { Site, SiteKind } from '../../model/site/types'
@@ -56,6 +57,9 @@ export function SiteMarkers({
 }: SiteMarkersProps) {
   const [hoverId, setHoverId] = useState<string | null>(null)
   const locale = useLocale((st) => st.locale)
+  // drei Html은 캔버스의 이벤트 연결 요소에 붙습니다. 연결 전에 그리면(처음부터 고른 지점이 있을 때)
+  // 붙을 곳이 바뀌며 이름표 루트를 렌더링 도중 다시 만들게 되고, 개발 빌드에서는 내용이 사라지므로 연결된 뒤에 그림
+  const connected = useThree((st) => Boolean(st.events.connected))
 
   const placed = useMemo(
     () =>
@@ -68,7 +72,7 @@ export function SiteMarkers({
     [sites],
   )
 
-  const labelId = hoverId ?? selectedId
+  const labelId = connected ? (hoverId ?? selectedId) : null
 
   return (
     <group>

@@ -1,13 +1,13 @@
 # EARTH_PLAN - 지구 환경·재해 대응 시뮬레이터
 
 [![CI](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml/badge.svg)](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml)
-![version](https://img.shields.io/badge/version-0.6.2-00a1ff)
+![version](https://img.shields.io/badge/version-0.6.3-00a1ff)
 
 3D 지구 위에서 해수면 상승, 화산 분화, 쓰나미, 지진, 소행성 충돌, 산불·가뭄을 일으키고 해협 댐·우주 차양·행성 방위 요격망 같은 거대 구조물로 막아 보는 웹 시뮬레이터입니다.
 
 **[데모 바로 보기](https://ryushin01.github.io/EARTH_PLAN/)** · [Storybook](https://ryushin01.github.io/EARTH_PLAN/storybook/)
 
-> **프로젝트 상태:** 0.6.2까지 만든 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
+> **프로젝트 상태:** 0.6.3까지 만든 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
 
 ## 화면
 
@@ -60,15 +60,15 @@
 
 ![React, TypeScript, Three.js, Tailwind CSS, Vite, Vitest, pnpm](https://skillicons.dev/icons?i=react,ts,threejs,tailwind,vite,vitest,pnpm)
 
-| 구분       | 사용 기술                                                                                          |
-| ---------- | -------------------------------------------------------------------------------------------------- |
-| 프레임워크 | TanStack Start 1.169 (정적 사전 렌더링), TanStack Router, React 19, TypeScript 6                   |
-| 3D         | three.js, React Three Fiber 9, drei, 직접 작성한 GLSL 셰이더                                       |
-| 상태       | zustand                                                                                            |
-| 스타일     | Tailwind CSS 4, Space Grotesk                                                                      |
-| 품질       | ESLint, Prettier, Steiger(FSD 검사), Vitest + Testing Library, Playwright E2E + axe, Lighthouse CI |
-| 문서       | Storybook 10 (`@storybook/react-vite`, a11y 애드온)                                                |
-| 배포·CI    | GitHub Pages, GitHub Actions                                                                       |
+| 구분       | 사용 기술                                                                                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 프레임워크 | TanStack Start 1.169 (정적 사전 렌더링), TanStack Router, React 19, TypeScript 6                                                                                        |
+| 3D         | three.js, React Three Fiber 9, drei, 직접 작성한 GLSL 셰이더                                                                                                            |
+| 상태       | zustand                                                                                                                                                                 |
+| 스타일     | Tailwind CSS 4, Space Grotesk                                                                                                                                           |
+| 품질       | ESLint, Prettier, Steiger(FSD 검사), Vitest + Testing Library·React Three Test Renderer, 스토리 테스트(Vitest 브라우저 모드 + axe), Playwright E2E + axe, Lighthouse CI |
+| 문서       | Storybook 10 (`@storybook/react-vite`, a11y·Vitest 애드온)                                                                                                              |
+| 배포·CI    | GitHub Pages, GitHub Actions                                                                                                                                            |
 
 ## 시작하기
 
@@ -81,15 +81,16 @@ pnpm install
 pnpm dev    # http://localhost:3000
 ```
 
-| 명령                                   | 설명                                                                  |
-| -------------------------------------- | --------------------------------------------------------------------- |
-| `pnpm build` / `pnpm preview`          | 정적 사이트 빌드(`dist/client`) / 빌드 결과 실행                      |
-| `pnpm build:all`                       | 사이트와 Storybook을 함께 빌드 (하위 경로는 `BASE_PATH=/EARTH_PLAN/`) |
-| `pnpm lint` / `lint:fsd` / `typecheck` | ESLint / FSD 구조 검사 / 타입 검사                                    |
-| `pnpm test`                            | 단위·컴포넌트 테스트                                                  |
-| `pnpm test:e2e`                        | 프로덕션 빌드 E2E·접근성 검사 (먼저 `build` 필요)                     |
-| `pnpm lighthouse`                      | Lighthouse CI 점수 검사 (먼저 `build` 필요)                           |
-| `pnpm storybook`                       | Storybook 개발 서버 (`http://localhost:6006`)                         |
+| 명령                                   | 설명                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `pnpm build` / `pnpm preview`          | 정적 사이트 빌드(`dist/client`) / 빌드 결과 실행                                                       |
+| `pnpm build:all`                       | 사이트와 Storybook을 함께 빌드 (하위 경로는 `BASE_PATH=/EARTH_PLAN/`)                                  |
+| `pnpm lint` / `lint:fsd` / `typecheck` | ESLint / FSD 구조 검사 / 타입 검사                                                                     |
+| `pnpm test`                            | 단위·컴포넌트 테스트 (jsdom, 3D 장면 포함)                                                             |
+| `pnpm test:storybook`                  | 모든 스토리를 Chromium에서 렌더링하고 접근성 검사 (처음 한 번 `pnpm exec playwright install chromium`) |
+| `pnpm test:e2e`                        | 프로덕션 빌드 E2E·접근성 검사 (먼저 `build` 필요)                                                      |
+| `pnpm lighthouse`                      | Lighthouse CI 점수 검사 (먼저 `build` 필요)                                                            |
+| `pnpm storybook`                       | Storybook 개발 서버 (`http://localhost:6006`)                                                          |
 
 ## 프로젝트 구조
 

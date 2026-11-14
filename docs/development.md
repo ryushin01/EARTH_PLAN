@@ -4,17 +4,17 @@
 
 [Feature-Sliced Design 2.1](https://feature-sliced.design)을 따릅니다. 화면이 한 페이지뿐이라 한 곳에서만 쓰는 코드는 모두 `pages/simulator` 슬라이스 안에 두고(pages-first), 여러 곳에서 쓰는 UI와 유틸만 `shared`에 둡니다. `pnpm lint:fsd`(Steiger)로 검사하며 `src/routes`, `src/router.tsx`, 생성 파일은 검사에서 뺍니다.
 
-| 위치                                        | 내용                                                                                   |
-| ------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `src/routes/`                               | TanStack Router 파일 라우트. `index.tsx`는 `SimulatorPage`를 연결만 합니다             |
-| `src/app/`                                  | 전역 CSS(Tailwind 테마 토큰), HTML 문서 틀(`lang="ko"`)                                |
-| `pages/simulator/model/world/`              | 시뮬레이션 엔진(순수 함수)·시나리오·시간·zustand 스토어                                |
-| `pages/simulator/model/site/`, `structure/` | 도시·화산·해구·해협·빙하 데이터, 거대 구조물 목록                                      |
-| `pages/simulator/model/frame.ts`            | 스토어 상태 → 매 프레임 셰이더 입력(태양 방향, 파면, 화산재, 폭풍)                     |
-| `pages/simulator/lib/shaders.ts`            | 지구·구름·대기 GLSL                                                                    |
-| `pages/simulator/ui/globe/`                 | Canvas, 카메라 조작, 지구, 마커, 구조물, 분출 기둥                                     |
-| `shared/ui/`                                | Button, Tabs, RangeField, SelectField, ChoiceGroup, StatusMessage (옆에 스토리·테스트) |
-| `shared/lib/`                               | 위경도 ↔ 3D 좌표, 대권 거리, 태양 직하점·계절, 숫자 서식                               |
+| 위치                                        | 내용                                                                                                      |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `src/routes/`                               | TanStack Router 파일 라우트. `index.tsx`는 `SimulatorPage`를 연결만 합니다                                |
+| `src/app/`                                  | 전역 CSS(Tailwind 테마 토큰), HTML 문서 틀(`lang="ko"`)                                                   |
+| `pages/simulator/model/world/`              | 시뮬레이션 엔진(순수 함수)·시나리오·시간·zustand 스토어                                                   |
+| `pages/simulator/model/site/`, `structure/` | 도시·화산·해구·해협·빙하 데이터, 거대 구조물 목록                                                         |
+| `pages/simulator/model/frame.ts`            | 스토어 상태 → 매 프레임 셰이더 입력(태양 방향, 파면, 화산재, 폭풍)                                        |
+| `pages/simulator/lib/shaders.ts`            | 지구·구름·대기 GLSL                                                                                       |
+| `pages/simulator/ui/globe/`                 | Canvas, 카메라 조작, 지구, 마커, 구조물, 분출 기둥 (옆에 스토리·테스트, 스토리 전용 3D 무대 `StoryStage`) |
+| `shared/ui/`                                | Button, Tabs, RangeField, SelectField, ChoiceGroup, StatusMessage (옆에 스토리·테스트)                    |
+| `shared/lib/`                               | 위경도 ↔ 3D 좌표, 대권 거리, 태양 직하점·계절, 숫자 서식                                                  |
 
 3D 화면은 `ClientOnly` + `lazy`로 브라우저에서만 불러오고, 나머지 화면은 빌드 때 HTML로 사전 렌더링합니다(`dist/client`, 정적 호스팅 가능).
 
@@ -61,12 +61,18 @@
 
 | 명령                   | 범위                                                                                                                                                                                              |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test`            | 엔진·스토어·좌표·천문 계산, 공통 UI(키보드 탭 이동 등), 패널 컴포넌트                                                                                                                             |
+| `pnpm test`            | 엔진·스토어·좌표·천문 계산, 공통 UI(키보드 탭 이동 등), 패널 컴포넌트, 지구본 3D 컴포넌트(WebGL 없이 장면 그래프·셰이더 입력·포인터 이벤트 검사)                                                  |
+| `pnpm test:storybook`  | 모든 스토리를 실제 Chromium에서 렌더링하고 `play` 상호작용과 axe(위반 시 실패) 검사. 지구 본체가 나오는 스토리는 셰이더 컴파일 오류가 없고 지구가 보이게 되는지 확인                              |
 | `pnpm test:e2e`        | 프로덕션 빌드에서 첫 화면 오류, 390·768·1440px 가로 넘침, axe(WCAG 2.2 AA), 본문 바로가기·탭·지구본 키보드, 해수면·건설·쓰나미·분화·소행성·산불·가뭄·재생 흐름, 공유 링크로 열기, 탭마다 axe 검사 |
 | `pnpm build-storybook` | 모든 스토리 빌드                                                                                                                                                                                  |
 | `pnpm lighthouse`      | Lighthouse CI: 접근성 ≥ 95, 권장사항·SEO ≥ 90, CLS ≤ 0.1은 실패, 성능·LCP·용량은 경고                                                                                                             |
 
-E2E는 GPU 없는 환경에서도 돌도록 Chromium을 SwiftShader(소프트웨어 WebGL)로 띄웁니다.
+E2E와 스토리 테스트는 GPU 없는 환경에서도 돌도록 Chromium을 SwiftShader(소프트웨어 WebGL)로 띄웁니다.
+
+Vitest는 두 프로젝트로 나뉩니다(`vitest.config.ts`).
+
+- `unit`: jsdom. 3D 컴포넌트는 `@react-three/test-renderer`로 그려 장면 그래프를 검사합니다. React Three Fiber·drei·test-renderer는 `exports`가 없어 CJS판이 잡히므로 ESM 파일로 별칭을 걸고 Vite가 직접 처리하게 해, three.js가 한 벌만 쓰이게 합니다.
+- `storybook`: 브라우저 모드(Playwright). 3D 스토리가 한 GPU 프로세스를 나눠 쓰면 서로 크게 느려져 파일을 차례로 실행합니다.
 
 ## 접근성
 

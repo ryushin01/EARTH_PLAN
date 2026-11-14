@@ -11,7 +11,7 @@ describe('MissionHud', () => {
     act(() => {
       useWorld.getState().setSeaLevel(5)
     })
-    expect(screen.getByRole('status')).toHaveTextContent(/경보: .*침수/)
+    expect(screen.getByRole('status').textContent).toMatch(/경보: .*침수/)
     expect(screen.getAllByRole('listitem').length).toBeGreaterThan(1)
   })
 })

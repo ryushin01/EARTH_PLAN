@@ -4,7 +4,7 @@
 /* EnduroSat 스타일 참고: 검은 우주 배경, 하늘색 포인트, 대문자 라벨, 각진 모서리 */
 @theme {
   --color-space: #000000;
-  --color-panel: rgb(8 10 14 / 0.82);
+  --color-panel: rgb(8 10 14 / 0.88);
   --color-panel-solid: #0b0e13;
   --color-line: rgb(218 242 255 / 0.18);
   --color-line-strong: rgb(218 242 255 / 0.4);

@@ -1,6 +1,6 @@
 {
   "name": "earth-plan",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.16.1",
@@ -24,7 +24,8 @@
     "lighthouse": "lhci autorun",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o dist/client/storybook",
-    "data:elevation": "node scripts/build-elevation.mjs"
+    "data:elevation": "node scripts/build-elevation.mjs",
+    "poster": "node scripts/capture-globe-poster.mjs"
   },
   "dependencies": {
     "@fontsource-variable/space-grotesk": "5.3.0",

@@ -37,6 +37,8 @@ interface PlanetProps {
   showClouds?: boolean
   /** 지구 표면을 눌렀을 때 그 지점의 위경도 */
   onSurfaceClick?: (point: Vec3) => void
+  /** 셰이더 컴파일을 마치고 지구가 처음 보이게 되면 */
+  onReady?: () => void
 }
 
 // 처음 불러올 때 한 번 정함 (도중에 바꾸면 텍스처를 다시 받아야 하므로)
@@ -58,6 +60,7 @@ export function Planet({
   readFrame,
   showClouds = true,
   onSurfaceClick,
+  onReady,
 }: PlanetProps) {
   // 이미지 해석을 메인 스레드 밖(ImageBitmap)에서 처리해 첫 화면 멈춤을 줄입니다
   const bitmaps = useLoader(ImageBitmapLoader, TEXTURE_URLS, (loader) => {
@@ -213,6 +216,10 @@ export function Planet({
       clearTimeout(timer)
     }
   }, [gl, camera, scene])
+
+  useEffect(() => {
+    if (compiled) onReady?.()
+  }, [compiled, onReady])
 
   return (
     <group ref={rootRef} visible={compiled}>

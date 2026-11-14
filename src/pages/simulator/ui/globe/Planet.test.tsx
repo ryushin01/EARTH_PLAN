@@ -66,12 +66,15 @@ describe('Planet', () => {
   })
 
   it('지구·구름·대기 세 겹으로 그리고, 셰이더를 컴파일한 뒤 보여 준다', async () => {
-    const { renderer, meshes } = await render()
+    const onReady = vi.fn()
+    const { renderer, meshes } = await render({ onReady })
     expect(meshes().map((m) => m.instance.scale.x)).toEqual([1, 1.012, 1.09])
     const root = renderer.scene.findAll(
       (node) => node.instance.name === 'sun-light',
     )[0].parent!.instance
     await waitFor(() => root.visible)
+    // 보이게 되면 한 번 알림 (지구본 화면이 정지 이미지를 지우는 신호)
+    expect(onReady).toHaveBeenCalledTimes(1)
     await renderer.unmount()
   })
 

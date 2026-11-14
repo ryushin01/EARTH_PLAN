@@ -1,13 +1,42 @@
-import { useId, useRef, useState, useSyncExternalStore } from 'react'
-import type { KeyboardEvent } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { useProgress } from '@react-three/drei'
+import {
+  Component,
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 import { Button } from '@/shared/ui'
-import { cn, latLonToVector3 } from '@/shared/lib'
+import { cn } from '@/shared/lib'
 import type { CameraApi } from '../../model/camera'
-import { GlobeScene } from './GlobeScene'
+import { SHARE_PARAM } from '../../model/world/snapshot'
 import { useT } from '../i18n'
 import type { MessageKey } from '../i18n'
+import poster600 from './poster/earth-600.webp'
+import poster1200 from './poster/earth-1200.webp'
+
+// three.js를 쓰는 부분은 필요할 때 따로 받습니다
+const GlobeCanvas = lazy(() =>
+  import('./GlobeCanvas').then((m) => ({ default: m.GlobeCanvas })),
+)
+
+/** 상호작용이 없을 때 3D 지구를 불러오기까지 기다리는 시간 */
+export const IDLE_LOAD_MS = 5000
+
+/** 이 중 하나라도 일어나면 3D 지구를 바로 불러옴 */
+const WAKE_EVENTS = [
+  'pointerdown',
+  'pointermove',
+  'keydown',
+  'wheel',
+  'touchstart',
+  'scroll',
+  'focusin',
+] as const
 
 const STEP = Math.PI / 12
 const MOTION_QUERY = '(prefers-reduced-motion: reduce)'
@@ -24,6 +53,67 @@ function usePrefersReducedMotion() {
     () => window.matchMedia(MOTION_QUERY).matches,
     () => false,
   )
+}
+
+const subscribeNothing = () => () => {}
+
+/** 공유 링크로 열었는지 (상태가 처음과 달라 정지 이미지를 쓸 수 없음) */
+function useOpenedFromShareLink() {
+  return useSyncExternalStore(
+    subscribeNothing,
+    () => new URLSearchParams(window.location.search).has(SHARE_PARAM),
+    () => false,
+  )
+}
+
+/** 브라우저의 데이터 절약 모드 (지원하지 않으면 false) */
+function prefersSaveData() {
+  const nav = navigator as Navigator & { connection?: { saveData?: boolean } }
+  return nav.connection?.saveData === true
+}
+
+/**
+ * 첫 상호작용이나 IDLE_LOAD_MS가 지나면 true. 공유 링크면 바로 true.
+ * 데이터 절약 모드에서는 저절로 받지 않고 상호작용할 때만 받음
+ */
+function useWake(immediate: boolean) {
+  const [awake, setAwake] = useState(false)
+  useEffect(() => {
+    if (awake) return
+    const wake = () => setAwake(true)
+    const options = { capture: true, passive: true } as const
+    for (const type of WAKE_EVENTS) window.addEventListener(type, wake, options)
+    const timer =
+      immediate || !prefersSaveData()
+        ? setTimeout(wake, immediate ? 0 : IDLE_LOAD_MS)
+        : undefined
+    return () => {
+      clearTimeout(timer)
+      for (const type of WAKE_EVENTS)
+        window.removeEventListener(type, wake, options)
+    }
+  }, [awake, immediate])
+  return awake
+}
+
+/** 3D를 그리지 못하면(WebGL 없음, 묶음 받기 실패) 알리고 정지 이미지를 그대로 둠 */
+class GlobeErrorBoundary extends Component<
+  { onError: () => void; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  componentDidCatch() {
+    this.props.onError()
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children
+  }
 }
 
 type CameraAction = 'left' | 'right' | 'up' | 'down' | 'in' | 'out'
@@ -60,19 +150,6 @@ const BUTTONS: Array<{
   { action: 'out', label: 'globe.out', symbol: '−' },
 ]
 
-function LoadingStatus() {
-  const { active, progress } = useProgress()
-  const { t } = useT()
-  return (
-    <p
-      role="status"
-      className="label-caps pointer-events-none absolute inset-x-0 top-1/3 text-center"
-    >
-      {active ? t('globe.loading', { percent: Math.round(progress) }) : ''}
-    </p>
-  )
-}
-
 function ToggleButton({
   pressed,
   onClick,
@@ -99,7 +176,10 @@ function ToggleButton({
   )
 }
 
-/** 끌어서 돌리고 확대할 수 있는 3D 지구본 */
+/**
+ * 끌어서 돌리고 확대할 수 있는 3D 지구본.
+ * 처음에는 같은 시점의 정지 이미지를 보여 주고, 첫 상호작용이나 잠시 뒤에 3D를 불러와 바꿉니다.
+ */
 export function GlobeViewport({
   className,
   hintId,
@@ -120,11 +200,35 @@ export function GlobeViewport({
   const [moreOpen, setMoreOpen] = useState(false)
   const optionsId = useId()
 
+  const shared = useOpenedFromShareLink()
+  const awake = useWake(shared)
+  const [percent, setPercent] = useState<number | null>(null)
+  const [ready, setReady] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [posterFaded, setPosterFaded] = useState(false)
+  // 지구가 보이기 전에 누른 회전·확대는 모아 두었다가 보이면 이어서 실행
+  // (정지 이미지와 같은 자리에서 3D로 바뀐 뒤에 움직이도록)
+  const pending = useRef<CameraAction[]>([])
+
   const perform = (action: CameraAction) => {
     setAutoRotate(false)
     const api = apiRef.current
-    if (api) ACTIONS[action](api)
+    if (api && ready) ACTIONS[action](api)
+    else pending.current.push(action)
   }
+
+  const onReady = useCallback(() => {
+    setReady(true)
+    const api = apiRef.current
+    if (api)
+      for (const action of pending.current.splice(0)) ACTIONS[action](api)
+  }, [])
+  const onFailed = useCallback(() => {
+    setFailed(true)
+    // 지구가 보인 뒤에 멈춰도 정지 이미지를 다시 보여 줌
+    setReady(false)
+    setPosterFaded(false)
+  }, [])
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const action = KEY_ACTIONS[event.key]
@@ -132,6 +236,15 @@ export function GlobeViewport({
     event.preventDefault()
     perform(action)
   }
+
+  const showPoster = !shared && !(ready && (posterFaded || reducedMotion))
+  const status = failed
+    ? t('globe.noWebgl')
+    : awake && !ready
+      ? percent === null
+        ? t('page.globeLoading')
+        : t('globe.loading', { percent })
+      : ''
 
   return (
     <div
@@ -147,31 +260,58 @@ export function GlobeViewport({
         onKeyDown={onKeyDown}
         className="relative min-h-0 flex-1 touch-none focus-visible:outline-offset-[-4px] lg:absolute lg:inset-0"
       >
-        <Canvas
-          camera={{
-            position: latLonToVector3({ lat: 25, lon: 128 }, 3.7),
-            fov: 40,
-            near: 0.05,
-            far: 200,
-          }}
-          dpr={[1, 1.75]}
-          gl={{ antialias: true }}
-          fallback={
-            <p className="p-6 text-sm text-muted">{t('globe.noWebgl')}</p>
-          }
-        >
-          <GlobeScene
-            apiRef={apiRef}
-            autoRotate={autoRotate}
-            showClouds={showClouds}
-            showMarkers={showMarkers}
-            reducedMotion={reducedMotion}
-          />
-        </Canvas>
+        {awake ? (
+          <GlobeErrorBoundary onError={onFailed}>
+            <Suspense fallback={null}>
+              <GlobeCanvas
+                apiRef={apiRef}
+                // 정지 이미지와 같은 자리에서 바뀌도록 지구가 보인 뒤에 돌기 시작
+                autoRotate={autoRotate && ready}
+                showClouds={showClouds}
+                showMarkers={showMarkers}
+                reducedMotion={reducedMotion}
+                onProgress={setPercent}
+                onReady={onReady}
+              />
+            </Suspense>
+          </GlobeErrorBoundary>
+        ) : null}
+        {showPoster ? (
+          // 3D와 같은 시점·시각에서 찍은 정지 이미지 (같은 지구를 보여 주므로 꾸밈 이미지로 둠)
+          <div className="pointer-events-none absolute inset-0 flex justify-center overflow-hidden">
+            <img
+              src={poster1200}
+              srcSet={`${poster600} 600w, ${poster1200} 1200w`}
+              sizes="(min-width: 1024px) 100vh, 45vh"
+              width={1200}
+              height={1200}
+              alt=""
+              fetchPriority="high"
+              onTransitionEnd={() => setPosterFaded(true)}
+              className={cn(
+                'h-full w-auto max-w-none transition-opacity duration-500 motion-reduce:transition-none',
+                ready && 'opacity-0',
+              )}
+            />
+          </div>
+        ) : null}
       </div>
-      <LoadingStatus />
+      {/* 정지 이미지가 보이는 동안에는 화면에서 감추고 낭독기에만 알림 */}
+      <p
+        role="status"
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-1/3 z-10 text-center',
+          // 실패 안내는 정지 이미지 위에서도 읽히도록 어두운 상자에 보통 글자로
+          failed
+            ? 'mx-auto w-fit max-w-[calc(100%-2rem)] rounded-xs border border-line bg-panel-solid px-4 py-2 text-sm text-ice'
+            : 'label-caps px-6',
+          showPoster && !failed && 'sr-only',
+        )}
+      >
+        {status}
+      </p>
       <div className="pointer-events-none absolute inset-x-0 bottom-1 flex flex-wrap items-end justify-center gap-2 px-3 lg:bottom-8 lg:gap-3 lg:p-3">
-        <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-xs border border-line bg-panel p-1.5 backdrop-blur">
+        <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-xs border border-line bg-panel p-1.5">
           {BUTTONS.map((button) => (
             <Button
               key={button.action}

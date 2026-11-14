@@ -1,7 +1,7 @@
 # EARTH_PLAN - 지구 환경·재해 대응 시뮬레이터
 
 [![CI](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml/badge.svg)](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml)
-![version](https://img.shields.io/badge/version-0.7.1-00a1ff)
+![version](https://img.shields.io/badge/version-0.7.2-00a1ff)
 
 3D 지구 위에서 해수면 상승, 화산 분화, 쓰나미, 지진, 소행성 충돌, 산불·가뭄을 일으키고 해협 댐·우주 차양·행성 방위 요격망 같은 거대 구조물로 막아 보는 웹 시뮬레이터입니다.
 
@@ -122,10 +122,11 @@ src/
 
 ## 출처
 
-| 자료                     | 저작자                            | 사용 허락                   | 원본                                                                                                  |
-| ------------------------ | --------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Space Grotesk 글꼴       | The Space Grotesk Project Authors | SIL OFL 1.1                 | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk)                       |
-| 지구 색·불빛·구름 텍스처 | three.js 기여자                   | MIT                         | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160) |
-| 고도 자료 ETOPO1         | NOAA NGDC (Amante & Eakins, 2009) | 자유 이용·재배포, 보증 없음 | [NOAA CoastWatch ERDDAP `etopo180`](https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html)    |
+| 자료                                            | 저작자                            | 사용 허락                   | 원본                                                                                                                     |
+| ----------------------------------------------- | --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Space Grotesk 글꼴                              | The Space Grotesk Project Authors | SIL OFL 1.1                 | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk)                                          |
+| 지구 색·불빛·구름 텍스처                        | three.js 기여자                   | MIT                         | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160)                    |
+| Orbit 아이콘 (파비콘·앱 아이콘, #1f6fb2로 칠함) | Skoll (game-icons.net)            | CC BY 3.0                   | [game-icons.net](https://game-icons.net/1x1/skoll/orbit.html) · [라이선스](https://creativecommons.org/licenses/by/3.0/) |
+| 고도 자료 ETOPO1                                | NOAA NGDC (Amante & Eakins, 2009) | 자유 이용·재배포, 보증 없음 | [NOAA CoastWatch ERDDAP `etopo180`](https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html)                       |
 
 인용 문헌, 파일별 구성과 변환 방법은 [데이터 출처](docs/data-sources.md)에 있습니다. 도시 고도·인구 등 대략값은 직접 정리했습니다.

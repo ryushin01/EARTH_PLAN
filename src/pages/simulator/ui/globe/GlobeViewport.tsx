@@ -16,27 +16,22 @@ import type { CameraApi } from '../../model/camera'
 import { SHARE_PARAM } from '../../model/world/snapshot'
 import { useT } from '../i18n'
 import type { MessageKey } from '../i18n'
+import { WAKE_EVENTS, wokeEarly } from './earlyWake'
 import poster600 from './poster/earth-600.webp'
+import poster800 from './poster/earth-800.webp'
 import poster1200 from './poster/earth-1200.webp'
 
 // three.js를 쓰는 부분은 필요할 때 따로 받습니다
+const loadGlobeCanvas = () => import('./GlobeCanvas')
 const GlobeCanvas = lazy(() =>
-  import('./GlobeCanvas').then((m) => ({ default: m.GlobeCanvas })),
+  loadGlobeCanvas().then((m) => ({ default: m.GlobeCanvas })),
 )
 
 /** 상호작용이 없을 때 3D 지구를 불러오기까지 기다리는 시간 */
 export const IDLE_LOAD_MS = 5000
 
-/** 이 중 하나라도 일어나면 3D 지구를 바로 불러옴 */
-const WAKE_EVENTS = [
-  'pointerdown',
-  'pointermove',
-  'keydown',
-  'wheel',
-  'touchstart',
-  'scroll',
-  'focusin',
-] as const
+/** requestIdleCallback이 없는 브라우저에서 미리 받기까지 기다리는 시간 */
+export const PREFETCH_FALLBACK_MS = 1500
 
 const STEP = Math.PI / 12
 const MOTION_QUERY = '(prefers-reduced-motion: reduce)'
@@ -66,14 +61,58 @@ function useOpenedFromShareLink() {
   )
 }
 
+type NetworkInformation = { saveData?: boolean; effectiveType?: string }
+
+function connection() {
+  return (navigator as Navigator & { connection?: NetworkInformation })
+    .connection
+}
+
 /** 브라우저의 데이터 절약 모드 (지원하지 않으면 false) */
 function prefersSaveData() {
-  const nav = navigator as Navigator & { connection?: { saveData?: boolean } }
-  return nav.connection?.saveData === true
+  return connection()?.saveData === true
+}
+
+/** 2G급 느린 회선 (지원하지 않으면 false) */
+function slowConnection() {
+  return /(^|-)2g$/.test(connection()?.effectiveType ?? '')
+}
+
+/**
+ * 페이지가 한가해지면 3D 묶음과 텍스처를 미리 받아 둠 (첫 상호작용 뒤 기다림을 줄임).
+ * 이미 3D를 불러오기 시작했거나, 데이터 절약 모드·느린 회선이면 하지 않음
+ */
+function usePrefetchGlobe(skip: boolean) {
+  useEffect(() => {
+    if (skip || prefersSaveData() || slowConnection()) return
+    let cancelled = false
+    const run = () => {
+      if (cancelled) return
+      loadGlobeCanvas()
+        .then((m) => {
+          if (!cancelled) m.preloadGlobe()
+        })
+        // 미리 받기에 실패해도 3D를 그릴 때 다시 받음
+        .catch(() => undefined)
+    }
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(run, { timeout: IDLE_LOAD_MS })
+      return () => {
+        cancelled = true
+        window.cancelIdleCallback(handle)
+      }
+    }
+    const timer = setTimeout(run, PREFETCH_FALLBACK_MS)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [skip])
 }
 
 /**
  * 첫 상호작용이나 IDLE_LOAD_MS가 지나면 true. 공유 링크면 바로 true.
+ * 페이지가 준비되기 전에 입력이 있었으면(EARLY_WAKE_SCRIPT가 기록) 바로 true.
  * 데이터 절약 모드에서는 저절로 받지 않고 상호작용할 때만 받음
  */
 function useWake(immediate: boolean) {
@@ -83,9 +122,10 @@ function useWake(immediate: boolean) {
     const wake = () => setAwake(true)
     const options = { capture: true, passive: true } as const
     for (const type of WAKE_EVENTS) window.addEventListener(type, wake, options)
+    const now = immediate || wokeEarly()
     const timer =
-      immediate || !prefersSaveData()
-        ? setTimeout(wake, immediate ? 0 : IDLE_LOAD_MS)
+      now || !prefersSaveData()
+        ? setTimeout(wake, now ? 0 : IDLE_LOAD_MS)
         : undefined
     return () => {
       clearTimeout(timer)
@@ -202,6 +242,7 @@ export function GlobeViewport({
 
   const shared = useOpenedFromShareLink()
   const awake = useWake(shared)
+  usePrefetchGlobe(awake)
   const [percent, setPercent] = useState<number | null>(null)
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -281,7 +322,7 @@ export function GlobeViewport({
           <div className="pointer-events-none absolute inset-0 flex justify-center overflow-hidden">
             <img
               src={poster1200}
-              srcSet={`${poster600} 600w, ${poster1200} 1200w`}
+              srcSet={`${poster600} 600w, ${poster800} 800w, ${poster1200} 1200w`}
               sizes="(min-width: 1024px) 100vh, 45vh"
               width={1200}
               height={1200}

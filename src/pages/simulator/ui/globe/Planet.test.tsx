@@ -2,16 +2,22 @@ import ReactThreeTestRenderer, {
   act,
   waitFor,
 } from '@react-three/test-renderer'
+import { ImageBitmapLoader } from 'three'
 import type { Mesh, ShaderMaterial } from 'three'
 import type { PlanetFrame } from '../../model/planet'
 import { useThree } from '@react-three/fiber'
 import type * as Fiber from '@react-three/fiber'
-import { COMPILE_TIMEOUT_MS, Planet } from './Planet'
+import { COMPILE_TIMEOUT_MS, Planet, preloadPlanet } from './Planet'
+
+const preload = vi.hoisted(() => vi.fn())
 
 // 텍스처는 내려받지 않고 가짜 이미지로 대신함
 vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof Fiber>()),
-  useLoader: () => Array.from({ length: 4 }, () => ({ width: 2, height: 1 })),
+  useLoader: Object.assign(
+    () => Array.from({ length: 4 }, () => ({ width: 2, height: 1 })),
+    { preload },
+  ),
 }))
 
 const frame = (patch: Partial<PlanetFrame> = {}): PlanetFrame => ({
@@ -90,6 +96,22 @@ describe('Planet', () => {
     })
     expect(root.visible).toBe(true)
     await renderer.unmount()
+  })
+
+  it('텍스처 네 장을 지구를 그릴 때와 같은 설정으로 미리 받아 둔다', () => {
+    preloadPlanet()
+    const [loader, urls, configure] = preload.mock.calls[0] as [
+      unknown,
+      string[],
+      (loader: { setOptions: (options: object) => void }) => void,
+    ]
+    expect(loader).toBe(ImageBitmapLoader)
+    expect(urls).toHaveLength(4)
+    const setOptions = vi.fn()
+    configure({ setOptions })
+    expect(setOptions).toHaveBeenCalledWith(
+      expect.objectContaining({ imageOrientation: 'flipY' }),
+    )
   })
 
   it('구름을 끄면 구름층을 그리지 않는다', async () => {

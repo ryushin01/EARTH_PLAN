@@ -2,7 +2,7 @@
  * 지구본 정지 이미지 만들기
  *
  * Storybook의 GlobeCanvas › Poster 스토리(처음 상태·카메라, 별 없음, 1200px)를 찍어
- * src/pages/simulator/ui/globe/poster/earth-{1200,600}.webp로 저장합니다.
+ * src/pages/simulator/ui/globe/poster/earth-{1200,800,600}.webp로 저장합니다.
  * 처음 화면이 바뀌면(셰이더, 텍스처, 시작 시각, 카메라, 지점 표시) 다시 만듭니다.
  *
  * 사용: pnpm storybook 을 띄운 뒤 pnpm poster [Storybook 주소 (기본 http://localhost:6006)]
@@ -15,7 +15,7 @@ const outDir = new URL(
   '../src/pages/simulator/ui/globe/poster/',
   import.meta.url,
 )
-const SIZES = [1200, 600]
+const SIZES = [1200, 800, 600]
 const QUALITY = 0.82
 
 const browser = await chromium.launch()

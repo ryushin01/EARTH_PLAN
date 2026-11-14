@@ -50,6 +50,20 @@ const TEXTURE_URLS = [
   TEXTURE_SET.clouds,
 ]
 
+// 이미지 해석을 메인 스레드 밖(ImageBitmap)에서 처리해 첫 화면 멈춤을 줄입니다
+const configureLoader = (loader: ImageBitmapLoader) => {
+  loader.setOptions({
+    imageOrientation: 'flipY',
+    premultiplyAlpha: 'none',
+    colorSpaceConversion: 'none',
+  })
+}
+
+/** 지구 텍스처를 미리 받아 해석해 둠 (지구를 그릴 때 같은 결과를 씀) */
+export function preloadPlanet() {
+  useLoader.preload(ImageBitmapLoader, TEXTURE_URLS, configureLoader)
+}
+
 /** 셰이더 컴파일 완료를 기다리는 최대 시간 */
 export const COMPILE_TIMEOUT_MS = 4000
 
@@ -62,14 +76,7 @@ export function Planet({
   onSurfaceClick,
   onReady,
 }: PlanetProps) {
-  // 이미지 해석을 메인 스레드 밖(ImageBitmap)에서 처리해 첫 화면 멈춤을 줄입니다
-  const bitmaps = useLoader(ImageBitmapLoader, TEXTURE_URLS, (loader) => {
-    loader.setOptions({
-      imageOrientation: 'flipY',
-      premultiplyAlpha: 'none',
-      colorSpaceConversion: 'none',
-    })
-  })
+  const bitmaps = useLoader(ImageBitmapLoader, TEXTURE_URLS, configureLoader)
   const [albedo, lights, elevation, clouds] = useMemo(
     () =>
       bitmaps.map((bitmap, i) => {

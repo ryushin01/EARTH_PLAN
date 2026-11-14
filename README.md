@@ -1,13 +1,13 @@
 # EARTH_PLAN - 지구 환경·재해 대응 시뮬레이터
 
 [![CI](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml/badge.svg)](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml)
-![version](https://img.shields.io/badge/version-0.6.1-00a1ff)
+![version](https://img.shields.io/badge/version-0.6.2-00a1ff)
 
 3D 지구 위에서 해수면 상승, 화산 분화, 쓰나미, 지진, 소행성 충돌, 산불·가뭄을 일으키고 해협 댐·우주 차양·행성 방위 요격망 같은 거대 구조물로 막아 보는 웹 시뮬레이터입니다.
 
 **[데모 바로 보기](https://ryushin01.github.io/EARTH_PLAN/)** · [Storybook](https://ryushin01.github.io/EARTH_PLAN/storybook/)
 
-> **프로젝트 상태:** 0.6.0까지 만든 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
+> **프로젝트 상태:** 0.6.2까지 만든 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
 
 ## 화면
 
@@ -42,7 +42,7 @@
 | 지구본                | 끌어서 돌리기(관성), 휠·핀치 확대, 화살표·`+`/`-` 키와 버튼으로 회전·확대, 자동 회전, 지점 선택 시 카메라 이동. 모바일은 지구를 위에 고정하고 아래 메뉴로 이동                                                                            |
 | 시간·날씨             | 태양 위치로 낮·밤 경계와 밤의 도시 불빛, 계절별 적설선·해빙, 흐르는 구름, 열대 저기압(나선 구름)과 해안 도시 상륙·해일 피해                                                                                                               |
 | 기후                  | IPCC AR6 기반 배출 시나리오 4종, 온난화에 따른 해빙·적설 후퇴와 건조화, 큰 분화·충돌 뒤 몇 년간 기온 하강                                                                                                                                 |
-| 해수면                | 시나리오 속도로 상승하거나 0~80m 직접 설정, 고도 자료로 잠긴 육지 표시·면적 계산, 46개 도시 침수·보호 상태                                                                                                                                |
+| 해수면                | 시나리오 속도로 상승하거나 0~80m 직접 설정, 고도 자료로 잠긴 육지 표시·면적 계산, 도시 50곳(해안 42곳)의 침수·보호 상태                                                                                                                   |
 | 화산·쓰나미           | 화산 16곳 VEI 4~8 분화(분출 기둥, 화산재), 섭입대 8곳 규모 7.5~9.5 지진(동심원 파면, 도시별 도달 표)                                                                                                                                      |
 | 지진                  | 활성 단층 8곳(양산·수도권 직하·북아나톨리아·샌안드레아스 등) 규모 5.5~8.5, 피해 반경과 도시별 피해, 지진파 고리                                                                                                                           |
 | 소행성                | 지름 50m~10km, 충돌 에너지·폭풍·열복사 반경, 바다에 떨어지면 충돌 쓰나미, 1km 이상은 충돌 겨울                                                                                                                                            |
@@ -120,10 +120,10 @@ src/
 
 ## 출처
 
-| 자료                     | 저작자                            | 사용 허락              | 원본                                                                                                  |
-| ------------------------ | --------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
-| Space Grotesk 글꼴       | The Space Grotesk Project Authors | SIL OFL 1.1            | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk)                       |
-| 지구 색·불빛·구름 텍스처 | three.js 기여자                   | MIT                    | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160) |
-| 고도 자료 ETOPO1         | 미국 해양대기청(NOAA)             | 미국 정부 저작물(공개) | [NOAA ETOPO](https://www.ncei.noaa.gov/products/etopo-global-relief-model)                            |
+| 자료                     | 저작자                            | 사용 허락                   | 원본                                                                                                  |
+| ------------------------ | --------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Space Grotesk 글꼴       | The Space Grotesk Project Authors | SIL OFL 1.1                 | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk)                       |
+| 지구 색·불빛·구름 텍스처 | three.js 기여자                   | MIT                         | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160) |
+| 고도 자료 ETOPO1         | NOAA NGDC (Amante & Eakins, 2009) | 자유 이용·재배포, 보증 없음 | [NOAA CoastWatch ERDDAP `etopo180`](https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html)    |
 
-파일별 구성과 변환 방법은 [데이터 출처](docs/data-sources.md)에 있습니다. 도시 고도·인구 등 대략값은 직접 정리했습니다.
+인용 문헌, 파일별 구성과 변환 방법은 [데이터 출처](docs/data-sources.md)에 있습니다. 도시 고도·인구 등 대략값은 직접 정리했습니다.

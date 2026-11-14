@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import { NetCDFReader } from 'netcdfjs'
 import { PNG } from 'pngjs'
 import jpeg from 'jpeg-js'
-const [nc, spec, out, outBin] = process.argv.slice(2)
+// 사용법: node scripts/build-elevation.mjs <etopo.nc> <바다 마스크.jpg> <고도.png> <격자.u8> [고도-1024.png]
+const [nc, spec, out, outBin, outSmall] = process.argv.slice(2)
 const r = new NetCDFReader(fs.readFileSync(nc))
 const lat = r.getDataVariable('latitude'),
   lon = r.getDataVariable('longitude')
@@ -64,5 +65,18 @@ for (let y = 0; y < SH; y++)
   }
 fs.writeFileSync(out, PNG.sync.write(png))
 fs.writeFileSync(outBin, Buffer.from(stats.buffer))
-// 웹용으로는 무손실 WebP로 바꿉니다: cwebp -lossless -exact -z 9 <out>.png -o earth-elevation.webp
+// 작은 화면용 1024×512: 값이 섞이면 침수 계산이 틀어지므로 최근접(한 칸씩 건너)으로 줄임
+if (outSmall) {
+  const SW2 = OW / 2,
+    SH2 = OH / 2
+  const small = new PNG({ width: SW2, height: SH2 })
+  for (let y = 0; y < SH2; y++)
+    for (let x = 0; x < SW2; x++) {
+      const i = (y * 2 * OW + x * 2) * 4,
+        j = (y * SW2 + x) * 4
+      for (let k = 0; k < 4; k++) small.data[j + k] = png.data[i + k]
+    }
+  fs.writeFileSync(outSmall, PNG.sync.write(small))
+}
+// 웹용으로는 무손실 WebP로 바꿉니다: cwebp -lossless -exact -z 9 <png> -o <webp>
 console.log('done')

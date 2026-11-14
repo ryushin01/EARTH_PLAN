@@ -103,8 +103,8 @@ export const MESSAGES = {
   ],
   'sea.level': ['해수면 (2020년 대비)', 'Sea level (vs. 2020)'],
   'sea.levelHelp': [
-    '재생하면 시나리오 속도대로 오르고, 직접 옮겨 극단적인 상황도 볼 수 있습니다. 고도 자료: NOAA ETOPO1.',
-    'Play to rise at the scenario rate, or drag to explore extremes. Elevation data: NOAA ETOPO1.',
+    '재생하면 시나리오 속도대로 오르고, 직접 옮겨 극단적인 상황도 볼 수 있습니다.',
+    'Play to rise at the scenario rate, or drag to explore extremes.',
   ],
   'sea.ifMelts': ['빙상이 녹으면', 'If the ice melts'],
   'sea.preset.2100': ['2100년 ({scenario})', '2100 ({scenario})'],

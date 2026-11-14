@@ -30,8 +30,8 @@ const GlobeCanvas = lazy(() =>
 /** 상호작용이 없을 때 3D 지구를 불러오기까지 기다리는 시간 */
 export const IDLE_LOAD_MS = 5000
 
-/** requestIdleCallback이 없는 브라우저에서 미리 받기까지 기다리는 시간 */
-export const PREFETCH_FALLBACK_MS = 1500
+/** 페이지를 다 받은 뒤 3D 묶음을 미리 받기 시작할 때까지 기다리는 시간 */
+export const PREFETCH_DELAY_MS = 1000
 
 const STEP = Math.PI / 12
 const MOTION_QUERY = '(prefers-reduced-motion: reduce)'
@@ -79,13 +79,15 @@ function slowConnection() {
 }
 
 /**
- * 페이지가 한가해지면 3D 묶음과 텍스처를 미리 받아 둠 (첫 상호작용 뒤 기다림을 줄임).
+ * 페이지를 다 받고 한가해지면 3D 묶음과 텍스처를 미리 받아 둠 (첫 상호작용 뒤 기다림을 줄임).
  * 이미 3D를 불러오기 시작했거나, 데이터 절약 모드·느린 회선이면 하지 않음
  */
 function usePrefetchGlobe(skip: boolean) {
   useEffect(() => {
     if (skip || prefersSaveData() || slowConnection()) return
     let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let idle: number | undefined
     const run = () => {
       if (cancelled) return
       loadGlobeCanvas()
@@ -95,17 +97,21 @@ function usePrefetchGlobe(skip: boolean) {
         // 미리 받기에 실패해도 3D를 그릴 때 다시 받음
         .catch(() => undefined)
     }
-    if (typeof window.requestIdleCallback === 'function') {
-      const handle = window.requestIdleCallback(run, { timeout: IDLE_LOAD_MS })
-      return () => {
-        cancelled = true
-        window.cancelIdleCallback(handle)
-      }
+    // 첫 화면(정지 이미지)을 그리는 일과 겹치지 않게, 페이지를 다 받고 잠시 뒤 한가할 때
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (typeof window.requestIdleCallback === 'function')
+          idle = window.requestIdleCallback(run, { timeout: IDLE_LOAD_MS })
+        else run()
+      }, PREFETCH_DELAY_MS)
     }
-    const timer = setTimeout(run, PREFETCH_FALLBACK_MS)
+    if (document.readyState === 'complete') schedule()
+    else window.addEventListener('load', schedule, { once: true })
     return () => {
       cancelled = true
       clearTimeout(timer)
+      window.removeEventListener('load', schedule)
+      if (idle !== undefined) window.cancelIdleCallback(idle)
     }
   }, [skip])
 }

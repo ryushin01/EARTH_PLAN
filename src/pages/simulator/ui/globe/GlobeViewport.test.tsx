@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocale } from '@/shared/i18n'
 import type { GlobeCanvasProps } from './GlobeCanvas'
-import { GlobeViewport, IDLE_LOAD_MS } from './GlobeViewport'
+import { GlobeViewport, IDLE_LOAD_MS, PREFETCH_DELAY_MS } from './GlobeViewport'
 
 // WebGL이 없는 jsdom에서는 3D 묶음을 대역으로 바꾸고, 받은 설정과 카메라 조작을 기록함
 const seen = vi.hoisted(() => ({
@@ -151,10 +151,16 @@ describe('GlobeViewport', () => {
     }
   })
 
-  it('한가해지면 3D 묶음과 텍스처를 미리 받아 두고, 그리지는 않는다', async () => {
+  it('페이지를 다 받고 잠시 뒤 한가할 때 3D 묶음과 텍스처를 미리 받아 두고, 그리지는 않는다', async () => {
     const idle = stubIdleCallback()
+    vi.useFakeTimers()
     setup()
+    // 첫 화면을 그리는 동안에는 미루고
+    act(() => vi.advanceTimersByTime(PREFETCH_DELAY_MS - 1))
+    expect(idle).toHaveLength(0)
+    act(() => vi.advanceTimersByTime(1))
     expect(idle).toHaveLength(1)
+    vi.useRealTimers()
     act(() => idle[0]())
     await vi.waitFor(() => expect(seen.preloadGlobe).toHaveBeenCalledTimes(1))
     expect(screen.queryByTestId('canvas')).toBeNull()
@@ -162,6 +168,7 @@ describe('GlobeViewport', () => {
 
   it('데이터 절약 모드나 2G 회선에서는 미리 받지 않는다', () => {
     const idle = stubIdleCallback()
+    vi.useFakeTimers()
     for (const connection of [
       { saveData: true },
       { effectiveType: 'slow-2g' },
@@ -172,6 +179,7 @@ describe('GlobeViewport', () => {
       })
       try {
         const { unmount } = render(<GlobeViewport hintId="hint" />)
+        act(() => vi.advanceTimersByTime(PREFETCH_DELAY_MS * 2))
         unmount()
       } finally {
         Reflect.deleteProperty(navigator, 'connection')

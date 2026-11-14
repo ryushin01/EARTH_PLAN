@@ -20,12 +20,15 @@
 
 ### 지구본 정지 이미지
 
-지구본 화면은 처음에 3D 첫 화면과 같은 시점·시각에서 찍은 정지 이미지(`ui/globe/poster/earth-{600,1200}.webp`)를 보여 줍니다. 첫 상호작용(포인터·키·휠·터치·스크롤·초점)이 있거나 5초가 지나면 3D 묶음을 받습니다. 브라우저의 데이터 절약 모드(`navigator.connection.saveData`)에서는 상호작용할 때만 받습니다. 지구가 처음 보이면(`Planet`의 `onReady`) 이미지를 흐리게 지웁니다.
+지구본 화면은 처음에 3D 첫 화면과 같은 시점·시각에서 찍은 정지 이미지(`ui/globe/poster/earth-{600,800,1200}.webp`)를 보여 줍니다. 첫 상호작용(포인터·키·휠·터치·스크롤·초점)이 있거나 5초가 지나면 3D를 그립니다. 지구가 처음 보이면(`Planet`의 `onReady`) 이미지를 흐리게 지웁니다.
+
+- 페이지를 다 받고(`load`) 1초 뒤 한가할 때(`requestIdleCallback`) 3D 묶음을 불러 두고 텍스처를 미리 받아 해석합니다(`preloadGlobe` → R3F `useLoader.preload`). 그리는 일은 하지 않습니다. 첫 화면 그리기와 겹치면 LCP가 늦어져서 미룹니다. 데이터 절약 모드(`navigator.connection.saveData`)나 2G급 회선에서는 미리 받지 않고, 데이터 절약 모드에서는 5초 뒤 저절로 그리지도 않습니다.
+- 페이지가 준비(하이드레이션)되기 전의 첫 입력은 문서 머리의 짧은 인라인 스크립트(`EARLY_WAKE_SCRIPT`, `routes/index.tsx`의 `head`)가 기록해 두고, 준비되자마자 3D를 그립니다.
 
 - 시작 시각이 고정(2026-11-12 03:00 UTC)이고 시뮬레이션이 멈춘 채 시작하므로 첫 3D 화면과 같습니다. 자동 회전은 지구가 보인 뒤에 시작하고, 그 전에 누른 회전·확대는 모아 두었다가 실행합니다.
 - 공유 링크(`?s=`)로 열면 상태가 처음과 다르므로 이미지 없이 바로 3D를 받습니다.
 - 3D를 그리지 못하면(WebGL 없음 등) 이미지를 그대로 두고 이유를 상태 메시지로 알립니다.
-- 셰이더, 텍스처, 시작 시각, 처음 카메라, 지점 표시가 바뀌면 `pnpm storybook`을 띄운 뒤 `pnpm poster`로 다시 찍습니다. Storybook의 `GlobeCanvas › Poster` 스토리(별 없음, 1200px)를 찍어 브라우저의 WebP 인코더로 1200·600px를 만듭니다.
+- 셰이더, 텍스처, 시작 시각, 처음 카메라, 지점 표시가 바뀌면 `pnpm storybook`을 띄운 뒤 `pnpm poster`로 다시 찍습니다. Storybook의 `GlobeCanvas › Poster` 스토리(별 없음, 1200px)를 찍어 브라우저의 WebP 인코더로 1200·800·600px를 만듭니다.
 
 ## 시뮬레이션 모델 (단순화)
 
@@ -82,6 +85,10 @@ Vitest는 두 프로젝트로 나뉩니다(`vitest.config.ts`).
 
 - `unit`: jsdom. 3D 컴포넌트는 `@react-three/test-renderer`로 그려 장면 그래프를 검사합니다. React Three Fiber·drei·test-renderer는 `exports`가 없어 CJS판이 잡히므로 ESM 파일로 별칭을 걸고 Vite가 직접 처리하게 해, three.js가 한 벌만 쓰이게 합니다.
 - `storybook`: 브라우저 모드(Playwright). 3D 스토리가 한 GPU 프로세스를 나눠 쓰면 서로 크게 느려져 파일을 차례로 실행합니다.
+
+## 의존성 업데이트
+
+Dependabot(`.github/dependabot.yml`)이 매주 월요일 오전 9시(한국 시각)에 npm(pnpm)과 GitHub Actions 업데이트 PR을 엽니다. 개발 도구와 배포 의존성의 부·수 버전은 각각 한 PR로 묶고, 공개 뒤 3일이 지난 판만 올립니다(pnpm의 공개 대기 기간 1일보다 넉넉히). 보안 알림과 보안 업데이트 PR도 켜 두었습니다. CI가 통과하면 검토해 합칩니다.
 
 ## 접근성
 

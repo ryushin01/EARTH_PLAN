@@ -31,10 +31,13 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
+      # 스토리 테스트와 E2E가 함께 쓰는 Chromium
+      - run: pnpm exec playwright install --with-deps chromium
+      # 모든 스토리를 Chromium에서 렌더링하고 접근성(axe)·지구 셰이더 컴파일을 검사
+      - run: pnpm test:storybook
       # 사이트와 Storybook(dist/client/storybook)을 함께 빌드
       - run: pnpm build:all
       # 프로덕션 빌드를 띄워 화면 폭별 넘침, 접근성(axe), 키보드, 시뮬레이션 흐름을 검사
-      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       # 접근성·권장사항·SEO 점수와 레이아웃 이동을 지키고, 성능·용량은 경고로 알림
       - run: pnpm lighthouse

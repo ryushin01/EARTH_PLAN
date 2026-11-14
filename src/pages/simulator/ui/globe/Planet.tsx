@@ -48,6 +48,9 @@ const TEXTURE_URLS = [
   TEXTURE_SET.clouds,
 ]
 
+/** 셰이더 컴파일 완료를 기다리는 최대 시간 */
+export const COMPILE_TIMEOUT_MS = 4000
+
 const vec4s = (n: number) => Array.from({ length: n }, () => new Vector4())
 const zeros = (n: number) => Array.from({ length: n }, () => 0)
 
@@ -195,13 +198,19 @@ export function Planet({
     const root = rootRef.current
     if (!root) return
     let cancelled = false
-    gl.compileAsync(root, camera, scene)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    // 드라이버에 따라 컴파일 완료 알림이 오지 않을 수 있어, 일정 시간이 지나면 그냥 보여 줌
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, COMPILE_TIMEOUT_MS)
+    })
+    Promise.race([gl.compileAsync(root, camera, scene), timeout])
       .catch(() => undefined)
       .then(() => {
         if (!cancelled) setCompiled(true)
       })
     return () => {
       cancelled = true
+      clearTimeout(timer)
     }
   }, [gl, camera, scene])
 

@@ -93,6 +93,7 @@ pnpm dev    # http://localhost:3000
 | `pnpm storybook`                       | Storybook 개발 서버 (`http://localhost:6006`)                                                          |
 | `pnpm poster`                          | 지구본 정지 이미지 다시 찍기 (Storybook을 띄운 뒤)                                                     |
 | `pnpm fonts`                           | 한글 웹 폰트 다시 만들기 (화면 글자를 바꾼 뒤)                                                         |
+| `pnpm screenshots`                     | README 화면 다시 찍기 (`build:all` 뒤 `preview`를 띄운 다음 `BASE_URL` 지정)                           |
 
 ## 프로젝트 구조
 

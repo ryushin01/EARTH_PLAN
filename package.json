@@ -24,6 +24,7 @@
     "lighthouse": "lhci autorun",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o dist/client/storybook",
+    "screenshots": "node scripts/screenshots.mjs",
     "data:elevation": "node scripts/build-elevation.mjs",
     "poster": "node scripts/capture-globe-poster.mjs",
     "fonts": "node scripts/build-fonts.mjs"

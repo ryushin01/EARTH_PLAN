@@ -32,7 +32,18 @@ async function open({
   const page = await context.newPage()
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
   await page.evaluate(() => document.fonts.ready)
-  await page.waitForTimeout(3000)
+  // 정지 이미지(포스터)가 걷히고 실제 지구본이 그려질 때까지 기다립니다.
+  await page.waitForFunction(
+    () =>
+      document.querySelector('canvas') &&
+      ![...document.images].some(
+        (image) =>
+          image.className.includes('transition-opacity') &&
+          !image.className.includes('opacity-0'),
+      ),
+    null,
+    { timeout: 30_000 },
+  )
   if (utc !== undefined) {
     await page.locator('input[type="range"][max="23.75"]').fill(String(utc))
     // 슬라이더의 초점 테두리가 찍히지 않게 초점을 뺍니다.
@@ -78,6 +89,8 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
 {
   const { page, context } = await open({ utc: 13 })
   await tab(page, '화산')
+  // README 그림처럼 VEI 7로 분화시킵니다.
+  await panel(page, '화산').getByRole('slider').first().fill('7')
   await page.getByRole('button', { name: '백두산 분화 시키기' }).click()
   await shot(page, 'eruption-night', 6000)
   await context.close()
@@ -103,6 +116,11 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
   await wildfire
     .getByRole('combobox', { name: '지역' })
     .selectOption('california')
+  // 극심한 가뭄을 먼저 일으킨 뒤 산불을 일으켜, 가뭄이 반영된 확산을 찍습니다.
+  await wildfire.getByRole('radio', { name: /극심/ }).check({ force: true })
+  await wildfire
+    .getByRole('button', { name: '캘리포니아 가뭄 일으키기' })
+    .click()
   await wildfire
     .getByRole('button', { name: '캘리포니아 산불 일으키기' })
     .click()
@@ -118,6 +136,8 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
     .getByRole('combobox')
     .first()
     .selectOption('north-anatolian')
+  // 규모 7.6
+  await panel(page, '지진').getByRole('slider').first().fill('7.6')
   await page
     .getByRole('button', { name: '북아나톨리아 단층 지진 일으키기' })
     .click()

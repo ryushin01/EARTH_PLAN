@@ -1,5 +1,7 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/space-grotesk/wght.css';
+@import '@fontsource-variable/sora/wght.css';
+/* 한글: 페이퍼로지 중 화면에 쓰는 글자만 담은 파일(pnpm fonts로 만듦). 나머지 글자는 RootDocument가 나중에 붙임 */
+@import './fonts/paperlogy.css';
 
 /* EnduroSat 스타일 참고: 검은 우주 배경, 하늘색 포인트, 대문자 라벨, 각진 모서리 */
 @theme {
@@ -17,12 +19,13 @@
   --color-danger: #ff6b6b;
   --color-safe: #3ddc97;
 
+  /* 영문·숫자는 Sora, 한글은 페이퍼로지. 제목·라벨(display)과 본문(sans)이 같은 짝을 씀 */
   --font-display:
-    'Space Grotesk Variable', system-ui, -apple-system, 'Apple SD Gothic Neo',
-    'Malgun Gothic', sans-serif;
+    'Sora Variable', 'Paperlogy', system-ui, -apple-system,
+    'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --font-sans:
-    system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic',
-    'Noto Sans KR', sans-serif;
+    'Sora Variable', 'Paperlogy', system-ui, -apple-system,
+    'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 
   --radius-xs: 2px;
 }

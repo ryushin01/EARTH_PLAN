@@ -98,6 +98,19 @@ async function screenText() {
           ts.forEachChild(node, visit)
         }
         visit(source)
+      } else if (file.endsWith('.json')) {
+        // 이스케이프된 글자(\ud7a3 등)도 풀어서 세도록 문자열 값을 모음
+        const text = await readFile(file, 'utf8')
+        const collect = (value) => {
+          if (typeof value === 'string') parts.push(value)
+          else if (value && typeof value === 'object')
+            for (const item of Object.values(value)) collect(item)
+        }
+        try {
+          collect(JSON.parse(text))
+        } catch {
+          parts.push(text)
+        }
       } else if (
         new RegExp(`\\.(${config.dataExtensions.join('|')})$`).test(file)
       ) {
@@ -145,13 +158,24 @@ for (const font of config.fonts) {
     const ui = new Set([...screen].filter((cp) => cmap.has(cp)))
 
     if (CHECK) {
+      // CSS의 unicode-range와 실제 화면 글자 파일의 글자 목록을 모두 확인
       const rule = existingUi
         .split('\n')
         .find((line) => line.includes(`font-weight:${weight};`))
-      const have = rule
+      const declared = rule
         ? parseRange(rule.match(/unicode-range:([^}]+)/)[1])
         : new Set()
-      const lack = [...ui].filter((cp) => !have.has(cp))
+      const uiPath = path.join(dir, `${slug}-${weight}-ui.woff2`)
+      if (!existsSync(uiPath)) {
+        missing.push(
+          `${family} ${weight}: ${path.relative(ROOT, uiPath)} 파일이 없습니다`,
+        )
+        continue
+      }
+      const inFile = cmapOf(
+        await fontverter.convert(await readFile(uiPath), 'sfnt'),
+      )
+      const lack = [...ui].filter((cp) => !declared.has(cp) || !inFile.has(cp))
       if (lack.length)
         missing.push(`${family} ${weight}: ${String.fromCodePoint(...lack)}`)
       checked = Math.max(checked, ui.size)

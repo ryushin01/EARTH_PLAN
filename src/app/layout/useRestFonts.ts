@@ -1,0 +1,45 @@
+import { useEffect } from 'react'
+
+/** 페이지를 다 받은 뒤 기다리는 시간. 첫 화면 그리기와 겹치지 않게 3D 미리 받기와 같은 때 붙임 */
+const DELAY_MS = 1000
+const IDLE_TIMEOUT_MS = 2000
+
+/**
+ * 화면 글자 파일에 없는 한글(사용자가 입력한 시나리오 이름 등)을 위한 글꼴 조각 CSS를
+ * 페이지를 다 받고 한가할 때 붙입니다. 조각 파일은 그 글자를 화면에 쓸 때만 받습니다.
+ */
+export function useRestFonts(href: string) {
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let idle: number | undefined
+    let link: HTMLLinkElement | undefined
+    const attach = () => {
+      link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = href
+      // print로 걸어 가장 낮은 우선순위로 받고, 다 받은 뒤 화면에 적용
+      link.media = 'print'
+      link.onload = () => {
+        if (link) link.media = 'all'
+      }
+      document.head.append(link)
+    }
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (typeof window.requestIdleCallback === 'function')
+          idle = window.requestIdleCallback(attach, {
+            timeout: IDLE_TIMEOUT_MS,
+          })
+        else attach()
+      }, DELAY_MS)
+    }
+    if (document.readyState === 'complete') schedule()
+    else window.addEventListener('load', schedule, { once: true })
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('load', schedule)
+      if (idle !== undefined) window.cancelIdleCallback(idle)
+      link?.remove()
+    }
+  }, [href])
+}

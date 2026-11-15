@@ -9,6 +9,12 @@ const base = process.env.BASE_PATH ?? '/'
 export default defineConfig({
   base,
   resolve: { tsconfigPaths: true },
+  build: {
+    // 한글 글꼴 조각(대부분 4KB 미만)을 CSS에 base64로 넣지 않고 파일로 둠.
+    // 넣으면 쓰지 않는 글자까지 CSS에 실려 첫 화면을 막음
+    assetsInlineLimit: (filePath) =>
+      filePath.endsWith('.woff2') ? false : undefined,
+  },
   plugins: [
     tailwindcss(),
     tanstackStart({

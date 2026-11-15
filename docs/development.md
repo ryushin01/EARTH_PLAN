@@ -69,6 +69,20 @@
 - `model/site/en.ts`, `STRUCTURE_EN`, `labelEn`: 데이터의 영어 이름·설명
 - 사건 기록·결과 메시지는 생길 때 `{ ko, en }`을 함께 만들고(`model/text.ts`의 `compose`), 화면에서 현재 언어를 고름
 
+## 웹 폰트
+
+영문·숫자는 Sora(`@fontsource-variable/sora`), 한글은 페이퍼로지를 씁니다. 전역 CSS(`src/app/styles/index.css`)의 `--font-sans`·`--font-display`가 둘 다 `'Sora Variable', 'Paperlogy', …` 순서라 영문·숫자는 Sora, 한글은 페이퍼로지로 그립니다.
+
+페이퍼로지는 저장소에 넣어 같은 사이트에서 제공합니다.
+
+- `scripts/fonts/paperlogy/`: 원본(400·600·700)과 라이선스. `scripts/fonts/config.json`: 글꼴·굵기·글자를 찾을 폴더. `scripts/fonts/ko-slices.json`: Google Fonts 한국어 글꼴의 글자 묶음(124개).
+- `pnpm fonts`가 `src/app/styles/fonts/`에 두 가지를 만듭니다.
+  - `paperlogy.css`, `paperlogy/paperlogy-<굵기>-ui.woff2`: 소스의 문자열·템플릿·JSX 글자(주석 제외)와 JSON에 쓰인 한글·기호만 담은 파일입니다. 전역 CSS가 불러와 첫 화면과 함께 받습니다.
+  - `paperlogy-rest.css`, `paperlogy/paperlogy-<굵기>-<번호>.woff2`: 나머지 글자를 글자 묶음별로 나눈 조각입니다. `RootDocument`의 `useRestFonts`가 페이지를 다 받고 1초 뒤 한가할 때 낮은 우선순위로 붙이고, 브라우저는 화면에 쓴 글자가 든 조각만 받습니다(사용자가 입력한 시나리오 이름 등). 화면 글자 파일에 있는 글자는 `unicode-range`에서 빼서 두 번 받지 않습니다.
+- 화면 글자를 바꾸면 `pnpm fonts`를 다시 실행합니다. 빠진 글자가 있으면 `src/app/styles/fonts.test.ts`가 실패합니다(빠진 글자도 나머지 조각으로 보이지만 늦게 받습니다). 조각 파일은 글자가 바뀌어도 그대로라 없는 것만 만들고, 원본 글꼴을 바꾸면 `pnpm fonts --all`로 모두 다시 만듭니다.
+- 작은 조각(대부분 4KB 미만)을 Vite가 CSS에 base64로 넣지 않도록 `vite.config.ts`의 `assetsInlineLimit`에서 woff2를 뺍니다.
+- 생성한 CSS는 Prettier 검사에서 뺍니다(`.prettierignore`).
+
 ## 테스트
 
 | 명령                   | 범위                                                                                                                                                                                                                                                                                 |

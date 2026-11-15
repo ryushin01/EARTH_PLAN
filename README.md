@@ -1,13 +1,13 @@
 # EARTH_PLAN - 지구 환경·재해 대응 시뮬레이터
 
 [![CI](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml/badge.svg)](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml)
-![version](https://img.shields.io/badge/version-0.7.2-00a1ff)
+![version](https://img.shields.io/badge/version-0.8.0-00a1ff)
 
 3D 지구 위에서 해수면 상승, 화산 분화, 쓰나미, 지진, 소행성 충돌, 산불·가뭄을 일으키고 해협 댐·우주 차양·행성 방위 요격망 같은 거대 구조물로 막아 보는 웹 시뮬레이터입니다.
 
 **[데모 바로 보기](https://ryushin01.github.io/EARTH_PLAN/)** · [Storybook](https://ryushin01.github.io/EARTH_PLAN/storybook/)
 
-> **프로젝트 상태:** 0.7.1까지 만든 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
+> **프로젝트 상태:** 0.8.0까지 만든 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
 
 ## 화면
 
@@ -65,7 +65,7 @@
 | 프레임워크 | TanStack Start 1.169 (정적 사전 렌더링), TanStack Router, React 19, TypeScript 6                                                                                        |
 | 3D         | three.js, React Three Fiber 9, drei, 직접 작성한 GLSL 셰이더                                                                                                            |
 | 상태       | zustand                                                                                                                                                                 |
-| 스타일     | Tailwind CSS 4, Space Grotesk                                                                                                                                           |
+| 스타일     | Tailwind CSS 4, 웹 폰트(Sora, 페이퍼로지)                                                                                                                               |
 | 품질       | ESLint, Prettier, Steiger(FSD 검사), Vitest + Testing Library·React Three Test Renderer, 스토리 테스트(Vitest 브라우저 모드 + axe), Playwright E2E + axe, Lighthouse CI |
 | 문서       | Storybook 10 (`@storybook/react-vite`, a11y·Vitest 애드온)                                                                                                              |
 | 배포·CI    | GitHub Pages, GitHub Actions                                                                                                                                            |
@@ -92,13 +92,14 @@ pnpm dev    # http://localhost:3000
 | `pnpm lighthouse`                      | Lighthouse CI 점수 검사 (먼저 `build` 필요)                                                            |
 | `pnpm storybook`                       | Storybook 개발 서버 (`http://localhost:6006`)                                                          |
 | `pnpm poster`                          | 지구본 정지 이미지 다시 찍기 (Storybook을 띄운 뒤)                                                     |
+| `pnpm fonts`                           | 한글 웹 폰트 다시 만들기 (화면 글자를 바꾼 뒤)                                                         |
 
 ## 프로젝트 구조
 
 ```
 e2e/                  E2E 테스트 (화면 폭, 접근성, 키보드, 3D 전환·WebGL 없음, 시뮬레이션·공유 흐름)
 public/textures/      지구 텍스처(WebP), 고도 텍스처, 육지 고도 격자
-scripts/              ETOPO1 → 고도 텍스처 변환, 지구본 정지 이미지 촬영
+scripts/              ETOPO1 → 고도 텍스처 변환, 지구본 정지 이미지 촬영, 한글 웹 폰트 만들기
 src/
 ├─ app/               전역 스타일, HTML 문서 틀
 ├─ pages/simulator/   시뮬레이터 페이지 (FSD pages-first)
@@ -120,11 +121,19 @@ src/
 | [배포](docs/deployment.md)          | GitHub Pages 배포와 하위 경로 설정            |
 | [버전 기록](CHANGELOG.md)           | 버전별 변경 내용                              |
 
+## 웹 폰트
+
+| 글꼴       | 쓰는 곳               | 굵기         | 저작자                                | 라이선스    | 원본                                                                                                                 |
+| ---------- | --------------------- | ------------ | ------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| Sora       | 영문·숫자 (제목·본문) | 100~800 가변 | Jonathan Barnbrook, Julián Moncada    | SIL OFL 1.1 | [Google Fonts](https://fonts.google.com/specimen/Sora) · [sora-xor/sora-font](https://github.com/sora-xor/sora-font) |
+| 페이퍼로지 | 한글 (제목·본문)      | 400·600·700  | 이주임(리디자인)·김도균(기획), 피티앤 | SIL OFL 1.1 | [배포처](https://www.freesentation.blog/paperlogyfont) · [눈누](https://noonnu.cc/font_page/1456)                    |
+
+두 글꼴 모두 저장소에 넣어 같은 사이트에서 제공합니다(외부 글꼴 CDN 없음). 페이퍼로지는 화면에 쓰는 글자만 담은 작은 파일을 먼저 받고, 나머지 글자는 글자 묶음별 조각으로 나눠 그 글자를 쓸 때만 받습니다([개발 가이드](docs/development.md#웹-폰트)). 라이선스 전문은 `scripts/fonts/paperlogy/OFL.txt`에 있습니다.
+
 ## 출처
 
 | 자료                                            | 저작자                            | 사용 허락                   | 원본                                                                                                                     |
 | ----------------------------------------------- | --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Space Grotesk 글꼴                              | The Space Grotesk Project Authors | SIL OFL 1.1                 | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk)                                          |
 | 지구 색·불빛·구름 텍스처                        | three.js 기여자                   | MIT                         | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160)                    |
 | Orbit 아이콘 (파비콘·앱 아이콘, #1f6fb2로 칠함) | Skoll (game-icons.net)            | CC BY 3.0                   | [game-icons.net](https://game-icons.net/1x1/skoll/orbit.html) · [라이선스](https://creativecommons.org/licenses/by/3.0/) |
 | 고도 자료 ETOPO1                                | NOAA NGDC (Amante & Eakins, 2009) | 자유 이용·재배포, 보증 없음 | [NOAA CoastWatch ERDDAP `etopo180`](https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html)                       |

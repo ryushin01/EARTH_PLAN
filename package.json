@@ -1,6 +1,6 @@
 {
   "name": "earth-plan",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.16.1",
@@ -25,10 +25,11 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o dist/client/storybook",
     "data:elevation": "node scripts/build-elevation.mjs",
-    "poster": "node scripts/capture-globe-poster.mjs"
+    "poster": "node scripts/capture-globe-poster.mjs",
+    "fonts": "node scripts/build-fonts.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/space-grotesk": "5.3.0",
+    "@fontsource-variable/sora": "5.3.0",
     "@react-three/drei": "10.7.9",
     "@react-three/fiber": "9.8.2",
     "@tanstack/react-router": "1.170.46",
@@ -61,6 +62,8 @@
     "@vitest/browser-playwright": "5.1.0",
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fontverter": "2.0.0",
+    "harfbuzzjs": "1.6.4",
     "jpeg-js": "^0.4.4",
     "jsdom": "^31.0.0",
     "netcdfjs": "^4.0.0",
@@ -69,6 +72,7 @@
     "prettier": "^3.9.10",
     "steiger": "0.10.0",
     "storybook": "10.6.7",
+    "subset-font": "2.9.0",
     "tailwindcss": "4.3.5",
     "typescript": "~6.0.3",
     "vite": "8.3.8",

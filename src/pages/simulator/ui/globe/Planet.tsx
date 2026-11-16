@@ -275,6 +275,8 @@ export function Planet({
       return
     let cancelled = false
     let detail: Texture | undefined
+    // 이 패치 이미지는 useLoader 캐시가 아니라 여기서 직접 받으므로, 텍스처를 해제할 때 함께 닫음
+    let detailBitmap: ImageBitmap | undefined
     const loader = new ImageBitmapLoader()
     configureLoader(loader)
     loader.load(
@@ -284,6 +286,7 @@ export function Planet({
           bitmap.close()
           return
         }
+        detailBitmap = bitmap
         detail = new Texture(bitmap)
         detail.flipY = false
         detail.colorSpace = NoColorSpace
@@ -299,6 +302,7 @@ export function Planet({
       material.uniforms.uDetailOn.value = 0
       material.uniforms.uDetail.value = null
       detail?.dispose()
+      detailBitmap?.close()
     }
   }, [compiled])
 

@@ -182,6 +182,8 @@ describe('Planet', () => {
     const dispose = vi.spyOn(detail, 'dispose')
     await renderer.unmount()
     expect(dispose).toHaveBeenCalledOnce()
+    // 직접 받은 패치 이미지도 닫음
+    expect(bitmap.close).toHaveBeenCalledOnce()
     vi.unstubAllGlobals()
   })
 

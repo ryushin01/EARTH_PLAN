@@ -35,4 +35,12 @@ describe('SolarStormPanel', () => {
     expect(within(damage).getAllByText('경보로 막음').length).toBeGreaterThan(0)
     expect(within(damage).queryByText('변압기 손상')).not.toBeInTheDocument()
   })
+
+  it('경보망이 아직 짓는 중이면 보호 안내를 보여 주지 않는다', () => {
+    useWorld.getState().build('space-weather-shield', 'orbit')
+    render(<SolarStormPanel />)
+    expect(
+      screen.queryByText(/우주 기상 경보망이 하루 전에 알려/),
+    ).not.toBeInTheDocument()
+  })
 })

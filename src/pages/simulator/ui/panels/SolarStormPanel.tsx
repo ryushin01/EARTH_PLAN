@@ -6,6 +6,7 @@ import {
   solarStormImpacts,
 } from '../../model/world/hazards'
 import type { SolarLevel } from '../../model/world/types'
+import { isActive } from '../../model/structure/types'
 import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { Button, ChoiceGroup, StatusMessage } from '@/shared/ui'
@@ -68,7 +69,9 @@ export function SolarStormPanel() {
             : ''}
         </p>
         {shielded ||
-        structures.some((s) => s.kind === 'space-weather-shield') ? (
+        structures.some(
+          (s) => s.kind === 'space-weather-shield' && isActive(s, year),
+        ) ? (
           <p className="text-accent">{t('solar.shielded')}</p>
         ) : null}
       </div>

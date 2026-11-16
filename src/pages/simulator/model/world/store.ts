@@ -35,6 +35,9 @@ import type { SpeedId } from './time'
 import {
   SEVERITY_LABEL,
   SEVERITY_LABEL_EN,
+  SOLAR_LABEL,
+  SOLAR_LABEL_EN,
+  solarStormImpacts,
   WILDFIRE_YEARS,
   blastRadiusKm,
   deflectedDiameter,
@@ -55,7 +58,7 @@ import type { Text } from '../text'
 import type { Locale } from '@/shared/i18n'
 import { snapshotStructures } from './snapshot'
 import type { Snapshot } from './snapshot'
-import type { WorldState } from './types'
+import type { SolarLevel, WorldState } from './types'
 
 export interface ActionResult {
   ok: boolean
@@ -96,6 +99,7 @@ interface WorldActions {
     now?: number,
   ) => ActionResult
   startDrought: (regionId: string, severity: 1 | 2 | 3) => ActionResult
+  triggerSolarStorm: (level: SolarLevel, now?: number) => ActionResult
   /** source: 어디서 불러왔는지 (예: 공유 링크) */
   loadSnapshot: (snapshot: Snapshot, source: Text) => void
   startMission: (id: string) => void
@@ -121,6 +125,7 @@ function initialState(): WorldState {
     tsunamis: [],
     impacts: [],
     quakes: [],
+    solarStorms: [],
     wildfires: [],
     droughts: [],
     storms: [],
@@ -162,6 +167,11 @@ export function formatEnergy(mt: number, locale: Locale = 'ko'): string {
 }
 
 const nowMs = () => (typeof performance === 'undefined' ? 0 : performance.now())
+
+let ticking = false
+
+/** 지금 바뀌는 상태가 시간 진행(tick)에서 나왔는지 (화면 갱신을 솎을 때 씀) */
+export const isTicking = () => ticking
 
 export const useWorld = create<WorldStore>()((set, get) => {
   const log = (events: NewEvent[]) =>
@@ -217,28 +227,38 @@ export const useWorld = create<WorldStore>()((set, get) => {
     ])
   }
 
+  /** 시간을 진행하고 그 사이 사건·미션을 처리 */
+  const advance = (state: WorldState, dtSeconds: number) => {
+    const dt = Math.min(dtSeconds, 0.1)
+    let dtYears = SPEED_BY_ID[state.speed].yearsPerSecond * dt
+    // 미션 중에는 마지막 해를 넘기지 않음
+    const mission =
+      state.mission?.status === 'active'
+        ? MISSION_BY_ID[state.mission.id]
+        : undefined
+    if (mission)
+      dtYears = Math.min(
+        dtYears,
+        Math.max(0, mission.endYear - state.year) + 1e-9,
+      )
+    const { patch, events } = step(state, dtYears, Math.random, nowMs())
+    set(patch)
+    log(events)
+    runMission()
+  }
+
   return {
     ...initialState(),
 
     tick: (dtSeconds) => {
       const state = get()
       if (!state.running) return
-      const dt = Math.min(dtSeconds, 0.1)
-      let dtYears = SPEED_BY_ID[state.speed].yearsPerSecond * dt
-      // 미션 중에는 마지막 해를 넘기지 않음
-      const mission =
-        state.mission?.status === 'active'
-          ? MISSION_BY_ID[state.mission.id]
-          : undefined
-      if (mission)
-        dtYears = Math.min(
-          dtYears,
-          Math.max(0, mission.endYear - state.year) + 1e-9,
-        )
-      const { patch, events } = step(state, dtYears, Math.random, nowMs())
-      set(patch)
-      log(events)
-      runMission()
+      ticking = true
+      try {
+        advance(state, dtSeconds)
+      } finally {
+        ticking = false
+      }
     },
 
     setRunning: (running) => set({ running }),
@@ -733,6 +753,69 @@ export const useWorld = create<WorldStore>()((set, get) => {
           : `${SEVERITY_LABEL_EN[severity]} drought in ${siteName(region, l)} for ${effects.durationYears} years. About ${effects.affectedMillions.toFixed(1)} million people short of water, crops down ${Math.round(effects.cropLoss)}%.`,
       )
       log([{ tone: severity >= 3 ? 'danger' : 'warn', text: message }])
+      return { ok: true, message }
+    },
+
+    triggerSolarStorm: (level, now = nowMs()) => {
+      const state = get()
+      const { impacts, satellitesLost, auroraLat } = solarStormImpacts(
+        level,
+        state.structures,
+        state.year,
+      )
+      set({
+        solarStorms: [
+          ...state.solarStorms.slice(-2),
+          {
+            id: `solar-${state.nextEventId}`,
+            level,
+            year: state.year,
+            startedAt: now,
+            auroraLat,
+            satellitesLost,
+            impacts,
+          },
+        ],
+      })
+      const damaged = impacts.filter((i) => i.outcome === 'damaged')
+      const dark = impacts.filter((i) => i.outcome !== 'protected')
+      const saved = impacts.filter((i) => i.outcome === 'protected')
+      const pop = totalPopulation(dark.map((i) => i.cityId)).toFixed(1)
+      const message = compose((l) => {
+        const list = (items: typeof impacts) =>
+          nameList(
+            items.map((i) => i.cityId),
+            l,
+          )
+        if (l === 'ko') {
+          const grid = dark.length
+            ? ` 정전 ${dark.length}곳${damaged.length ? `, 그중 변압기 손상 ${damaged.length}곳 (${list(damaged)})` : ''}, 약 ${pop}백만 명 영향.`
+            : ' 정전된 주요 도시는 없습니다.'
+          const shield = saved.length
+            ? ` 우주 기상 경보망으로 막은 곳: ${list(saved)}.`
+            : ''
+          const sats = satellitesLost
+            ? ` 위성 약 ${satellitesLost}기 고장.`
+            : ''
+          return `${SOLAR_LABEL[level]} 태양 폭풍. 오로라가 지자기 위도 ${auroraLat}°까지 내려옵니다.${grid}${shield}${sats}`
+        }
+        const grid = dark.length
+          ? ` Blackouts in ${dark.length} cities${damaged.length ? `, transformers burned out in ${damaged.length} (${list(damaged)})` : ''}, about ${pop} million people affected.`
+          : ' No major city loses power.'
+        const shield = saved.length
+          ? ` The space weather shield protected ${list(saved)}.`
+          : ''
+        const sats = satellitesLost
+          ? ` About ${satellitesLost} satellites fail.`
+          : ''
+        return `${SOLAR_LABEL_EN[level]} solar storm. Aurora reaches down to ${auroraLat}° magnetic latitude.${grid}${shield}${sats}`
+      })
+      log([
+        {
+          tone: damaged.length || level === 'carrington' ? 'danger' : 'warn',
+          text: message,
+        },
+      ])
       return { ok: true, message }
     },
 

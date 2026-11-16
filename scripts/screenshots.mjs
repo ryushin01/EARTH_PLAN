@@ -182,6 +182,38 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
   await context.close()
 }
 
+// 캐링턴급 태양 폭풍: 유럽 밤하늘까지 내려온 오로라(03시 UTC면 유럽은 밤)
+{
+  const { page, context } = await open({ utc: 3 })
+  await page.getByRole('button', { name: '자동 회전' }).click()
+  await page
+    .getByRole('combobox', { name: '지점으로 이동' })
+    .selectOption('london')
+  await tab(page, '태양 폭풍')
+  await panel(page, '태양 폭풍')
+    .getByRole('radio', { name: /캐링턴급/ })
+    .check({ force: true })
+  await page.getByRole('button', { name: '태양 폭풍 일으키기' }).click()
+  await shot(page, 'solar-storm', 6000)
+  await context.close()
+}
+
+// 한반도 해수면 +12m: 1분 고해상도 고도로 그린 서해안·한강 하구 침수(한국 낮)
+{
+  const { page, context } = await open({ utc: 3 })
+  await page.getByRole('button', { name: '자동 회전' }).click()
+  await page.getByRole('slider', { name: '해수면 (2020년 대비)' }).fill('12')
+  await page
+    .getByRole('combobox', { name: '지점으로 이동' })
+    .selectOption('seoul')
+  for (let i = 0; i < 3; i++)
+    await page.getByRole('button', { name: '확대' }).click()
+  // 크게 확대하면 지점 표시가 반도를 가리므로 끔
+  await page.getByRole('button', { name: '지점' }).click()
+  await shot(page, 'korea', 5000)
+  await context.close()
+}
+
 // 영어 화면: 캐스케이디아 섭입대 쓰나미(북미 서해안 밤)
 {
   const { page, context } = await open({ utc: 7, locale: 'en-US' })

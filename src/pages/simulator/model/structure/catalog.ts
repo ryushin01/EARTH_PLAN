@@ -11,6 +11,7 @@ export type StructureKind =
   | 'seismic-retrofit'
   | 'carbon-capture'
   | 'renewable-transition'
+  | 'space-weather-shield'
 
 export type StructureTarget =
   'city' | 'strait' | 'glacier' | 'volcano' | 'region' | 'orbit' | 'global'
@@ -42,6 +43,8 @@ export interface StructureSpec {
   droughtReduction?: number
   /** 지진 피해 감소율 (0~1) */
   quakeReduction?: number
+  /** 태양 폭풍 정전 경계를 극 쪽으로 옮기는 정도 (지자기 위도 °) */
+  gridProtection?: number
   /** 완공 뒤 효과가 다 나타나기까지 걸리는 해 (감축 정책) */
   rampYears?: number
 }
@@ -117,6 +120,16 @@ export const STRUCTURES: Record<StructureKind, StructureSpec> = {
     cost: 800,
     buildYears: 5,
     deflectDiameter: 1000,
+  },
+  'space-weather-shield': {
+    kind: 'space-weather-shield',
+    name: '우주 기상 경보망',
+    summary:
+      'L1 지점의 태양 감시 위성과 변전소 보호 장치. 태양 폭풍을 하루 전에 알려 변압기 손상을 막고, 정전 범위를 줄이고, 위성 피해를 절반으로 줄입니다.',
+    target: 'orbit',
+    cost: 120,
+    buildYears: 3,
+    gridProtection: 8,
   },
   'firefighting-base': {
     kind: 'firefighting-base',
@@ -212,6 +225,11 @@ export const STRUCTURE_EN: Record<
     name: 'Planetary Defense Network',
     summary:
       'Survey telescopes and kinetic impactors (DART-style). Deflects asteroids up to 1 km; breaks larger ones to half their size.',
+  },
+  'space-weather-shield': {
+    name: 'Space Weather Shield',
+    summary:
+      'Sun-watching satellites at L1 and substation protection. A day’s warning of solar storms prevents transformer damage, shrinks blackouts and halves satellite losses.',
   },
   'firefighting-base': {
     name: 'Aerial Firefighting Base',

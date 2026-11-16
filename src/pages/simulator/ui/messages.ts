@@ -78,6 +78,7 @@ export const MESSAGES = {
   'tabs.tsunami': ['쓰나미', 'Tsunami'],
   'tabs.quake': ['지진', 'Quake'],
   'tabs.asteroid': ['소행성', 'Asteroid'],
+  'tabs.solar': ['태양 폭풍', 'Solar storm'],
   'tabs.hazard': ['산불·가뭄', 'Hazards'],
   'tabs.build': ['구조물', 'Build'],
   // 지점 종류
@@ -205,6 +206,41 @@ export const MESSAGES = {
   'quake.outcome.moderate': ['흔들림 피해', 'Shaking damage'],
   'quake.outcome.reduced': ['내진 보강으로 버팀', 'Held by retrofit'],
   // 소행성
+  // 태양 폭풍
+  'solar.level': ['폭풍 세기', 'Storm strength'],
+  'solar.levelHelp': [
+    'NOAA 지자기 폭풍 등급(G3~G5)과 1859년 캐링턴 사건 같은 역대 최대급입니다.',
+    'NOAA geomagnetic storm scale (G3–G5) and a record-breaking Carrington-class event like 1859.',
+  ],
+  'solar.g3': ['G3 강함', 'G3 Strong'],
+  'solar.g4': ['G4 심함', 'G4 Severe'],
+  'solar.g5': ['G5 극심', 'G5 Extreme'],
+  'solar.carrington': ['캐링턴급', 'Carrington'],
+  'solar.hint': [
+    '오로라 지자기 위도 {lat}°까지',
+    'Aurora to {lat}° mag. latitude',
+  ],
+  'solar.explain': [
+    '지자기 위도가 높을수록(지자기 극에 가까울수록) 전력망이 크게 흔들립니다. 서울은 지자기 위도 약 29°라 캐링턴급 폭풍에서야 오로라가 보입니다.',
+    'The higher the magnetic latitude (closer to the magnetic pole), the harder power grids are hit. Seoul sits near 29° magnetic latitude, so only a Carrington-class storm brings aurora there.',
+  ],
+  'solar.blackout': ['정전 위험 도시 {n}곳', '{n} cities at risk of blackout'],
+  'solar.damage': ['그중 변압기 손상 {n}곳', 'transformers burn out in {n}'],
+  'solar.satellites': ['위성 약 {n}기 고장', 'about {n} satellites fail'],
+  'solar.noCities': [
+    '정전 위험이 있는 주요 도시는 없습니다.',
+    'No major city is at risk of blackout.',
+  ],
+  'solar.shielded': [
+    '우주 기상 경보망이 하루 전에 알려 변압기를 보호하고 정전 범위를 줄입니다.',
+    'The space weather shield gives a day’s warning, protecting transformers and shrinking blackouts.',
+  ],
+  'solar.trigger': ['태양 폭풍 일으키기', 'Unleash the solar storm'],
+  'solar.latest': ['최근 태양 폭풍 피해', 'Latest solar storm damage'],
+  'solar.magLat': ['지자기 위도 {lat}°', '{lat}° mag. latitude'],
+  'solar.outcome.damaged': ['변압기 손상', 'Transformers burned'],
+  'solar.outcome.outage': ['정전', 'Blackout'],
+  'solar.outcome.protected': ['경보로 막음', 'Saved by warning'],
   'asteroid.target': ['충돌 지점', 'Impact site'],
   'asteroid.targetHelp': [
     '바다에 떨어지면 거대한 쓰나미가 생깁니다.',
@@ -338,6 +374,7 @@ export const MESSAGES = {
   'hud.budget': ['예산', 'Budget'],
   'hud.budgetNote': ['매년 $150B 증가', '+$150B per year'],
   'hud.log': ['사건 기록', 'Event log'],
+  'hud.newEvents': ['새 사건 {n}건', '{n} new events'],
   'hud.logEmpty': [
     '아직 기록이 없습니다. 재생하거나 재해를 일으켜 보세요.',
     'Nothing yet. Press play or trigger a disaster.',

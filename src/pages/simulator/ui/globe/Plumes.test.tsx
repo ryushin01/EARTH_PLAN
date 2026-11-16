@@ -48,4 +48,29 @@ describe('Plumes', () => {
     expect(await meshes(at('quake', 3, 0.02))).toHaveLength(5)
     expect(await meshes(at('quake', 13, 0.02))).toHaveLength(0)
   })
+
+  it('크기가 바뀌어도 도형을 새로 만들지 않고 정점만 고친다', async () => {
+    const quake = (age: number): PlumeInput => ({
+      ...at('quake', age, 0.02),
+      id: 'q',
+    })
+    const renderer = await ReactThreeTestRenderer.create(
+      <Plumes plumes={[quake(1)]} />,
+    )
+    // 첫 번째 지진파 고리: 1초에 반지름 0.3 × (1 / 3.5)
+    const firstRing = () =>
+      (
+        renderer.scene.findAll((node) => node.type === 'Mesh')[0]
+          .instance as Mesh
+      ).geometry
+    const before = firstRing()
+    expect(before.boundingSphere?.radius).toBeCloseTo(0.3 / 3.5 + 0.002, 4)
+    await renderer.update(<Plumes plumes={[quake(2)]} />)
+    expect(firstRing()).toBe(before)
+    expect(before.boundingSphere?.radius).toBeCloseTo(
+      (0.3 * 2) / 3.5 + 0.002,
+      4,
+    )
+    await renderer.unmount()
+  })
 })

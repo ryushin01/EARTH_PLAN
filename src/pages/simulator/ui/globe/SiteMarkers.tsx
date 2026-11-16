@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { Quaternion, Vector3 } from 'three'
 import { useThree } from '@react-three/fiber'
@@ -70,6 +70,14 @@ export function SiteMarkers({
         return { site, position: [x, y, z] as const, quaternion }
       }),
     [sites],
+  )
+
+  // 마커 위에 있을 때 마커를 끄거나 지구가 사라지면 손 모양 커서가 남지 않게 되돌림
+  useEffect(
+    () => () => {
+      document.body.style.cursor = ''
+    },
+    [],
   )
 
   const labelId = connected ? (hoverId ?? selectedId) : null

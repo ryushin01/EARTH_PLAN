@@ -12,8 +12,15 @@ import {
   Vector4,
 } from 'three'
 import type { DirectionalLight, Group, ShaderMaterial } from 'three'
+import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { TEXTURES, TEXTURES_SMALL, prefersSmallTextures } from '@/shared/config'
+import {
+  KOREA_DETAIL_BOUNDS,
+  TEXTURES,
+  TEXTURES_SMALL,
+  prefersSmallTextures,
+} from '@/shared/config'
+import { latLonToVector3 } from '@/shared/lib'
 import type { Vec3 } from '@/shared/lib'
 import {
   MAX_ASHES,
@@ -23,6 +30,7 @@ import {
   MAX_WAVES,
 } from '../../model/planet'
 import type { PlanetFrame } from '../../model/planet'
+import { GEOMAGNETIC_POLE } from '../../model/world/hazards'
 import {
   atmosphereFragment,
   atmosphereVertex,
@@ -64,6 +72,17 @@ export function preloadPlanet() {
   useLoader.preload(ImageBitmapLoader, TEXTURE_URLS, configureLoader)
 }
 
+/** 한반도 고도 패치 범위를 지구 텍스처 좌표(u: 경도, v: 위도)로 */
+const DETAIL_RECT = new Vector4(
+  (KOREA_DETAIL_BOUNDS.west + 180) / 360,
+  (KOREA_DETAIL_BOUNDS.south + 90) / 180,
+  (KOREA_DETAIL_BOUNDS.east + 180) / 360,
+  (KOREA_DETAIL_BOUNDS.north + 90) / 180,
+)
+
+/** 지자기 북극 방향 (오로라 띠의 중심) */
+const MAG_POLE = new Vector3(...latLonToVector3(GEOMAGNETIC_POLE)).normalize()
+
 /** 셰이더 컴파일 완료를 기다리는 최대 시간 */
 export const COMPILE_TIMEOUT_MS = 4000
 
@@ -91,6 +110,16 @@ export function Planet({
     [bitmaps],
   )
 
+  // 직접 만든 텍스처는 React Three Fiber가 해제하지 않으므로 지구가 사라질 때 GPU 메모리를 돌려줌
+  // (원본 이미지는 useLoader 캐시가 들고 있어 다시 그리면 그대로 다시 올림)
+  useEffect(
+    () => () => {
+      for (const texture of [albedo, lights, elevation, clouds])
+        texture.dispose()
+    },
+    [albedo, lights, elevation, clouds],
+  )
+
   const earthRef = useRef<ShaderMaterial>(null)
   const cloudRef = useRef<ShaderMaterial>(null)
   const atmoRef = useRef<ShaderMaterial>(null)
@@ -101,6 +130,9 @@ export function Planet({
       uAlbedo: { value: albedo },
       uLights: { value: lights },
       uElevation: { value: elevation },
+      uDetail: { value: null as Texture | null },
+      uDetailRect: { value: DETAIL_RECT },
+      uDetailOn: { value: 0 },
       uSun: { value: new Vector3(1, 0, 0) },
       uSeaLevel: { value: 0 },
       uIceN: { value: 75 },
@@ -120,6 +152,8 @@ export function Planet({
       },
       uDroughts: { value: vec4s(MAX_DROUGHTS) },
       uDroughtAmount: { value: zeros(MAX_DROUGHTS) },
+      uAurora: { value: new Vector2(0, 90) },
+      uMagPole: { value: MAG_POLE },
     }),
     [albedo, lights, elevation],
   )
@@ -144,10 +178,13 @@ export function Planet({
     [],
   )
 
+  // 프레임마다 새로 만들지 않고 고쳐 씀
+  const sun = useMemo(() => new Vector3(), [])
+
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
     const frame = readFrame(t)
-    const sun = new Vector3(...frame.sun).normalize()
+    sun.set(...frame.sun).normalize()
     const earth = earthRef.current
     if (earth) {
       const u = earth.uniforms
@@ -180,6 +217,7 @@ export function Planet({
         if (d) u.uDroughts.value[i].set(...d.center, d.radius)
         u.uDroughtAmount.value[i] = d?.amount ?? 0
       }
+      u.uAurora.value.set(frame.aurora.strength, frame.aurora.lat)
     }
     const cloud = cloudRef.current
     if (cloud) {
@@ -228,11 +266,51 @@ export function Planet({
     if (compiled) onReady?.()
   }, [compiled, onReady])
 
+  // 한반도 고해상도 고도(약 60KB)는 지구가 보인 뒤에 받아 첫 화면을 늦추지 않음.
+  // 받지 못하면 전 세계 고도만으로 그림.
+  // React Three Fiber는 uniforms 항목을 재질 쪽 객체로 복사하므로, 나중에 바꿀 값은 재질의 uniforms에 씀
+  useEffect(() => {
+    const material = earthRef.current
+    if (!compiled || !material || typeof createImageBitmap === 'undefined')
+      return
+    let cancelled = false
+    let detail: Texture | undefined
+    // 이 패치 이미지는 useLoader 캐시가 아니라 여기서 직접 받으므로, 텍스처를 해제할 때 함께 닫음
+    let detailBitmap: ImageBitmap | undefined
+    const loader = new ImageBitmapLoader()
+    configureLoader(loader)
+    loader.load(
+      TEXTURES.koreaElevation,
+      (bitmap) => {
+        if (cancelled) {
+          bitmap.close()
+          return
+        }
+        detailBitmap = bitmap
+        detail = new Texture(bitmap)
+        detail.flipY = false
+        detail.colorSpace = NoColorSpace
+        detail.needsUpdate = true
+        material.uniforms.uDetail.value = detail
+        material.uniforms.uDetailOn.value = 1
+      },
+      undefined,
+      () => undefined,
+    )
+    return () => {
+      cancelled = true
+      material.uniforms.uDetailOn.value = 0
+      material.uniforms.uDetail.value = null
+      detail?.dispose()
+      detailBitmap?.close()
+    }
+  }, [compiled])
+
   return (
     <group ref={rootRef} visible={compiled}>
       {/* 태양 방향 (구조물 조명·우주 차양 위치 기준) */}
       <group ref={sunRef} name="sun-light" />
-      <SunLight />
+      <SunLight anchor={sunRef} />
       <mesh
         name="earth"
         onClick={(event: ThreeEvent<MouseEvent>) => {
@@ -280,12 +358,11 @@ export function Planet({
 }
 
 /** 구조물(표준 재질)을 비추는 태양광. 태양 방향 그룹을 따라갑니다 */
-function SunLight() {
+function SunLight({ anchor }: { anchor: RefObject<Group | null> }) {
   const ref = useRef<DirectionalLight>(null)
-  useFrame(({ scene }) => {
-    const anchor = scene.getObjectByName('sun-light')
+  useFrame(() => {
     const light = ref.current
-    if (anchor && light) light.position.copy(anchor.position)
+    if (anchor.current && light) light.position.copy(anchor.current.position)
   })
   return (
     <>

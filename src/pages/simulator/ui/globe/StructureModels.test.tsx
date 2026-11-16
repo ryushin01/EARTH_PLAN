@@ -98,4 +98,20 @@ describe('StructureModels', () => {
     expect(orbit.rotation.y - before).toBeCloseTo(0.25)
     await renderer.unmount()
   })
+
+  it('우주 기상 감시 위성은 태양 쪽, 차양보다 가까운 곳에 떠 있다', async () => {
+    const renderer = await render(
+      [built('space-weather-shield', 'orbit')],
+      [],
+      true,
+    )
+    await renderer.advanceFrames(1, 0.016)
+    const boxes = geometries(renderer, 'BoxGeometry')
+    // 몸체 1개 + 태양 전지판 2개
+    expect(boxes).toHaveLength(3)
+    const position = boxes[0].parent!.instance.position
+    expect(position.x).toBeCloseTo(1.6)
+    expect(position.y).toBeCloseTo(0.22)
+    await renderer.unmount()
+  })
 })

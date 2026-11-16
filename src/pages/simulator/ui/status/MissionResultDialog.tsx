@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { Mission } from '../../model/world/missions'
 import { toSnapshot } from '../../model/world/snapshot'
 import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { warming } from '../../model/world/engine'
 import { shareUrl } from './ScenarioShare'
 import { formatSimDate } from './TimeControls'
@@ -16,7 +17,7 @@ export function MissionResultDialog({ mission }: { mission: Mission }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const descId = useId()
-  const status = useWorld((s) => s.mission?.status ?? 'active')
+  const status = useWorldSampled((s) => s.mission?.status ?? 'active')
   const previous = useRef(status)
   const [copy, setCopy] = useState<{ key: MessageKey | null; ok: boolean }>({
     key: null,

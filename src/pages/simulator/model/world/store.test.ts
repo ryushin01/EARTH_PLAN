@@ -76,4 +76,17 @@ describe('새 재해', () => {
     expect(useWorld.getState().wildfires[1].burnedKm2).toBeCloseTo(area1 * 1.8)
     expect(useWorld.getState().startWildfire('tokyo', 0).ok).toBe(false)
   })
+
+  it('태양 폭풍을 기록하고 최근 세 번만 남긴다', () => {
+    const result = useWorld.getState().triggerSolarStorm('carrington', 0)
+    expect(result.ok).toBe(true)
+    expect(result.message.ko).toContain('캐링턴급 태양 폭풍')
+    expect(result.message.ko).toContain('변압기 손상')
+    expect(result.message.en).toContain('Carrington-class solar storm')
+    expect(useWorld.getState().events[0].tone).toBe('danger')
+    for (const level of ['g3', 'g4', 'g5'] as const)
+      useWorld.getState().triggerSolarStorm(level, 0)
+    const storms = useWorld.getState().solarStorms
+    expect(storms.map((s) => s.level)).toEqual(['g3', 'g4', 'g5'])
+  })
 })

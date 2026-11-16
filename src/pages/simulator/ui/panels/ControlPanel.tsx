@@ -6,6 +6,7 @@ import { BuildPanel } from './BuildPanel'
 import { AsteroidPanel } from './AsteroidPanel'
 import { HazardPanel } from './HazardPanel'
 import { QuakePanel } from './QuakePanel'
+import { SolarStormPanel } from './SolarStormPanel'
 import { Tabs } from '@/shared/ui'
 import { useT } from '../i18n'
 
@@ -19,6 +20,7 @@ const ITEMS = [
     label: 'tabs.asteroid' as const,
     content: <AsteroidPanel />,
   },
+  { id: 'solar', label: 'tabs.solar' as const, content: <SolarStormPanel /> },
   { id: 'hazard', label: 'tabs.hazard' as const, content: <HazardPanel /> },
   { id: 'build', label: 'tabs.build' as const, content: <BuildPanel /> },
 ]

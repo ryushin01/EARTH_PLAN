@@ -8,6 +8,7 @@ import {
   riseRate,
   sourceWaveHeight,
   stepStorms,
+  stormLandfalls,
   tsunamiImpacts,
   warming,
 } from './engine'
@@ -217,5 +218,33 @@ describe('시각', () => {
     const { START_YEAR, utcHourOf, withUtcHour } = await import('./time')
     expect(utcHourOf(START_YEAR)).toBeCloseTo(3, 3)
     expect(utcHourOf(withUtcHour(START_YEAR, 18.5))).toBeCloseTo(18.5, 3)
+  })
+})
+
+describe('강 하구 도시 (서울)', () => {
+  const seoul = CITIES.find((c) => c.id === 'seoul')!
+  const calm = { structures: [], year: 2030 }
+
+  it('바다에 바로 닿지 않아도 저지대가 해수면 상승으로 잠긴다', () => {
+    expect(seoul.basins).toEqual([])
+    expect(cityState(seoul, { ...calm, seaLevel: 5 })).toBe('safe')
+    expect(cityState(seoul, { ...calm, seaLevel: 12 })).toBe('flooded')
+  })
+
+  it('폭풍 해일과 쓰나미는 받지 않는다', () => {
+    const storm = {
+      id: 's',
+      lat: seoul.lat,
+      lon: seoul.lon,
+      category: 5,
+      bornYear: 2030,
+      lifeDays: 8,
+      hemisphere: 1 as const,
+    }
+    const result = stormLandfalls([storm], { ...calm, seaLevel: 0 })
+    expect(result.storms[0].hitCityIds ?? []).not.toContain('seoul')
+    const reached = tsunamiImpacts('east-sea', 9, [], 2030).map((i) => i.cityId)
+    expect(reached).toContain('gangneung')
+    expect(reached).not.toContain('seoul')
   })
 })

@@ -47,6 +47,14 @@ export interface PlumeInput {
   size: number
 }
 
+/** 태양 폭풍 오로라: 지자기 극을 둘러싼 빛의 띠 */
+export interface AuroraInput {
+  /** 밝기 0~1 (0이면 그리지 않음) */
+  strength: number
+  /** 띠가 내려오는 지자기 위도 (°) */
+  lat: number
+}
+
 /** 매 프레임 지구 셰이더에 넣는 값 */
 export interface PlanetFrame {
   sun: Vec3
@@ -66,6 +74,7 @@ export interface PlanetFrame {
   plumes: PlumeInput[]
   fires: FireInput[]
   droughts: DroughtInput[]
+  aurora: AuroraInput
 }
 
 export const MAX_WAVES = 4

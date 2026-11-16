@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Quaternion, Vector3 } from 'three'
-import type { Group } from 'three'
+import type { Group, Object3D } from 'three'
 import { latLonToVector3 } from '@/shared/lib'
 import type { LatLon } from '@/shared/lib'
 import type { BuiltStructure } from '../../model/structure/types'
@@ -186,6 +186,7 @@ function Model({
     case 'planetary-defense':
     case 'carbon-capture':
     case 'renewable-transition':
+    case 'space-weather-shield':
       return null
   }
 }
@@ -219,8 +220,12 @@ function DefenseSatellites({ active }: { active: boolean }) {
 /** 태양 쪽을 향해 지구 밖에 떠 있는 우주 차양 */
 function SolarShade({ active }: { active: boolean }) {
   const ref = useRef<Group>(null)
+  // 태양 방향 그룹(Planet 안)은 한 번 찾아 두고, 지구가 다시 만들어져 떨어져 나가면 다시 찾음
+  const anchor = useRef<Object3D | undefined>(undefined)
   useFrame(({ scene }) => {
-    const sun = scene.getObjectByName('sun-light')
+    if (!anchor.current?.parent)
+      anchor.current = scene.getObjectByName('sun-light')
+    const sun = anchor.current
     if (sun && ref.current) {
       ref.current.position.copy(sun.position).normalize().multiplyScalar(1.9)
       ref.current.lookAt(0, 0, 0)
@@ -245,6 +250,47 @@ function SolarShade({ active }: { active: boolean }) {
   )
 }
 
+/** 태양 쪽 L1 지점에서 태양을 지켜보는 우주 기상 감시 위성 (차양보다 가깝고 조금 위) */
+function WeatherSentinel({ active }: { active: boolean }) {
+  const ref = useRef<Group>(null)
+  const anchor = useRef<Object3D | undefined>(undefined)
+  useFrame(({ scene }) => {
+    if (!anchor.current?.parent)
+      anchor.current = scene.getObjectByName('sun-light')
+    const sun = anchor.current
+    if (sun && ref.current) {
+      ref.current.position.copy(sun.position).normalize().multiplyScalar(1.6)
+      ref.current.position.y += 0.22
+      ref.current.lookAt(0, 0, 0)
+    }
+  })
+  const color = active ? '#00a1ff' : '#fc6a18'
+  return (
+    <group ref={ref}>
+      <mesh>
+        <boxGeometry args={[0.022, 0.022, 0.03]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[side * 0.045, 0, 0]}>
+          <boxGeometry args={[0.06, 0.002, 0.024]} />
+          <meshStandardMaterial
+            color="#9fd8ff"
+            emissive={color}
+            emissiveIntensity={0.25}
+            metalness={0.6}
+            roughness={0.3}
+          />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
 export function StructureModels({
   structures,
   activeIds,
@@ -257,7 +303,8 @@ export function StructureModels({
           structure.kind === 'solar-shade' ||
           structure.kind === 'carbon-capture' ||
           structure.kind === 'renewable-transition' ||
-          structure.kind === 'planetary-defense'
+          structure.kind === 'planetary-defense' ||
+          structure.kind === 'space-weather-shield'
         )
           return []
         const at = locate(structure.siteId)
@@ -273,6 +320,7 @@ export function StructureModels({
   )
   const shade = structures.find((s) => s.kind === 'solar-shade')
   const defense = structures.find((s) => s.kind === 'planetary-defense')
+  const sentinel = structures.find((s) => s.kind === 'space-weather-shield')
 
   return (
     <group>
@@ -287,6 +335,9 @@ export function StructureModels({
       {shade ? <SolarShade active={activeIds.includes(shade.id)} /> : null}
       {defense ? (
         <DefenseSatellites active={activeIds.includes(defense.id)} />
+      ) : null}
+      {sentinel ? (
+        <WeatherSentinel active={activeIds.includes(sentinel.id)} />
       ) : null}
     </group>
   )

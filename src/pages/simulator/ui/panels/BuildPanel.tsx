@@ -19,20 +19,20 @@ import {
   siteName,
   siteNote,
 } from '../../model/text'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { decimalYearToDate, formatBillions } from '@/shared/lib'
 import { Button, ChoiceGroup, SelectField, StatusMessage } from '@/shared/ui'
 
 export function BuildPanel() {
   const { t, pick, locale } = useT()
-  const budget = useWorld((s) => s.budget)
-  const year = useWorld((s) => s.year)
-  const structures = useWorld((s) => s.structures)
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const build = useWorld((s) => s.build)
-  const inMission = useWorld((s) => s.mission?.status === 'active')
-  const select = useWorld((s) => s.select)
+  const budget = useWorldSampled((s) => s.budget)
+  const year = useWorldSampled((s) => s.year)
+  const structures = useWorldSampled((s) => s.structures)
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const build = useWorldSampled((s) => s.build)
+  const inMission = useWorldSampled((s) => s.mission?.status === 'active')
+  const select = useWorldSampled((s) => s.select)
 
   const [kind, setKind] = useState<StructureKind>('sea-wall')
   const [siteByKind, setSiteByKind] = useState<

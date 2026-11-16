@@ -3,7 +3,7 @@ import ReactThreeTestRenderer, {
   waitFor,
 } from '@react-three/test-renderer'
 import { ImageBitmapLoader } from 'three'
-import type { Mesh, ShaderMaterial } from 'three'
+import type { Mesh, ShaderMaterial, Texture } from 'three'
 import type { PlanetFrame } from '../../model/planet'
 import { useThree } from '@react-three/fiber'
 import type * as Fiber from '@react-three/fiber'
@@ -37,6 +37,7 @@ const frame = (patch: Partial<PlanetFrame> = {}): PlanetFrame => ({
   plumes: [],
   fires: [],
   droughts: [],
+  aurora: { strength: 0, lat: 90 },
   ...patch,
 })
 
@@ -136,6 +137,9 @@ describe('Planet', () => {
     expect(u.uSeaLevel.value).toBe(25)
     expect(u.uWaves.value[0].toArray()).toEqual([0, 0, 1, 0.4])
     expect(u.uWaveStrength.value).toEqual([0.8, 0, 0, 0])
+    // 오로라는 없으면 밝기 0
+    expect(u.uAurora.value.x).toBe(0)
+    expect(u.uMagPole.value.length()).toBeCloseTo(1)
     // 태양 방향은 단위 벡터로, 태양 기준점은 10배 거리에
     expect(u.uSun.value.toArray()).toEqual([1, 0, 0])
     const sun = renderer.scene.findAll(
@@ -146,6 +150,41 @@ describe('Planet', () => {
     const cu = ((cloud.instance as Mesh).material as ShaderMaterial).uniforms
     expect(cu.uStormInfo.value[0].toArray()).toEqual([0.7, -1])
     await renderer.unmount()
+  })
+
+  it('지구가 사라지면 직접 만든 텍스처를 해제한다', async () => {
+    const { renderer, uniforms } = await render()
+    const u = uniforms()
+    const textures = [u.uAlbedo.value, u.uLights.value, u.uElevation.value]
+    const disposed = textures.map((texture) => vi.spyOn(texture, 'dispose'))
+    await renderer.unmount()
+    for (const spy of disposed) expect(spy).toHaveBeenCalledOnce()
+  })
+
+  it('지구가 보이면 한반도 고해상도 고도를 받아 셰이더에 넣고, 사라지면 해제한다', async () => {
+    const bitmap = { width: 2, height: 3, close: vi.fn() }
+    vi.stubGlobal('createImageBitmap', vi.fn())
+    const load = vi
+      .spyOn(ImageBitmapLoader.prototype, 'load')
+      .mockImplementation((url, onLoad) => {
+        expect(url).toContain('korea-elevation')
+        onLoad?.(bitmap)
+      })
+    const { renderer, uniforms } = await render()
+    await waitFor(() => expect(load).toHaveBeenCalledOnce())
+    const u = uniforms()
+    expect(u.uDetailOn.value).toBe(1)
+    const detail = u.uDetail.value as Texture
+    expect(detail.image).toBe(bitmap)
+    // 텍스처 좌표의 서·남·동·북: 동경 124~131°, 북위 33~43° (반 칸씩 더함)
+    expect(u.uDetailRect.value.x).toBeCloseTo((124 - 1 / 120 + 180) / 360)
+    expect(u.uDetailRect.value.w).toBeCloseTo((43 + 1 / 120 + 90) / 180)
+    const dispose = vi.spyOn(detail, 'dispose')
+    await renderer.unmount()
+    expect(dispose).toHaveBeenCalledOnce()
+    // 직접 받은 패치 이미지도 닫음
+    expect(bitmap.close).toHaveBeenCalledOnce()
+    vi.unstubAllGlobals()
   })
 
   it('지표면을 누르면 그 지점을 알리고, 끌기는 무시한다', async () => {

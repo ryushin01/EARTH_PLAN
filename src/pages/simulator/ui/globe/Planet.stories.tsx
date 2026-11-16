@@ -27,6 +27,7 @@ const frame = (patch: Partial<PlanetFrame> = {}): PlanetFrame => ({
   plumes: [],
   fires: [],
   droughts: [],
+  aurora: { strength: 0, lat: 90 },
   ...patch,
 })
 

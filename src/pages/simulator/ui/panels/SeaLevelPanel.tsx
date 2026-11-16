@@ -3,7 +3,7 @@ import { CITIES } from '../../model/site/data'
 import { siteName } from '../../model/text'
 import { SCENARIOS, baselineSeaLevel } from '../../model/world/scenario'
 import { cityStates, summarize } from '../../model/world/selectors'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import type { CityState } from '../../model/world/types'
 import type { ScenarioId } from '../../model/world/scenario'
 import { useT } from '../i18n'
@@ -26,15 +26,15 @@ const STATE_STYLE: Record<CityState, string> = {
 
 export function SeaLevelPanel() {
   const { t, locale } = useT()
-  const scenario = useWorld((s) => s.scenario)
-  const seaLevel = useWorld((s) => s.seaLevel)
-  const year = useWorld((s) => s.year)
-  const structures = useWorld((s) => s.structures)
-  const setScenario = useWorld((s) => s.setScenario)
-  const setSeaLevel = useWorld((s) => s.setSeaLevel)
-  const select = useWorld((s) => s.select)
+  const scenario = useWorldSampled((s) => s.scenario)
+  const seaLevel = useWorldSampled((s) => s.seaLevel)
+  const year = useWorldSampled((s) => s.year)
+  const structures = useWorldSampled((s) => s.structures)
+  const setScenario = useWorldSampled((s) => s.setScenario)
+  const setSeaLevel = useWorldSampled((s) => s.setSeaLevel)
+  const select = useWorldSampled((s) => s.select)
 
-  const summary = useWorld(useShallow(summarize))
+  const summary = useWorldSampled(useShallow(summarize))
   const states = cityStates({ seaLevel, structures, year })
   const watched = CITIES.filter((c) => states[c.id] !== 'safe').sort(
     (a, b) => a.elevation - b.elevation,

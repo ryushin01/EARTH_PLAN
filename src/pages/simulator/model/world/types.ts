@@ -80,6 +80,31 @@ export interface Quake {
   impacts: QuakeImpact[]
 }
 
+/** 태양 폭풍 세기: NOAA 지자기 폭풍 등급 G3~G5와 캐링턴급(1859년) */
+export type SolarLevel = 'g3' | 'g4' | 'g5' | 'carrington'
+
+/** 변압기 손상(수개월 정전) · 정전(몇 시간~며칠) · 경보로 막음 */
+export type SolarOutcome = 'damaged' | 'outage' | 'protected'
+
+export interface SolarImpact {
+  cityId: string
+  /** 도시의 지자기 위도 (°) */
+  magLat: number
+  outcome: SolarOutcome
+}
+
+export interface SolarStorm {
+  id: string
+  level: SolarLevel
+  year: number
+  startedAt: number
+  /** 오로라가 내려오는 지자기 위도 (°) */
+  auroraLat: number
+  /** 고장 나는 위성 수 (대략값) */
+  satellitesLost: number
+  impacts: SolarImpact[]
+}
+
 export interface Wildfire {
   id: string
   regionId: string
@@ -144,6 +169,7 @@ export interface WorldState {
   tsunamis: Tsunami[]
   impacts: Impact[]
   quakes: Quake[]
+  solarStorms: SolarStorm[]
   wildfires: Wildfire[]
   droughts: Drought[]
   storms: Storm[]

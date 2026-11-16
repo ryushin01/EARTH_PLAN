@@ -4,7 +4,15 @@ import { STRUCTURES } from '../structure/catalog'
 import { isActive } from '../structure/types'
 import type { BuiltStructure } from '../structure/types'
 import { distanceKm } from '@/shared/lib'
-import type { Drought, Impact, QuakeImpact, Wildfire } from './types'
+import type { LatLon } from '@/shared/lib'
+import type {
+  Drought,
+  Impact,
+  QuakeImpact,
+  SolarImpact,
+  SolarLevel,
+  Wildfire,
+} from './types'
 
 function activeAt(structures: BuiltStructure[], year: number) {
   return structures.filter((s) => isActive(s, year))
@@ -252,4 +260,126 @@ export function quakeImpacts(
       : raw
     return [{ cityId: city.id, distanceKm: d, outcome }]
   }).sort((a, b) => a.distanceKm - b.distanceKm)
+}
+
+// ── 태양 폭풍 ─────────────────────────────────────────
+
+/** 지자기 북극 (지구 자기장을 막대자석으로 본 쌍극자 근사, 2025년 무렵) */
+export const GEOMAGNETIC_POLE: LatLon = { lat: 80.8, lon: -72.7 }
+
+const RAD = Math.PI / 180
+
+/** 지자기 위도 (°): 지자기 극에 가까울수록 태양 폭풍의 영향을 크게 받음 */
+export function geomagneticLatitude({ lat, lon }: LatLon): number {
+  const pole = GEOMAGNETIC_POLE
+  const sin =
+    Math.sin(lat * RAD) * Math.sin(pole.lat * RAD) +
+    Math.cos(lat * RAD) *
+      Math.cos(pole.lat * RAD) *
+      Math.cos((lon - pole.lon) * RAD)
+  return Math.asin(Math.max(-1, Math.min(1, sin))) / RAD
+}
+
+export const SOLAR_LEVELS: SolarLevel[] = ['g3', 'g4', 'g5', 'carrington']
+
+interface SolarSpec {
+  /** 오로라가 내려오는 지자기 위도 (NOAA 등급표 기준) */
+  auroraLat: number
+  /** 이보다 지자기 위도가 높은 도시는 정전 */
+  outageLat: number
+  /** 이보다 높으면 변압기가 타 수개월 정전 (없으면 손상 없음) */
+  damageLat: number | null
+  /** 고장 나는 위성 수 (대략값) */
+  satellites: number
+  /** 오로라 밝기 0~1 */
+  glow: number
+}
+
+/**
+ * 세기별 영향 (대략값). 1989년 퀘벡 정전(G5)은 지자기 위도 약 60°,
+ * 1859년 캐링턴 사건 때는 지자기 위도 20°대(카리브해·일본)에서도 오로라가 보였습니다.
+ */
+export const SOLAR_SPEC: Record<SolarLevel, SolarSpec> = {
+  g3: {
+    auroraLat: 50,
+    outageLat: 60,
+    damageLat: null,
+    satellites: 0,
+    glow: 0.6,
+  },
+  g4: {
+    auroraLat: 45,
+    outageLat: 55,
+    damageLat: null,
+    satellites: 5,
+    glow: 0.75,
+  },
+  g5: {
+    auroraLat: 40,
+    outageLat: 50,
+    damageLat: 58,
+    satellites: 40,
+    glow: 0.9,
+  },
+  carrington: {
+    auroraLat: 22,
+    outageLat: 40,
+    damageLat: 45,
+    satellites: 600,
+    glow: 1,
+  },
+}
+
+export const SOLAR_LABEL: Record<SolarLevel, string> = {
+  g3: 'G3 강한',
+  g4: 'G4 심한',
+  g5: 'G5 극심한',
+  carrington: '캐링턴급',
+}
+export const SOLAR_LABEL_EN: Record<SolarLevel, string> = {
+  g3: 'Strong (G3)',
+  g4: 'Severe (G4)',
+  g5: 'Extreme (G5)',
+  carrington: 'Carrington-class',
+}
+
+/** 우주 기상 경보망이 정전 경계를 극 쪽으로 옮기는 정도 (지자기 위도 °) */
+function gridShift(structures: BuiltStructure[], year: number): number {
+  return activeAt(structures, year).reduce(
+    (best, s) => Math.max(best, STRUCTURES[s.kind].gridProtection ?? 0),
+    0,
+  )
+}
+
+/**
+ * 태양 폭풍이 도시 전력망과 위성에 주는 피해 (지자기 위도가 높은 순).
+ * 경보망이 있으면 하루 전에 알고 변압기를 보호해 손상이 없고, 정전 범위가 줄고, 위성 피해가 절반이 됩니다.
+ */
+export function solarStormImpacts(
+  level: SolarLevel,
+  structures: BuiltStructure[],
+  year: number,
+): { impacts: SolarImpact[]; satellitesLost: number; auroraLat: number } {
+  const spec = SOLAR_SPEC[level]
+  const shift = gridShift(structures, year)
+  const impacts = CITIES.flatMap((city) => {
+    const magLat = geomagneticLatitude(city)
+    const m = Math.abs(magLat)
+    if (m < spec.outageLat) return []
+    const outcome: SolarImpact['outcome'] =
+      shift > 0
+        ? m >= spec.outageLat + shift
+          ? 'outage'
+          : 'protected'
+        : spec.damageLat !== null && m >= spec.damageLat
+          ? 'damaged'
+          : 'outage'
+    return [{ cityId: city.id, magLat, outcome }]
+  }).sort((a, b) => Math.abs(b.magLat) - Math.abs(a.magLat))
+  return {
+    impacts,
+    satellitesLost:
+      shift > 0 ? Math.round(spec.satellites / 2) : spec.satellites,
+    auroraLat: spec.auroraLat,
+  }
 }

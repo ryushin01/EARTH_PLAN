@@ -33,4 +33,15 @@ describe('buildFrame', () => {
     buildFrame(useWorld.getState(), 0, clock, 0.1)
     expect(clock.cloudOffset).toBeGreaterThan(0)
   })
+
+  it('태양 폭풍 오로라는 밝아졌다가 1분이 안 돼 사라진다', () => {
+    const clock = { cloudOffset: 0, lastTime: 0 }
+    const at = (ms: number) =>
+      buildFrame(useWorld.getState(), ms, clock, 0).aurora
+    expect(at(0).strength).toBe(0)
+    useWorld.getState().triggerSolarStorm('carrington', 0)
+    expect(at(10_000)).toEqual({ strength: 1, lat: 22 })
+    expect(at(40_000).strength).toBeCloseTo(0.5)
+    expect(at(60_000).strength).toBe(0)
+  })
 })

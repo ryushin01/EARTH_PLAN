@@ -3,7 +3,7 @@ import { ashRadiusKm, climateVisuals, TSUNAMI_SPEED_KMH } from './world/engine'
 import { isHourFrozen, SPEED_BY_ID, withUtcHour } from './world/time'
 import type { WorldState } from './world/types'
 import { getSite } from './site/data'
-import { regionOf, wildfireRadiusKm } from './world/hazards'
+import { SOLAR_SPEC, regionOf, wildfireRadiusKm } from './world/hazards'
 import {
   DAYS_PER_YEAR,
   kmToRadians,
@@ -168,6 +168,20 @@ export function buildFrame(
     }
   })
 
+  // 태양 폭풍 오로라: 2초에 걸쳐 밝아져 30초 동안 춤추고 20초에 걸쳐 사라짐.
+  // 실제 폭풍은 며칠이므로 시뮬레이션 시간으로 약 11일이 지나도 사라짐
+  const solar = state.solarStorms.at(-1)
+  let aurora = { strength: 0, lat: 90 }
+  if (solar) {
+    const age = (nowMs - solar.startedAt) / 1000
+    const realFade =
+      age < 30 ? Math.min(1, age / 2) : Math.max(0, 1 - (age - 30) / 20)
+    const simFade = Math.max(0, 1 - (state.year - solar.year) / 0.03)
+    const strength =
+      Math.max(0, Math.min(realFade, simFade)) * SOLAR_SPEC[solar.level].glow
+    if (strength > 0) aurora = { strength, lat: solar.auroraLat }
+  }
+
   return {
     sun: latLonToVector3(subsolarPoint(sunYear)),
     seaLevel: state.seaLevel,
@@ -185,5 +199,6 @@ export function buildFrame(
     plumes,
     fires: fires.slice(-6),
     droughts: droughts.slice(-4),
+    aurora,
   }
 }

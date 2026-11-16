@@ -83,8 +83,8 @@ test.describe('시뮬레이터 첫 화면', () => {
   }
 
   test('모든 탭에서 axe 접근성 검사를 통과한다', async ({ page }) => {
-    // 탭 6개를 차례로 검사하므로 느린 CI에서도 끝나도록 넉넉히
-    test.setTimeout(120_000)
+    // 탭 8개를 차례로 검사하므로 느린 CI에서도 끝나도록 넉넉히
+    test.setTimeout(150_000)
     await page.goto('/')
     await page.locator('canvas').waitFor()
     for (const name of [
@@ -93,6 +93,7 @@ test.describe('시뮬레이터 첫 화면', () => {
       '쓰나미',
       '지진',
       '소행성',
+      '태양 폭풍',
       '산불·가뭄',
       '구조물',
     ]) {
@@ -385,5 +386,106 @@ test.describe('설치와 지점 정보', () => {
     await expect(card).toContainText('인구')
     await card.getByRole('button', { name: '선택 해제' }).click()
     await expect(card).toBeHidden()
+  })
+})
+
+test.describe('태양 폭풍과 한반도', () => {
+  test('캐링턴급 태양 폭풍은 고위도 도시 변압기를 태우고, 우주 기상 경보망이 막는다', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.getByRole('tab', { name: '태양 폭풍' }).click()
+    const panel = page.getByRole('tabpanel', { name: '태양 폭풍' })
+    await panel.getByRole('radio', { name: /캐링턴급/ }).check({ force: true })
+    await panel.getByRole('button', { name: '태양 폭풍 일으키기' }).click()
+    const damage = panel.getByRole('region', { name: '최근 태양 폭풍 피해' })
+    await expect(damage).toContainText('레이캬비크')
+    await expect(damage).toContainText('변압기 손상')
+    await expect(panel.getByRole('status')).toContainText('캐링턴급 태양 폭풍')
+
+    await page.getByRole('tab', { name: '구조물' }).click()
+    await page
+      .getByRole('radio', { name: /우주 기상 경보망/ })
+      .check({ force: true })
+    await page.getByRole('checkbox', { name: /바로 완공/ }).check()
+    await page.getByRole('button', { name: /우주 기상 경보망 짓기/ }).click()
+    await page.getByRole('tab', { name: '태양 폭풍' }).click()
+    await panel.getByRole('button', { name: '태양 폭풍 일으키기' }).click()
+    await expect(damage).toContainText('경보로 막음')
+    await expect(damage).not.toContainText('변압기 손상')
+  })
+
+  test('서울을 고르면 정보 카드가 나온다', async ({ page }) => {
+    await page.goto('/')
+    await page
+      .getByRole('combobox', { name: '지점으로 이동' })
+      .selectOption('seoul')
+    const card = page.getByRole('region', { name: /서울/ })
+    await expect(card).toContainText('인구')
+    await expect(card).toContainText('23백만 명')
+  })
+})
+
+test.describe('없는 주소와 배포 파일', () => {
+  test('없는 주소는 404 안내와 처음 화면 링크를 보여 준다', async ({
+    page,
+  }) => {
+    const response = await page.goto('/no-such-page')
+    expect(response?.status()).toBe(404)
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: '페이지를 찾을 수 없습니다',
+      }),
+    ).toBeVisible()
+    await expect(page).toHaveTitle(/페이지를 찾을 수 없습니다/)
+    await page.getByRole('link', { name: '처음 화면으로' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      /Earth.*Plan/i,
+    )
+  })
+
+  test('GitHub Pages의 404.html(SPA 셸)도 오류 없이 404 안내를 그린다', async ({
+    page,
+  }) => {
+    const shell = await (await page.request.get('/404.html')).text()
+    // 셸에는 본문(첫 화면 내용)이 없고, 브라우저에서 라우터가 그림
+    expect(shell).not.toContain('<main')
+    expect(shell).not.toContain('<h1')
+    await page.route('**/missing/page', (route) =>
+      route.fulfill({ status: 404, contentType: 'text/html', body: shell }),
+    )
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.goto('/missing/page')
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: '페이지를 찾을 수 없습니다',
+      }),
+    ).toBeVisible()
+    expect(errors).toEqual([])
+  })
+
+  test('서비스 워커 캐시 이름에 빌드 버전이 들어 있다', async ({ page }) => {
+    const sw = await (await page.request.get('/sw.js')).text()
+    expect(sw).toMatch(/earth-plan-assets-[0-9a-f]{12}/)
+    expect(sw).toMatch(/earth-plan-textures-[0-9a-f]{12}/)
+    expect(sw).not.toContain('__ASSETS_VERSION__')
+  })
+
+  test('공유 미리보기 메타와 이미지가 있다', async ({ page }) => {
+    await page.goto('/')
+    const og = (property: string) =>
+      page.locator(`meta[property="${property}"]`).getAttribute('content')
+    expect(await og('og:image')).toMatch(/\/og-image\.jpg$/)
+    expect(await og('og:title')).toContain('EARTH PLAN')
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      'https://ryushin01.github.io/EARTH_PLAN/',
+    )
+    const image = await page.request.get('/og-image.jpg')
+    expect(image.ok()).toBe(true)
+    expect(image.headers()['content-type']).toContain('image/jpeg')
   })
 })

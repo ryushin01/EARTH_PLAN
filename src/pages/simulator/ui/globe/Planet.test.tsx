@@ -37,6 +37,7 @@ const frame = (patch: Partial<PlanetFrame> = {}): PlanetFrame => ({
   plumes: [],
   fires: [],
   droughts: [],
+  aurora: { strength: 0, lat: 90 },
   ...patch,
 })
 
@@ -136,6 +137,9 @@ describe('Planet', () => {
     expect(u.uSeaLevel.value).toBe(25)
     expect(u.uWaves.value[0].toArray()).toEqual([0, 0, 1, 0.4])
     expect(u.uWaveStrength.value).toEqual([0.8, 0, 0, 0])
+    // 오로라는 없으면 밝기 0
+    expect(u.uAurora.value.x).toBe(0)
+    expect(u.uMagPole.value.length()).toBeCloseTo(1)
     // 태양 방향은 단위 벡터로, 태양 기준점은 10배 거리에
     expect(u.uSun.value.toArray()).toEqual([1, 0, 0])
     const sun = renderer.scene.findAll(

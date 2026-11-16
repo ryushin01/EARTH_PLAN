@@ -52,6 +52,9 @@ uniform vec4 uFires[MAX_FIRES];
 uniform vec2 uFireInfo[MAX_FIRES];
 uniform vec4 uDroughts[MAX_DROUGHTS];
 uniform float uDroughtAmount[MAX_DROUGHTS];
+// 태양 폭풍 오로라 (x: 밝기, y: 띠가 내려오는 지자기 위도°) · 지자기 북극 방향
+uniform vec2 uAurora;
+uniform vec3 uMagPole;
 
 varying vec2 vUv;
 varying vec3 vPos;
@@ -180,6 +183,25 @@ void main() {
 
   // 산불 불빛 (낮에도 약하게, 밤에는 강하게)
   lit += vec3(1.0, 0.36, 0.06) * fireGlow * (0.9 + 1.6 * (1.0 - day));
+
+  // 태양 폭풍 오로라: 지자기 극을 둘러싼 띠가 저위도까지 내려옴 (밤에만 보임).
+  // 경계 바로 위에 밝은 초록 아치와 세로 광선, 극 쪽으로 옅은 분홍 빛이 퍼짐
+  if (uAurora.x > 0.0) {
+    float mlat = abs(degrees(asin(clamp(dot(vPos, uMagPole), -1.0, 1.0))));
+    float edge = uAurora.y;
+    float arc = smoothstep(edge - 1.0, edge + 1.5, mlat) * (1.0 - smoothstep(edge + 3.0, edge + 9.0, mlat));
+    float haze = smoothstep(edge, edge + 4.0, mlat) * (1.0 - smoothstep(edge + 8.0, edge + 22.0, mlat)) * 0.35;
+    vec3 e1 = normalize(cross(uMagPole, vec3(0.0, 1.0, 0.0)));
+    vec3 e2 = cross(uMagPole, e1);
+    float mlon = atan(dot(vPos, e2), dot(vPos, e1));
+    // 고리 좌표(cos, sin)로 노이즈를 만들어 한 바퀴 도는 곳에 이음매가 없음
+    vec2 ring = vec2(cos(mlon), sin(mlon));
+    float curtain = fbm(ring * 4.0 + vec2(uTime * 0.12, -uTime * 0.08));
+    float rays = 0.6 + 0.4 * sin(mlon * 140.0 + curtain * 8.0 + uTime * 0.7);
+    float glow = arc * (0.45 + 0.9 * smoothstep(0.35, 0.75, curtain)) * rays + haze * (0.5 + curtain);
+    vec3 auroraColor = mix(vec3(0.25, 1.0, 0.6), vec3(0.95, 0.35, 0.6), smoothstep(edge + 4.0, edge + 14.0, mlat) * 0.7);
+    lit += auroraColor * glow * uAurora.x * (1.0 - day) * 0.75;
+  }
 
   // 밤에도 화산재 장막이 보이도록
   lit = mix(lit, vec3(0.11, 0.1, 0.095), ashCover * 0.55 * (1.0 - day));

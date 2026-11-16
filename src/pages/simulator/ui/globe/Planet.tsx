@@ -20,6 +20,7 @@ import {
   TEXTURES_SMALL,
   prefersSmallTextures,
 } from '@/shared/config'
+import { latLonToVector3 } from '@/shared/lib'
 import type { Vec3 } from '@/shared/lib'
 import {
   MAX_ASHES,
@@ -29,6 +30,7 @@ import {
   MAX_WAVES,
 } from '../../model/planet'
 import type { PlanetFrame } from '../../model/planet'
+import { GEOMAGNETIC_POLE } from '../../model/world/hazards'
 import {
   atmosphereFragment,
   atmosphereVertex,
@@ -77,6 +79,9 @@ const DETAIL_RECT = new Vector4(
   (KOREA_DETAIL_BOUNDS.east + 180) / 360,
   (KOREA_DETAIL_BOUNDS.north + 90) / 180,
 )
+
+/** 지자기 북극 방향 (오로라 띠의 중심) */
+const MAG_POLE = new Vector3(...latLonToVector3(GEOMAGNETIC_POLE)).normalize()
 
 /** 셰이더 컴파일 완료를 기다리는 최대 시간 */
 export const COMPILE_TIMEOUT_MS = 4000
@@ -147,6 +152,8 @@ export function Planet({
       },
       uDroughts: { value: vec4s(MAX_DROUGHTS) },
       uDroughtAmount: { value: zeros(MAX_DROUGHTS) },
+      uAurora: { value: new Vector2(0, 90) },
+      uMagPole: { value: MAG_POLE },
     }),
     [albedo, lights, elevation],
   )
@@ -210,6 +217,7 @@ export function Planet({
         if (d) u.uDroughts.value[i].set(...d.center, d.radius)
         u.uDroughtAmount.value[i] = d?.amount ?? 0
       }
+      u.uAurora.value.set(frame.aurora.strength, frame.aurora.lat)
     }
     const cloud = cloudRef.current
     if (cloud) {

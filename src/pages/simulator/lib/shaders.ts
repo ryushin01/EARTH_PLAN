@@ -31,6 +31,10 @@ export const earthFragment = /* glsl */ `
 uniform sampler2D uAlbedo;
 uniform sampler2D uLights;
 uniform sampler2D uElevation;
+// 한반도 고해상도 고도 (uDetailRect: 텍스처 좌표의 서·남·동·북, uDetailOn: 받았으면 1)
+uniform sampler2D uDetail;
+uniform vec4 uDetailRect;
+uniform float uDetailOn;
 uniform vec3 uSun;
 uniform float uSeaLevel;
 uniform float uIceN;
@@ -80,6 +84,12 @@ void main() {
   float land = step(0.5, elev.b);
   // 해발 0m 미만 육지(간척지 등)는 기존 제방이 0.5m까지 지킨다고 봅니다
   float hLow = max(elev.r * 255.0 - 50.0, 0.5);
+  // 한반도는 10배 촘촘한 고도로 침수를 판정 (가장자리는 전 세계 고도와 부드럽게 섞음)
+  vec2 dUv = (vUv - uDetailRect.xy) / (uDetailRect.zw - uDetailRect.xy);
+  vec2 dIn = min(dUv, 1.0 - dUv);
+  float detailW = uDetailOn * smoothstep(0.0, 0.04, min(dIn.x, dIn.y));
+  float hDetail = max(texture2D(uDetail, clamp(dUv, 0.0, 1.0)).r * 255.0 - 50.0, 0.5);
+  hLow = mix(hLow, hDetail, detailW);
   float h = fullHeight(elev.g);
   float lat = degrees(asin(clamp(vPos.y, -1.0, 1.0)));
   vec3 albedo = texture2D(uAlbedo, vUv).rgb;

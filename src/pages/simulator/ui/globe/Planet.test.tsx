@@ -3,7 +3,7 @@ import ReactThreeTestRenderer, {
   waitFor,
 } from '@react-three/test-renderer'
 import { ImageBitmapLoader } from 'three'
-import type { Mesh, ShaderMaterial } from 'three'
+import type { Mesh, ShaderMaterial, Texture } from 'three'
 import type { PlanetFrame } from '../../model/planet'
 import { useThree } from '@react-three/fiber'
 import type * as Fiber from '@react-three/fiber'
@@ -155,6 +155,30 @@ describe('Planet', () => {
     const disposed = textures.map((texture) => vi.spyOn(texture, 'dispose'))
     await renderer.unmount()
     for (const spy of disposed) expect(spy).toHaveBeenCalledOnce()
+  })
+
+  it('지구가 보이면 한반도 고해상도 고도를 받아 셰이더에 넣고, 사라지면 해제한다', async () => {
+    const bitmap = { width: 2, height: 3, close: vi.fn() }
+    vi.stubGlobal('createImageBitmap', vi.fn())
+    const load = vi
+      .spyOn(ImageBitmapLoader.prototype, 'load')
+      .mockImplementation((url, onLoad) => {
+        expect(url).toContain('korea-elevation')
+        onLoad?.(bitmap)
+      })
+    const { renderer, uniforms } = await render()
+    await waitFor(() => expect(load).toHaveBeenCalledOnce())
+    const u = uniforms()
+    expect(u.uDetailOn.value).toBe(1)
+    const detail = u.uDetail.value as Texture
+    expect(detail.image).toBe(bitmap)
+    // 텍스처 좌표의 서·남·동·북: 동경 124~131°, 북위 33~43° (반 칸씩 더함)
+    expect(u.uDetailRect.value.x).toBeCloseTo((124 - 1 / 120 + 180) / 360)
+    expect(u.uDetailRect.value.w).toBeCloseTo((43 + 1 / 120 + 90) / 180)
+    const dispose = vi.spyOn(detail, 'dispose')
+    await renderer.unmount()
+    expect(dispose).toHaveBeenCalledOnce()
+    vi.unstubAllGlobals()
   })
 
   it('지표면을 누르면 그 지점을 알리고, 끌기는 무시한다', async () => {

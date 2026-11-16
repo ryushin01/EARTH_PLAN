@@ -14,7 +14,12 @@ import {
 import type { DirectionalLight, Group, ShaderMaterial } from 'three'
 import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { TEXTURES, TEXTURES_SMALL, prefersSmallTextures } from '@/shared/config'
+import {
+  KOREA_DETAIL_BOUNDS,
+  TEXTURES,
+  TEXTURES_SMALL,
+  prefersSmallTextures,
+} from '@/shared/config'
 import type { Vec3 } from '@/shared/lib'
 import {
   MAX_ASHES,
@@ -65,6 +70,14 @@ export function preloadPlanet() {
   useLoader.preload(ImageBitmapLoader, TEXTURE_URLS, configureLoader)
 }
 
+/** 한반도 고도 패치 범위를 지구 텍스처 좌표(u: 경도, v: 위도)로 */
+const DETAIL_RECT = new Vector4(
+  (KOREA_DETAIL_BOUNDS.west + 180) / 360,
+  (KOREA_DETAIL_BOUNDS.south + 90) / 180,
+  (KOREA_DETAIL_BOUNDS.east + 180) / 360,
+  (KOREA_DETAIL_BOUNDS.north + 90) / 180,
+)
+
 /** 셰이더 컴파일 완료를 기다리는 최대 시간 */
 export const COMPILE_TIMEOUT_MS = 4000
 
@@ -112,6 +125,9 @@ export function Planet({
       uAlbedo: { value: albedo },
       uLights: { value: lights },
       uElevation: { value: elevation },
+      uDetail: { value: null as Texture | null },
+      uDetailRect: { value: DETAIL_RECT },
+      uDetailOn: { value: 0 },
       uSun: { value: new Vector3(1, 0, 0) },
       uSeaLevel: { value: 0 },
       uIceN: { value: 75 },
@@ -241,6 +257,42 @@ export function Planet({
   useEffect(() => {
     if (compiled) onReady?.()
   }, [compiled, onReady])
+
+  // 한반도 고해상도 고도(약 60KB)는 지구가 보인 뒤에 받아 첫 화면을 늦추지 않음.
+  // 받지 못하면 전 세계 고도만으로 그림.
+  // React Three Fiber는 uniforms 항목을 재질 쪽 객체로 복사하므로, 나중에 바꿀 값은 재질의 uniforms에 씀
+  useEffect(() => {
+    const material = earthRef.current
+    if (!compiled || !material || typeof createImageBitmap === 'undefined')
+      return
+    let cancelled = false
+    let detail: Texture | undefined
+    const loader = new ImageBitmapLoader()
+    configureLoader(loader)
+    loader.load(
+      TEXTURES.koreaElevation,
+      (bitmap) => {
+        if (cancelled) {
+          bitmap.close()
+          return
+        }
+        detail = new Texture(bitmap)
+        detail.flipY = false
+        detail.colorSpace = NoColorSpace
+        detail.needsUpdate = true
+        material.uniforms.uDetail.value = detail
+        material.uniforms.uDetailOn.value = 1
+      },
+      undefined,
+      () => undefined,
+    )
+    return () => {
+      cancelled = true
+      material.uniforms.uDetailOn.value = 0
+      material.uniforms.uDetail.value = null
+      detail?.dispose()
+    }
+  }, [compiled])
 
   return (
     <group ref={rootRef} visible={compiled}>

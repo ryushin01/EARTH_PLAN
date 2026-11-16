@@ -21,6 +21,8 @@ const city = (
   population: number,
   basins: Basin[],
   defense = 0,
+  /** 바다에 바로 닿지 않아도 강 하구 저지대가 해수면 영향을 받는 도시 (쓰나미·폭풍 해일은 없음) */
+  tidal = false,
 ): City => ({
   kind: 'city',
   id,
@@ -30,7 +32,7 @@ const city = (
   lon,
   elevation,
   population,
-  coastal: basins.length > 0,
+  coastal: basins.length > 0 || tidal,
   basins,
   defense,
 })
@@ -44,6 +46,21 @@ export const CITIES: City[] = [
     'east-asian-seas',
   ]),
   city('busan', '부산', '동아시아', 35.18, 129.08, 5, 3.4, ['east-asian-seas']),
+  // 서울: 한강 하구 저지대가 해수면 상승 영향을 받음. 인구는 인천을 뺀 수도권
+  city('seoul', '서울', '동아시아', 37.57, 126.98, 10, 23, [], 0, true),
+  city('ulsan', '울산', '동아시아', 35.54, 129.31, 5, 1.1, ['east-asian-seas']),
+  city('pohang', '포항', '동아시아', 36.02, 129.34, 4, 0.5, [
+    'east-asian-seas',
+  ]),
+  city('gangneung', '강릉', '동아시아', 37.75, 128.9, 5, 0.2, [
+    'east-asian-seas',
+  ]),
+  city('mokpo', '목포', '동아시아', 34.81, 126.39, 3, 0.2, ['east-asian-seas']),
+  city('jeju', '제주', '동아시아', 33.5, 126.53, 5, 0.5, ['east-asian-seas']),
+  city('daejeon', '대전', '동아시아', 36.35, 127.38, 50, 1.5, []),
+  city('daegu', '대구', '동아시아', 35.87, 128.6, 35, 2.4, []),
+  city('gwangju', '광주', '동아시아', 35.16, 126.85, 30, 1.4, []),
+  city('pyongyang', '평양', '동아시아', 39.02, 125.75, 15, 3, []),
   city('tokyo', '도쿄', '동아시아', 35.68, 139.77, 3, 37, ['pacific'], 3),
   city('osaka', '오사카', '동아시아', 34.69, 135.5, 2, 19, ['pacific']),
   city('sendai', '센다이', '동아시아', 38.27, 140.87, 4, 1.5, ['pacific']),
@@ -432,7 +449,7 @@ export const STRAITS: Strait[] = [
     region: '동아시아',
     lat: 31.0,
     lon: 125.5,
-    protects: ['seoul-incheon', 'shanghai'],
+    protects: ['seoul-incheon', 'seoul', 'mokpo', 'shanghai'],
     note: '가상 구상: 황해·동중국해 북부를 막는 장대 방조제',
   },
 ]

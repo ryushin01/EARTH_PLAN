@@ -407,8 +407,9 @@ export function stormLandfalls(
   const next = storms.map((storm) => {
     const hit = new Set(storm.hitCityIds ?? [])
     for (const city of CITIES) {
+      // 바다에 바로 닿은 도시만 (강 하구 도시는 해일이 닿지 않음, 지중해는 열대 저기압이 없음)
       if (
-        !city.coastal ||
+        !city.basins.length ||
         hit.has(city.id) ||
         city.basins.includes('mediterranean')
       )

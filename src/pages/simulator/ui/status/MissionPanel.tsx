@@ -1,7 +1,7 @@
 import { useShallow } from 'zustand/react/shallow'
 import { MISSIONS, MISSION_BY_ID } from '../../model/world/missions'
 import type { Mission } from '../../model/world/missions'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { MissionResultDialog } from './MissionResultDialog'
 import { formatSimDate } from './TimeControls'
 import { Button } from '@/shared/ui'
@@ -10,12 +10,12 @@ import { cn, decimalYearToDate, formatBillions } from '@/shared/lib'
 
 function ActiveMission({ mission }: { mission: Mission }) {
   const { t, pick, locale } = useT()
-  const status = useWorld((s) => s.mission?.status ?? 'active')
-  const firedIds = useWorld(useShallow((s) => s.mission?.firedIds ?? []))
-  const year = useWorld((s) => s.year)
-  const detail = useWorld((s) => mission.evaluate(s).detail[locale])
-  const quitMission = useWorld((s) => s.quitMission)
-  const startYear = useWorld((s) => s.history[0]?.year ?? s.year)
+  const status = useWorldSampled((s) => s.mission?.status ?? 'active')
+  const firedIds = useWorldSampled(useShallow((s) => s.mission?.firedIds ?? []))
+  const year = useWorldSampled((s) => s.year)
+  const detail = useWorldSampled((s) => mission.evaluate(s).detail[locale])
+  const quitMission = useWorldSampled((s) => s.quitMission)
+  const startYear = useWorldSampled((s) => s.history[0]?.year ?? s.year)
   const progress = Math.min(
     1,
     Math.max(0, (year - startYear) / (mission.endYear - startYear)),
@@ -89,8 +89,8 @@ function ActiveMission({ mission }: { mission: Mission }) {
 /** 목표가 있는 미션 */
 export function MissionPanel() {
   const { t, pick } = useT()
-  const missionId = useWorld((s) => s.mission?.id ?? null)
-  const startMission = useWorld((s) => s.startMission)
+  const missionId = useWorldSampled((s) => s.mission?.id ?? null)
+  const startMission = useWorldSampled((s) => s.startMission)
   const mission = missionId ? MISSION_BY_ID[missionId] : undefined
 
   return (

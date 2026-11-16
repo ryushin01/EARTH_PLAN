@@ -12,17 +12,17 @@ import {
   citiesWithin,
   effectiveVei,
 } from '../../model/world/engine'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { Button, RangeField, SelectField, StatusMessage } from '@/shared/ui'
 
 export function EruptionPanel() {
   const { t, pick, locale } = useT()
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const structures = useWorld((s) => s.structures)
-  const year = useWorld((s) => s.year)
-  const select = useWorld((s) => s.select)
-  const triggerEruption = useWorld((s) => s.triggerEruption)
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const structures = useWorldSampled((s) => s.structures)
+  const year = useWorldSampled((s) => s.year)
+  const select = useWorldSampled((s) => s.select)
+  const triggerEruption = useWorldSampled((s) => s.triggerEruption)
 
   const [volcanoId, setVolcanoId] = useState(VOLCANOES[0].id)
   const [vei, setVei] = useState(6)

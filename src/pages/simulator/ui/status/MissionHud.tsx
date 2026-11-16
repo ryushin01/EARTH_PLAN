@@ -1,9 +1,10 @@
+import { useEffect, useRef, useState } from 'react'
 import { useT } from '../i18n'
 import type { MessageKey } from '../i18n'
 import { useShallow } from 'zustand/react/shallow'
 import { summarize } from '../../model/world/selectors'
-import { useWorld } from '../../model/world/store'
-import type { EventTone } from '../../model/world/types'
+import { useWorldSampled } from '../../model/world/sampled'
+import type { EventTone, WorldEvent } from '../../model/world/types'
 import { formatSimDate } from './TimeControls'
 import { formatBillions, formatNumber, formatSigned, cn } from '@/shared/lib'
 
@@ -44,21 +45,66 @@ function Stat({
   )
 }
 
+/** 사건 알림을 다시 읽어 주기까지의 최소 간격 */
+export const ANNOUNCE_MS = 3000
+
+interface Announcement {
+  /** 지난 알림 뒤 새로 생긴 사건 수 */
+  count: number
+  /** 그중 가장 최근 사건 */
+  event: WorldEvent
+}
+
+/**
+ * 새 사건을 화면 낭독기에 알릴 내용. 빠르게 재생하면 사건이 연달아 생기므로
+ * ANNOUNCE_MS 안에 생긴 사건은 모아 "새 사건 N건"으로 한 번만 알립니다
+ */
+function useEventAnnouncement(events: WorldEvent[]): Announcement | null {
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+  const latest = useRef(events)
+  // 마지막으로 알린 사건 (처음 그릴 때 있던 사건은 알리지 않음)
+  const announced = useRef<WorldEvent | undefined>(events.at(0))
+  const lastAt = useRef(Number.NEGATIVE_INFINITY)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => {
+    latest.current = events
+    const announce = () => {
+      timer.current = undefined
+      const list = latest.current
+      const seen = announced.current ? list.indexOf(announced.current) : -1
+      const count = seen === -1 ? list.length : seen
+      const event = list.at(0)
+      if (!event || count === 0) return
+      announced.current = event
+      lastAt.current = performance.now()
+      setAnnouncement({ count, event })
+    }
+    if (events.at(0) === announced.current || timer.current) return
+    const wait = ANNOUNCE_MS - (performance.now() - lastAt.current)
+    if (wait <= 0) announce()
+    else timer.current = setTimeout(announce, wait)
+  }, [events])
+
+  useEffect(() => () => clearTimeout(timer.current), [])
+  return announcement
+}
+
 /** 지구 상태 수치와 사건 기록 */
 export function MissionHud() {
   const { t, pick } = useT()
-  const seaLevel = useWorld((s) => s.seaLevel)
-  const budget = useWorld((s) => s.budget)
-  const storms = useWorld((s) => s.storms.length)
-  const fires = useWorld(
+  const seaLevel = useWorldSampled((s) => s.seaLevel)
+  const budget = useWorldSampled((s) => s.budget)
+  const storms = useWorldSampled((s) => s.storms.length)
+  const fires = useWorldSampled(
     (s) => s.wildfires.filter((f) => s.year < f.year + f.durationYears).length,
   )
-  const droughts = useWorld(
+  const droughts = useWorldSampled(
     (s) => s.droughts.filter((d) => s.year < d.year + d.durationYears).length,
   )
-  const events = useWorld((s) => s.events)
-  const summary = useWorld(useShallow(summarize))
-  const latest = events.at(0)
+  const events = useWorldSampled((s) => s.events)
+  const summary = useWorldSampled(useShallow(summarize))
+  const announcement = useEventAnnouncement(events)
 
   return (
     <div className="grid gap-4">
@@ -112,9 +158,11 @@ export function MissionHud() {
         <h3 id="event-log-title" className="label-caps">
           {t('hud.log')}
         </h3>
-        {/* 새 사건을 화면 낭독기에 알림 (내용만 바뀜) */}
+        {/* 새 사건을 화면 낭독기에 알림 (내용만 바뀜, 짧은 간격의 사건은 묶어서) */}
         <p role="status" className="sr-only">
-          {latest ? `${t(TONE_KEY[latest.tone])}: ${pick(latest.text)}` : ''}
+          {announcement
+            ? `${announcement.count > 1 ? `${t('hud.newEvents', { n: announcement.count })}. ` : ''}${t(TONE_KEY[announcement.event.tone])}: ${pick(announcement.event.text)}`
+            : ''}
         </p>
         {events.length === 0 ? (
           <p className="text-sm text-muted">{t('hud.logEmpty')}</p>

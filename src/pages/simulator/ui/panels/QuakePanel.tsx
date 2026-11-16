@@ -12,7 +12,7 @@ import {
   quakeSevereRadiusKm,
   quakeStrongRadiusKm,
 } from '../../model/world/hazards'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { Button, RangeField, SelectField, StatusMessage } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
@@ -25,12 +25,12 @@ const OUTCOME_STYLE = {
 
 export function QuakePanel() {
   const { t, pick, locale } = useT()
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const structures = useWorld((s) => s.structures)
-  const year = useWorld((s) => s.year)
-  const quakes = useWorld((s) => s.quakes)
-  const select = useWorld((s) => s.select)
-  const triggerQuake = useWorld((s) => s.triggerQuake)
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const structures = useWorldSampled((s) => s.structures)
+  const year = useWorldSampled((s) => s.year)
+  const quakes = useWorldSampled((s) => s.quakes)
+  const select = useWorldSampled((s) => s.select)
+  const triggerQuake = useWorldSampled((s) => s.triggerQuake)
 
   const [faultId, setFaultId] = useState(FAULTS[0].id)
   const [magnitude, setMagnitude] = useState(7)

@@ -338,6 +338,7 @@ export const MESSAGES = {
   'hud.budget': ['예산', 'Budget'],
   'hud.budgetNote': ['매년 $150B 증가', '+$150B per year'],
   'hud.log': ['사건 기록', 'Event log'],
+  'hud.newEvents': ['새 사건 {n}건', '{n} new events'],
   'hud.logEmpty': [
     '아직 기록이 없습니다. 재생하거나 재해를 일으켜 보세요.',
     'Nothing yet. Press play or trigger a disaster.',

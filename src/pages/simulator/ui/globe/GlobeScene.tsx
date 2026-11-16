@@ -20,6 +20,7 @@ import type { MarkerTone } from './SiteMarkers'
 import { StructureModels } from './StructureModels'
 import { cityStates } from '../../model/world/selectors'
 import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import type { CityState } from '../../model/world/types'
 import { distanceKm, latLonToVector3, vector3ToLatLon } from '@/shared/lib'
 import type { Vec3 } from '@/shared/lib'
@@ -27,6 +28,9 @@ import { buildFrame } from '../../model/frame'
 import type { FrameClock } from '../../model/frame'
 import { MAX_DISTANCE, MIN_DISTANCE, orbitPosition } from '../../model/camera'
 import type { CameraApi } from '../../model/camera'
+
+const scratchDir = new Vector3()
+const scratchGoal = new Vector3()
 
 const TONE_BY_STATE: Record<CityState, MarkerTone> = {
   safe: 'normal',
@@ -62,15 +66,15 @@ export function GlobeScene({
   const clock = useRef<FrameClock>({ cloudOffset: 0, lastTime: 0 })
   const plumesRef = useRef<PlumeInput[]>([])
 
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const select = useWorld((s) => s.select)
-  const structures = useWorld((s) => s.structures)
-  const activeIds = useWorld(
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const select = useWorldSampled((s) => s.select)
+  const structures = useWorldSampled((s) => s.structures)
+  const activeIds = useWorldSampled(
     useShallow((s) =>
       s.structures.filter((x) => s.year >= x.completeYear).map((x) => x.id),
     ),
   )
-  const tones = useWorld(
+  const tones = useWorldSampled(
     useShallow((s) => {
       const states = cityStates(s)
       const out: Record<string, MarkerTone> = {}
@@ -119,12 +123,14 @@ export function GlobeScene({
     const target = goal.current
     if (!target) return
     const step = reducedMotion ? 1 : 1 - Math.exp(-delta * 4)
-    // 구면을 따라 방향과 거리를 따로 보간
-    const dir = camera.position.clone().normalize()
-    const goalDir = target.clone().normalize()
+    // 구면을 따라 방향과 거리를 따로 보간 (프레임마다 벡터를 새로 만들지 않음)
     const distance = camera.position.length()
-    const newDir = dir.lerp(goalDir, step).normalize()
     const newDistance = distance + (target.length() - distance) * step
+    const newDir = scratchDir
+      .copy(camera.position)
+      .normalize()
+      .lerp(scratchGoal.copy(target).normalize(), step)
+      .normalize()
     camera.position.copy(newDir.multiplyScalar(newDistance))
     camera.lookAt(0, 0, 0)
     controlsRef.current?.update()

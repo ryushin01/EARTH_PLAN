@@ -3,7 +3,7 @@ import { structureName } from '../../model/structure/catalog'
 import { nameList, regionName, siteName, siteNote } from '../../model/text'
 import { isInDrought } from '../../model/world/hazards'
 import { cityStates } from '../../model/world/selectors'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { decimalYearToDate } from '@/shared/lib'
 import { Button } from '@/shared/ui'
@@ -11,12 +11,12 @@ import { Button } from '@/shared/ui'
 /** 선택한 지점의 정보와 그곳에 지은 구조물 */
 export function SiteInfoCard() {
   const { t, locale } = useT()
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const structures = useWorld((s) => s.structures)
-  const seaLevel = useWorld((s) => s.seaLevel)
-  const year = useWorld((s) => s.year)
-  const droughts = useWorld((s) => s.droughts)
-  const select = useWorld((s) => s.select)
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const structures = useWorldSampled((s) => s.structures)
+  const seaLevel = useWorldSampled((s) => s.seaLevel)
+  const year = useWorldSampled((s) => s.year)
+  const droughts = useWorldSampled((s) => s.droughts)
+  const select = useWorldSampled((s) => s.select)
 
   const site = selectedSiteId ? getSite(selectedSiteId) : undefined
   if (!site) return null

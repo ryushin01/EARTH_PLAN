@@ -1,5 +1,5 @@
 import { SPEEDS, isHourFrozen, utcHourOf } from '../../model/world/time'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import type { SpeedId } from '../../model/world/time'
 import { Button, ChoiceGroup, RangeField } from '@/shared/ui'
 import { useT } from '../i18n'
@@ -21,14 +21,14 @@ function formatHour(hour: number): string {
 /** 재생·정지, 속도, 시각 조절 */
 export function TimeControls() {
   const { t } = useT()
-  const year = useWorld((s) => s.year)
-  const running = useWorld((s) => s.running)
-  const speed = useWorld((s) => s.speed)
-  const heldHour = useWorld((s) => s.heldHour)
-  const setRunning = useWorld((s) => s.setRunning)
-  const setSpeed = useWorld((s) => s.setSpeed)
-  const setHour = useWorld((s) => s.setHour)
-  const reset = useWorld((s) => s.reset)
+  const year = useWorldSampled((s) => s.year)
+  const running = useWorldSampled((s) => s.running)
+  const speed = useWorldSampled((s) => s.speed)
+  const heldHour = useWorldSampled((s) => s.heldHour)
+  const setRunning = useWorldSampled((s) => s.setRunning)
+  const setSpeed = useWorldSampled((s) => s.setSpeed)
+  const setHour = useWorldSampled((s) => s.setHour)
+  const reset = useWorldSampled((s) => s.reset)
 
   const frozen = isHourFrozen(speed)
   const hour = frozen ? heldHour : utcHourOf(year)

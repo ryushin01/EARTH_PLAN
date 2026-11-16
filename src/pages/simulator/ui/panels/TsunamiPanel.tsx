@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { TRENCHES } from '../../model/site/data'
 import { EMPTY_TEXT, regionName, siteName, siteNote } from '../../model/text'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { Button, RangeField, SelectField, StatusMessage } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
@@ -14,10 +14,10 @@ const OUTCOME_STYLE = {
 
 export function TsunamiPanel() {
   const { t, pick, locale } = useT()
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const tsunamis = useWorld((s) => s.tsunamis)
-  const select = useWorld((s) => s.select)
-  const triggerTsunami = useWorld((s) => s.triggerTsunami)
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const tsunamis = useWorldSampled((s) => s.tsunamis)
+  const select = useWorldSampled((s) => s.select)
+  const triggerTsunami = useWorldSampled((s) => s.triggerTsunami)
 
   const [trenchId, setTrenchId] = useState(TRENCHES[0].id)
   const [magnitude, setMagnitude] = useState(9)

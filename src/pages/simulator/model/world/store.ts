@@ -163,6 +163,11 @@ export function formatEnergy(mt: number, locale: Locale = 'ko'): string {
 
 const nowMs = () => (typeof performance === 'undefined' ? 0 : performance.now())
 
+let ticking = false
+
+/** 지금 바뀌는 상태가 시간 진행(tick)에서 나왔는지 (화면 갱신을 솎을 때 씀) */
+export const isTicking = () => ticking
+
 export const useWorld = create<WorldStore>()((set, get) => {
   const log = (events: NewEvent[]) =>
     set((state) => appendEvents(state, events))
@@ -217,28 +222,38 @@ export const useWorld = create<WorldStore>()((set, get) => {
     ])
   }
 
+  /** 시간을 진행하고 그 사이 사건·미션을 처리 */
+  const advance = (state: WorldState, dtSeconds: number) => {
+    const dt = Math.min(dtSeconds, 0.1)
+    let dtYears = SPEED_BY_ID[state.speed].yearsPerSecond * dt
+    // 미션 중에는 마지막 해를 넘기지 않음
+    const mission =
+      state.mission?.status === 'active'
+        ? MISSION_BY_ID[state.mission.id]
+        : undefined
+    if (mission)
+      dtYears = Math.min(
+        dtYears,
+        Math.max(0, mission.endYear - state.year) + 1e-9,
+      )
+    const { patch, events } = step(state, dtYears, Math.random, nowMs())
+    set(patch)
+    log(events)
+    runMission()
+  }
+
   return {
     ...initialState(),
 
     tick: (dtSeconds) => {
       const state = get()
       if (!state.running) return
-      const dt = Math.min(dtSeconds, 0.1)
-      let dtYears = SPEED_BY_ID[state.speed].yearsPerSecond * dt
-      // 미션 중에는 마지막 해를 넘기지 않음
-      const mission =
-        state.mission?.status === 'active'
-          ? MISSION_BY_ID[state.mission.id]
-          : undefined
-      if (mission)
-        dtYears = Math.min(
-          dtYears,
-          Math.max(0, mission.endYear - state.year) + 1e-9,
-        )
-      const { patch, events } = step(state, dtYears, Math.random, nowMs())
-      set(patch)
-      log(events)
-      runMission()
+      ticking = true
+      try {
+        advance(state, dtSeconds)
+      } finally {
+        ticking = false
+      }
     },
 
     setRunning: (running) => set({ running }),

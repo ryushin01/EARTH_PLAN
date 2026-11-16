@@ -9,7 +9,7 @@ import {
   isInDrought,
   wildfireArea,
 } from '../../model/world/hazards'
-import { useWorld } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { decimalYearToDate, formatNumber } from '@/shared/lib'
 import { Button, ChoiceGroup, SelectField, StatusMessage } from '@/shared/ui'
@@ -19,14 +19,14 @@ type Severity = '1' | '2' | '3'
 /** 산불과 가뭄 */
 export function HazardPanel() {
   const { t, pick, locale } = useT()
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const structures = useWorld((s) => s.structures)
-  const year = useWorld((s) => s.year)
-  const droughts = useWorld((s) => s.droughts)
-  const warmingC = useWorld(warming)
-  const select = useWorld((s) => s.select)
-  const startWildfire = useWorld((s) => s.startWildfire)
-  const startDrought = useWorld((s) => s.startDrought)
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const structures = useWorldSampled((s) => s.structures)
+  const year = useWorldSampled((s) => s.year)
+  const droughts = useWorldSampled((s) => s.droughts)
+  const warmingC = useWorldSampled(warming)
+  const select = useWorldSampled((s) => s.select)
+  const startWildfire = useWorldSampled((s) => s.startWildfire)
+  const startDrought = useWorldSampled((s) => s.startDrought)
 
   const [regionId, setRegionId] = useState(REGIONS[0].id)
   const [severity, setSeverity] = useState<Severity>('2')

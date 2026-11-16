@@ -8,7 +8,8 @@ import {
   impactPeakCooling,
   thermalRadiusKm,
 } from '../../model/world/hazards'
-import { formatDiameter, formatEnergy, useWorld } from '../../model/world/store'
+import { formatDiameter, formatEnergy } from '../../model/world/store'
+import { useWorldSampled } from '../../model/world/sampled'
 import { useT } from '../i18n'
 import { Button, RangeField, SelectField, StatusMessage } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
@@ -17,11 +18,11 @@ const SIZES = [50, 140, 340, 1000, 5000, 10000] as const
 
 export function AsteroidPanel() {
   const { t, pick, locale } = useT()
-  const selectedSiteId = useWorld((s) => s.selectedSiteId)
-  const structures = useWorld((s) => s.structures)
-  const year = useWorld((s) => s.year)
-  const select = useWorld((s) => s.select)
-  const triggerImpact = useWorld((s) => s.triggerImpact)
+  const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
+  const structures = useWorldSampled((s) => s.structures)
+  const year = useWorldSampled((s) => s.year)
+  const select = useWorldSampled((s) => s.select)
+  const triggerImpact = useWorldSampled((s) => s.triggerImpact)
 
   const [targetId, setTargetId] = useState(OCEANS[0].id)
   const [sizeIndex, setSizeIndex] = useState(3)

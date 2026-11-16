@@ -111,6 +111,14 @@ describe('SiteMarkers', () => {
     expect(document.body.style.cursor).toBe('')
   })
 
+  it('마우스를 올린 채 마커가 사라지면 커서를 되돌린다', async () => {
+    const { renderer, markers } = await setup()
+    await renderer.fireEvent(markers()[0], 'pointerOver')
+    expect(document.body.style.cursor).toBe('pointer')
+    await renderer.unmount()
+    expect(document.body.style.cursor).toBe('')
+  })
+
   it('영어로 바꾸면 이름표도 영어다', async () => {
     useLocale.setState({ locale: 'en' })
     const { label } = await setup({ selectedId: 'baekdu' })

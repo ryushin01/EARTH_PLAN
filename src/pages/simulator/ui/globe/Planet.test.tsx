@@ -148,6 +148,15 @@ describe('Planet', () => {
     await renderer.unmount()
   })
 
+  it('지구가 사라지면 직접 만든 텍스처를 해제한다', async () => {
+    const { renderer, uniforms } = await render()
+    const u = uniforms()
+    const textures = [u.uAlbedo.value, u.uLights.value, u.uElevation.value]
+    const disposed = textures.map((texture) => vi.spyOn(texture, 'dispose'))
+    await renderer.unmount()
+    for (const spy of disposed) expect(spy).toHaveBeenCalledOnce()
+  })
+
   it('지표면을 누르면 그 지점을 알리고, 끌기는 무시한다', async () => {
     const onSurfaceClick = vi.fn()
     const { renderer, earth } = await render({ onSurfaceClick })

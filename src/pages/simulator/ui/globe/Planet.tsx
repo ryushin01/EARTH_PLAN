@@ -12,6 +12,7 @@ import {
   Vector4,
 } from 'three'
 import type { DirectionalLight, Group, ShaderMaterial } from 'three'
+import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { TEXTURES, TEXTURES_SMALL, prefersSmallTextures } from '@/shared/config'
 import type { Vec3 } from '@/shared/lib'
@@ -91,6 +92,16 @@ export function Planet({
     [bitmaps],
   )
 
+  // 직접 만든 텍스처는 React Three Fiber가 해제하지 않으므로 지구가 사라질 때 GPU 메모리를 돌려줌
+  // (원본 이미지는 useLoader 캐시가 들고 있어 다시 그리면 그대로 다시 올림)
+  useEffect(
+    () => () => {
+      for (const texture of [albedo, lights, elevation, clouds])
+        texture.dispose()
+    },
+    [albedo, lights, elevation, clouds],
+  )
+
   const earthRef = useRef<ShaderMaterial>(null)
   const cloudRef = useRef<ShaderMaterial>(null)
   const atmoRef = useRef<ShaderMaterial>(null)
@@ -144,10 +155,13 @@ export function Planet({
     [],
   )
 
+  // 프레임마다 새로 만들지 않고 고쳐 씀
+  const sun = useMemo(() => new Vector3(), [])
+
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
     const frame = readFrame(t)
-    const sun = new Vector3(...frame.sun).normalize()
+    sun.set(...frame.sun).normalize()
     const earth = earthRef.current
     if (earth) {
       const u = earth.uniforms
@@ -232,7 +246,7 @@ export function Planet({
     <group ref={rootRef} visible={compiled}>
       {/* 태양 방향 (구조물 조명·우주 차양 위치 기준) */}
       <group ref={sunRef} name="sun-light" />
-      <SunLight />
+      <SunLight anchor={sunRef} />
       <mesh
         name="earth"
         onClick={(event: ThreeEvent<MouseEvent>) => {
@@ -280,12 +294,11 @@ export function Planet({
 }
 
 /** 구조물(표준 재질)을 비추는 태양광. 태양 방향 그룹을 따라갑니다 */
-function SunLight() {
+function SunLight({ anchor }: { anchor: RefObject<Group | null> }) {
   const ref = useRef<DirectionalLight>(null)
-  useFrame(({ scene }) => {
-    const anchor = scene.getObjectByName('sun-light')
+  useFrame(() => {
     const light = ref.current
-    if (anchor && light) light.position.copy(anchor.position)
+    if (anchor.current && light) light.position.copy(anchor.current.position)
   })
   return (
     <>

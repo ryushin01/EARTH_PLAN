@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Quaternion, Vector3 } from 'three'
-import type { Group } from 'three'
+import type { Group, Object3D } from 'three'
 import { latLonToVector3 } from '@/shared/lib'
 import type { LatLon } from '@/shared/lib'
 import type { BuiltStructure } from '../../model/structure/types'
@@ -219,8 +219,12 @@ function DefenseSatellites({ active }: { active: boolean }) {
 /** 태양 쪽을 향해 지구 밖에 떠 있는 우주 차양 */
 function SolarShade({ active }: { active: boolean }) {
   const ref = useRef<Group>(null)
+  // 태양 방향 그룹(Planet 안)은 한 번 찾아 두고, 지구가 다시 만들어져 떨어져 나가면 다시 찾음
+  const anchor = useRef<Object3D | undefined>(undefined)
   useFrame(({ scene }) => {
-    const sun = scene.getObjectByName('sun-light')
+    if (!anchor.current?.parent)
+      anchor.current = scene.getObjectByName('sun-light')
+    const sun = anchor.current
     if (sun && ref.current) {
       ref.current.position.copy(sun.position).normalize().multiplyScalar(1.9)
       ref.current.lookAt(0, 0, 0)

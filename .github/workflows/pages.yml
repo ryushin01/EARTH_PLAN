@@ -30,11 +30,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # 저장소 이름 하위 경로(https://ryushin01.github.io/EARTH_PLAN/)에 맞춰 빌드, Storybook은 /storybook/
+      # 없는 주소에 내주는 404.html(SPA 셸)도 빌드가 만듦
       - run: pnpm build:all
         env:
           BASE_PATH: /EARTH_PLAN/
-      # 없는 주소로 들어와도 앱이 열리도록 함
-      - run: cp dist/client/index.html dist/client/404.html
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist/client

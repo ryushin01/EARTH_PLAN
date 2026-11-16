@@ -2,10 +2,11 @@ import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/shared/lib'
 
 type Variant = 'primary' | 'ghost' | 'danger'
+type Size = 'md' | 'sm'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
-  size?: 'md' | 'sm'
+  size?: Size
   /** 앞쪽 작은 사각 표시 (아이콘 버튼은 끔) */
   indicator?: boolean
 }
@@ -17,6 +18,33 @@ const variants: Record<Variant, string> = {
     'border border-line-strong text-ice hover:border-ice hover:text-accent disabled:text-muted disabled:border-line',
   danger:
     'bg-warn text-black hover:brightness-110 disabled:bg-steel disabled:text-muted',
+}
+
+/** 버튼 모양 클래스 (버튼처럼 보이는 링크에도 씀) */
+export function buttonClasses({
+  variant = 'ghost',
+  size = 'md',
+  className,
+}: { variant?: Variant; size?: Size; className?: string } = {}) {
+  return cn(
+    'group inline-flex items-center justify-center gap-2 rounded-xs font-display font-semibold uppercase tracking-[0.04em] transition-colors disabled:cursor-not-allowed',
+    size === 'md' ? 'min-h-11 px-4 text-sm' : 'min-h-9 px-3 text-xs',
+    variants[variant],
+    className,
+  )
+}
+
+/** 버튼 앞의 작은 사각 표시 (꾸밈) */
+export function ButtonIndicator({ variant = 'ghost' }: { variant?: Variant }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'size-1.5 shrink-0 transition-colors',
+        variant === 'ghost' ? 'bg-muted group-hover:bg-accent' : 'bg-black/70',
+      )}
+    />
+  )
 }
 
 /** 대문자 라벨 + 작은 사각 표시가 있는 각진 버튼 */
@@ -32,25 +60,10 @@ export function Button({
   return (
     <button
       type={type}
-      className={cn(
-        'group inline-flex items-center justify-center gap-2 rounded-xs font-display font-semibold uppercase tracking-[0.04em] transition-colors disabled:cursor-not-allowed',
-        size === 'md' ? 'min-h-11 px-4 text-sm' : 'min-h-9 px-3 text-xs',
-        variants[variant],
-        className,
-      )}
+      className={buttonClasses({ variant, size, className })}
       {...props}
     >
-      {indicator ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            'size-1.5 shrink-0 transition-colors',
-            variant === 'ghost'
-              ? 'bg-muted group-hover:bg-accent'
-              : 'bg-black/70',
-          )}
-        />
-      ) : null}
+      {indicator ? <ButtonIndicator variant={variant} /> : null}
       {children}
     </button>
   )

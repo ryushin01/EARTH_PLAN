@@ -36,7 +36,7 @@ ETOPO1을 쓸 때 NOAA가 밝히도록 한 문헌입니다.
 
 ```bash
 curl -o korea.nc "https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?altitude%5B(33.0):1:(43.0)%5D%5B(124.0):1:(131.0)%5D"
-node scripts/build-korea-detail.mjs korea.nc korea-elevation.png
+pnpm data:korea korea.nc korea-elevation.png
 cwebp -lossless -exact -z 9 korea-elevation.png -o public/textures/korea-elevation.webp
 ```
 

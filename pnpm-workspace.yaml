@@ -5,10 +5,8 @@ ignoreWorkspaceRootCheck: true
 # 개발 도구 하위 의존성의 알려진 취약점을 고친 버전으로 (배포되는 사이트에는 들어가지 않음)
 # - basic-ftp: Lighthouse CI → get-uri 경로. 6.0의 호환성 변경은 별도 전송 호스트 차단뿐이라 get-uri에 영향 없음
 # - glob: Storybook 문서 생성 플러그인(0.7.0)이 globSync만 씀
-# - minimatch: ESLint(10.15부터 ^11을 씀)와 @typescript-eslint/typescript-estree. 공개 대기 기간이 지나면 ESLint를 올리고 정리
+# - minimatch: @typescript-eslint/typescript-estree (ESLint 쪽은 10.15부터 ^11을 써서 override가 필요 없음)
 overrides:
   basic-ftp: ^6.2.4
   '@joshwooding/vite-plugin-react-docgen-typescript>glob': ^14.0.4
-  '@eslint/config-array>minimatch': ^11.0.5
-  'eslint>minimatch': ^11.0.5
   '@typescript-eslint/typescript-estree>minimatch': ^11.0.5

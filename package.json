@@ -26,7 +26,7 @@
     "build-storybook": "storybook build -o dist/client/storybook",
     "screenshots": "node scripts/screenshots.mjs",
     "data:elevation": "node scripts/build-elevation.mjs",
-    "data:korea": "node scripts/build-korea-detail.mjs",
+    "data:detail": "node scripts/build-detail-patch.mjs",
     "poster": "node scripts/capture-globe-poster.mjs",
     "fonts": "node scripts/build-fonts.mjs"
   },

@@ -8,6 +8,7 @@ import type { Mesh, ShaderMaterial, Texture } from 'three'
 import type { PlanetFrame } from '../../model/planet'
 import { useThree } from '@react-three/fiber'
 import type * as Fiber from '@react-three/fiber'
+import { DETAIL_PATCHES } from '@/shared/config'
 import { COMPILE_TIMEOUT_MS, Planet, preloadPlanet } from './Planet'
 
 const preload = vi.hoisted(() => vi.fn())
@@ -173,34 +174,57 @@ describe('Planet', () => {
     for (const spy of disposed) expect(spy).toHaveBeenCalledOnce()
   })
 
-  it('지구가 보이면 한반도 고해상도 고도를 받아 셰이더에 넣고, 사라지면 해제한다', async () => {
-    const bitmap = { width: 2, height: 3, close: vi.fn() }
+  it('지구가 보이면 고해상도 고도 패치(한반도·도쿄만·네덜란드)를 받아 셰이더에 넣고, 사라지면 해제한다', async () => {
     vi.stubGlobal('createImageBitmap', vi.fn())
-    let deliver: (() => void) | undefined
+    const deliveries = new Map<string, () => void>()
+    const bitmaps = DETAIL_PATCHES.map(() => ({
+      width: 2,
+      height: 3,
+      close: vi.fn(),
+    }))
     const load = vi
       .spyOn(ImageBitmapLoader.prototype, 'load')
       .mockImplementation((url, onLoad) => {
-        expect(url).toContain('korea-elevation')
-        deliver = () => onLoad?.(bitmap)
+        const i = DETAIL_PATCHES.findIndex((patch) => patch.url === url)
+        expect(i).toBeGreaterThanOrEqual(0)
+        deliveries.set(url, () => onLoad?.(bitmaps[i]))
       })
     const { renderer, uniforms, invalidate } = await render()
-    await waitFor(() => expect(load).toHaveBeenCalledOnce())
-    invalidate.mockClear()
-    deliver!()
-    // 그리기를 쉬는 중에도 바로 보이게 다음 프레임을 요청
-    expect(invalidate).toHaveBeenCalled()
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(3))
+    expect(DETAIL_PATCHES.map((patch) => patch.id)).toEqual([
+      'korea',
+      'tokyo-bay',
+      'netherlands',
+    ])
     const u = uniforms()
-    expect(u.uDetailOn.value).toBe(1)
-    const detail = u.uDetail.value as Texture
-    expect(detail.image).toBe(bitmap)
-    // 텍스처 좌표의 서·남·동·북: 동경 124~131°, 북위 33~43° (반 칸씩 더함)
-    expect(u.uDetailRect.value.x).toBeCloseTo((124 - 1 / 120 + 180) / 360)
-    expect(u.uDetailRect.value.w).toBeCloseTo((43 + 1 / 120 + 90) / 180)
-    const dispose = vi.spyOn(detail, 'dispose')
+    DETAIL_PATCHES.forEach((patch, i) => {
+      invalidate.mockClear()
+      deliveries.get(patch.url)!()
+      // 그리기를 쉬는 중에도 바로 보이게 다음 프레임을 요청
+      expect(invalidate).toHaveBeenCalled()
+      expect(u.uDetailOn.value[i]).toBe(1)
+      expect((u[`uDetail${i}`].value as Texture).image).toBe(bitmaps[i])
+      // 텍스처 좌표의 서·남·동·북 (격자점이 픽셀 가운데라 반 칸씩 더함)
+      const rect = u.uDetailRect.value[i]
+      expect(rect.x).toBeCloseTo((patch.bounds.west + 180) / 360)
+      expect(rect.y).toBeCloseTo((patch.bounds.south + 90) / 180)
+      expect(rect.z).toBeCloseTo((patch.bounds.east + 180) / 360)
+      expect(rect.w).toBeCloseTo((patch.bounds.north + 90) / 180)
+    })
+    // 한반도: 동경 124~131°, 북위 33~43° 격자에 반 칸(1/120°)씩
+    expect(DETAIL_PATCHES[0].bounds).toEqual({
+      west: 124 - 1 / 120,
+      east: 131 + 1 / 120,
+      south: 33 - 1 / 120,
+      north: 43 + 1 / 120,
+    })
+    const disposes = DETAIL_PATCHES.map((_, i) =>
+      vi.spyOn(u[`uDetail${i}`].value as Texture, 'dispose'),
+    )
     await renderer.unmount()
-    expect(dispose).toHaveBeenCalledOnce()
+    for (const dispose of disposes) expect(dispose).toHaveBeenCalledOnce()
     // 직접 받은 패치 이미지도 닫음
-    expect(bitmap.close).toHaveBeenCalledOnce()
+    for (const bitmap of bitmaps) expect(bitmap.close).toHaveBeenCalledOnce()
     vi.unstubAllGlobals()
   })
 

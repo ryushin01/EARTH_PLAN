@@ -140,6 +140,8 @@ function initialState(): WorldState {
     nextEventId: 1,
     history: [],
     stormDamage: 0,
+    gridDamagedCityIds: [],
+    satellitesLost: 0,
     spent: 0,
     mission: null,
   }
@@ -215,19 +217,27 @@ export const useWorld = create<WorldStore>()((set, get) => {
           firedIds: [...state.mission.firedIds, item.id],
         },
       }))
+      // 며칠 만에 지나가는 사건은 빠른 속도에서 한순간에 끝나 보이지 않으므로 1일 속도로 늦춤
+      const slow = item.slowDown === true && isHourFrozen(get().speed)
       log([
         {
           tone: 'warn',
-          text: compose(
-            (l) =>
-              `${l === 'ko' ? '미션 사건' : 'Mission event'}: ${item.warning[l]}`,
-          ),
+          mission: true,
+          text: compose((l) => {
+            const notice = `${l === 'ko' ? '미션 사건' : 'Mission event'}: ${item.warning[l]}`
+            if (!slow) return notice
+            return l === 'ko'
+              ? `${notice} 지켜볼 수 있게 1일 속도로 늦춥니다.`
+              : `${notice} Slowing to 1 day per second so you can watch.`
+          }),
         },
       ])
+      if (slow) get().setSpeed('day')
       const h = item.hazard
       if (h.kind === 'impact') get().triggerImpact(h.targetId, h.diameterM)
       if (h.kind === 'tsunami') get().triggerTsunami(h.sourceId, h.magnitude)
       if (h.kind === 'eruption') get().triggerEruption(h.volcanoId, h.vei)
+      if (h.kind === 'solar') get().triggerSolarStorm(h.level)
     }
     if (get().year < mission.endYear) return
     const result = mission.evaluate(get())
@@ -254,16 +264,21 @@ export const useWorld = create<WorldStore>()((set, get) => {
   const advance = (state: WorldState, dtSeconds: number) => {
     const dt = Math.min(dtSeconds, 0.1)
     let dtYears = SPEED_BY_ID[state.speed].yearsPerSecond * dt
-    // 미션 중에는 마지막 해를 넘기지 않음
+    // 미션 중에는 마지막 해와 아직 일어나지 않은 사건 날짜를 넘기지 않음 (정해진 날짜에 일어나도록)
     const mission =
       state.mission?.status === 'active'
         ? MISSION_BY_ID[state.mission.id]
         : undefined
-    if (mission)
-      dtYears = Math.min(
-        dtYears,
-        Math.max(0, mission.endYear - state.year) + 1e-9,
+    if (mission) {
+      const fired = state.mission?.firedIds ?? []
+      const stop = Math.min(
+        mission.endYear,
+        ...mission.schedule
+          .filter((item) => !fired.includes(item.id))
+          .map((item) => item.year),
       )
+      dtYears = Math.min(dtYears, Math.max(0, stop - state.year) + 1e-9)
+    }
     const { patch, events } = step(state, dtYears, Math.random, nowMs())
     set(patch)
     log(events)
@@ -795,7 +810,15 @@ export const useWorld = create<WorldStore>()((set, get) => {
         state.structures,
         state.year,
       )
+      const damaged = impacts.filter((i) => i.outcome === 'damaged')
       set({
+        gridDamagedCityIds: [
+          ...new Set([
+            ...state.gridDamagedCityIds,
+            ...damaged.map((i) => i.cityId),
+          ]),
+        ],
+        satellitesLost: state.satellitesLost + satellitesLost,
         solarStorms: [
           ...state.solarStorms.slice(-2),
           {
@@ -809,7 +832,6 @@ export const useWorld = create<WorldStore>()((set, get) => {
           },
         ],
       })
-      const damaged = impacts.filter((i) => i.outcome === 'damaged')
       const dark = impacts.filter((i) => i.outcome !== 'protected')
       const saved = impacts.filter((i) => i.outcome === 'protected')
       const pop = totalPopulation(dark.map((i) => i.cityId)).toFixed(1)

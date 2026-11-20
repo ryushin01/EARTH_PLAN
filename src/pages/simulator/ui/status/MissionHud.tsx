@@ -53,11 +53,14 @@ interface Announcement {
   count: number
   /** 그중 가장 최근 사건 */
   event: WorldEvent
+  /** 그 앞에 함께 읽을 미션 사건 안내 (오래된 순) */
+  notes: WorldEvent[]
 }
 
 /**
  * 새 사건을 화면 낭독기에 알릴 내용. 빠르게 재생하면 사건이 연달아 생기므로
- * ANNOUNCE_MS 안에 생긴 사건은 모아 "새 사건 N건"으로 한 번만 알립니다
+ * ANNOUNCE_MS 안에 생긴 사건은 모아 "새 사건 N건"으로 한 번만 알립니다.
+ * 미션 사건 안내(예: 재생 속도를 늦춤)는 같은 순간의 재해 기록에 가려지지 않게 함께 읽습니다
  */
 function useEventAnnouncement(events: WorldEvent[]): Announcement | null {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
@@ -76,9 +79,13 @@ function useEventAnnouncement(events: WorldEvent[]): Announcement | null {
       const count = seen === -1 ? list.length : seen
       const event = list.at(0)
       if (!event || count === 0) return
+      const notes = list
+        .slice(1, count)
+        .filter((e) => e.mission)
+        .reverse()
       announced.current = event
       lastAt.current = performance.now()
-      setAnnouncement({ count, event })
+      setAnnouncement({ count, event, notes })
     }
     if (events.at(0) === announced.current || timer.current) return
     const wait = ANNOUNCE_MS - (performance.now() - lastAt.current)
@@ -161,7 +168,12 @@ export function MissionHud() {
         {/* 새 사건을 화면 낭독기에 알림 (내용만 바뀜, 짧은 간격의 사건은 묶어서) */}
         <p role="status" className="sr-only">
           {announcement
-            ? `${announcement.count > 1 ? `${t('hud.newEvents', { n: announcement.count })}. ` : ''}${t(TONE_KEY[announcement.event.tone])}: ${pick(announcement.event.text)}`
+            ? `${announcement.count > 1 ? `${t('hud.newEvents', { n: announcement.count })}. ` : ''}${[
+                ...announcement.notes,
+                announcement.event,
+              ]
+                .map((e) => `${t(TONE_KEY[e.tone])}: ${pick(e.text)}`)
+                .join(' ')}`
             : ''}
         </p>
         {events.length === 0 ? (

@@ -83,7 +83,7 @@ describe('GlobeViewport', () => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
     vi.useRealTimers()
-    Reflect.deleteProperty(window, '__earthPlanWoke')
+    Reflect.deleteProperty(window, '__terraNovaWoke')
     useLocale.setState({ locale: 'ko' })
     window.history.replaceState(null, '', '/')
   })
@@ -190,7 +190,7 @@ describe('GlobeViewport', () => {
 
   it('페이지가 준비되기 전에 입력이 있었으면 기다리지 않고 3D를 불러온다', async () => {
     // EARLY_WAKE_SCRIPT가 남기는 표시
-    Object.assign(window, { __earthPlanWoke: true })
+    Object.assign(window, { __terraNovaWoke: true })
     setup()
     expect(await screen.findByTestId('canvas')).toBeInTheDocument()
   })

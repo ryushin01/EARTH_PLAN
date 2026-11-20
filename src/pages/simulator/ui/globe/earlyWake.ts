@@ -9,7 +9,7 @@ export const WAKE_EVENTS = [
   'focusin',
 ] as const
 
-const FLAG = '__earthPlanWoke'
+const FLAG = '__terraNovaWoke'
 
 /**
  * 페이지가 준비(하이드레이션)되기 전에 들어온 첫 입력을 기록하는 인라인 스크립트.

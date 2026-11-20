@@ -18,7 +18,7 @@ describe('AppErrorPage', () => {
       'href',
       '/',
     )
-    expect(document.title).toBe('문제가 생겼습니다 · EARTH PLAN')
+    expect(document.title).toBe('문제가 생겼습니다 · TerraNova')
     logged.mockRestore()
   })
 })

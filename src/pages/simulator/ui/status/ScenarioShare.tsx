@@ -9,10 +9,15 @@ import {
 import type { Snapshot } from '../../model/world/snapshot'
 import { useWorld } from '../../model/world/store'
 import { formatSimDate } from './TimeControls'
+import { readMigrated } from '@/shared/lib'
 import { Button, StatusMessage } from '@/shared/ui'
 import { useT } from '../i18n'
 
-const STORAGE_KEY = 'earth-plan:saves'
+const STORAGE_KEY = 'terranova:saves'
+/** 이름을 바꾸기 전(EARTH_PLAN) 키 */
+const LEGACY_STORAGE_KEY = 'earth-plan:saves'
+/** 옛 키에서 옮기지 못했으면 옛 키에 계속 씀 (읽을 수 있는 값이 있는 곳) */
+let storageKey = STORAGE_KEY
 const MAX_SAVES = 8
 
 interface SavedItem {
@@ -35,7 +40,13 @@ function subscribe(listener: () => void) {
 
 function readRaw(): string {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) ?? '[]'
+    const stored = readMigrated(
+      window.localStorage,
+      STORAGE_KEY,
+      LEGACY_STORAGE_KEY,
+    )
+    storageKey = stored.key
+    return stored.value ?? '[]'
   } catch {
     return '[]'
   }
@@ -65,7 +76,7 @@ function parseSaves(raw: string): SavedItem[] {
 
 function writeSaves(items: SavedItem[]): boolean {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    window.localStorage.setItem(storageKey, JSON.stringify(items))
     listeners.forEach((l) => l())
     return true
   } catch {
@@ -138,7 +149,13 @@ export function ScenarioShare() {
 
   const remove = (item: SavedItem) => {
     const next = saves.filter((s) => s.id !== item.id)
-    writeSaves(next)
+    if (!writeSaves(next)) {
+      setStatus({
+        ok: false,
+        message: t('share.removeBlocked', { name: item.name }),
+      })
+      return
+    }
     setStatus({ ok: true, message: t('share.removed', { name: item.name }) })
   }
 

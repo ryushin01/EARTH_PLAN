@@ -2,7 +2,7 @@ import { EARLY_WAKE_SCRIPT, WAKE_EVENTS, wokeEarly } from './earlyWake'
 
 describe('EARLY_WAKE_SCRIPT', () => {
   afterEach(() => {
-    Reflect.deleteProperty(window, '__earthPlanWoke')
+    Reflect.deleteProperty(window, '__terraNovaWoke')
   })
 
   it('첫 입력을 기록하고 나머지 듣기는 그만둔다', () => {

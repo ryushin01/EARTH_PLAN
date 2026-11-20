@@ -1,11 +1,11 @@
-# EARTH_PLAN - 지구 환경·재해 대응 시뮬레이터
+# TerraNova - 지구 환경·재해 대응 시뮬레이터
 
-[![CI](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml/badge.svg)](https://github.com/ryushin01/EARTH_PLAN/actions/workflows/ci.yml)
-![version](https://img.shields.io/badge/version-1.0.0-00a1ff)
+[![CI](https://github.com/ryushin01/TerraNova/actions/workflows/ci.yml/badge.svg)](https://github.com/ryushin01/TerraNova/actions/workflows/ci.yml)
+![version](https://img.shields.io/badge/version-1.0.1-00a1ff)
 
 3D 지구 위에서 해수면 상승, 화산 분화, 쓰나미, 지진, 소행성 충돌, 태양 폭풍, 산불·가뭄을 일으키고 해협 댐·우주 차양·행성 방위 요격망 같은 거대 구조물로 막아 보는 웹 시뮬레이터입니다.
 
-**[데모 바로 보기](https://ryushin01.github.io/EARTH_PLAN/)** · [Storybook](https://ryushin01.github.io/EARTH_PLAN/storybook/)
+**[데모 바로 보기](https://ryushin01.github.io/TerraNova/)** · [Storybook](https://ryushin01.github.io/TerraNova/storybook/)
 
 > **프로젝트 상태:** 1.0.0으로 정식 공개한 **개인 프로젝트**입니다. 해수면 상승은 실제 고도 자료(NOAA ETOPO1, 한반도는 1분 해상도)로 계산하지만, 도시 고도·인구·피해 규모는 대략값과 단순화한 모델이라 교육·탐색용으로만 쓰세요.
 
@@ -90,7 +90,7 @@ pnpm dev    # http://localhost:3000
 | 명령                                   | 설명                                                                                                   |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `pnpm build` / `pnpm preview`          | 정적 사이트 빌드(`dist/client`) / 빌드 결과 실행                                                       |
-| `pnpm build:all`                       | 사이트와 Storybook을 함께 빌드 (하위 경로는 `BASE_PATH=/EARTH_PLAN/`)                                  |
+| `pnpm build:all`                       | 사이트와 Storybook을 함께 빌드 (하위 경로는 `BASE_PATH=/TerraNova/`)                                   |
 | `pnpm lint` / `lint:fsd` / `typecheck` | ESLint / FSD 구조 검사 / 타입 검사                                                                     |
 | `pnpm test`                            | 단위·컴포넌트 테스트 (jsdom, 3D 장면 포함)                                                             |
 | `pnpm test:storybook`                  | 모든 스토리를 Chromium에서 렌더링하고 접근성 검사 (처음 한 번 `pnpm exec playwright install chromium`) |

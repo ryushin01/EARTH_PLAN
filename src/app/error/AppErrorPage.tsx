@@ -37,7 +37,7 @@ export function AppErrorPage({ error, reset }: ErrorComponentProps) {
     console.error(error)
   }, [error])
   useEffect(() => {
-    document.title = `${text.title} · EARTH PLAN`
+    document.title = `${text.title} · TerraNova`
   }, [text])
   return (
     <MessageScreen

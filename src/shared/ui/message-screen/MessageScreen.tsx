@@ -24,7 +24,7 @@ export function MessageScreen({
     <div className="flex min-h-svh flex-col bg-space text-ice">
       <header className="px-4 pt-4">
         <p className="font-display text-2xl font-semibold uppercase leading-none tracking-[-0.03em]">
-          Earth<span className="text-accent">_</span>Plan
+          Terra<span className="text-accent">Nova</span>
         </p>
         <p className="mt-1 text-xs text-muted">{tagline}</p>
       </header>

@@ -50,7 +50,7 @@ export function stampServiceWorker(outDir: string): boolean {
 /** 브라우저용 빌드가 끝나면 서비스 워커에 버전을 넣는 Vite 플러그인 */
 export function serviceWorkerVersion(): Plugin {
   return {
-    name: 'earth-plan:sw-version',
+    name: 'terranova:sw-version',
     apply: 'build',
     closeBundle: {
       order: 'post',

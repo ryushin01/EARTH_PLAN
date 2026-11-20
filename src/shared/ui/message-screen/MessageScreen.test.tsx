@@ -13,7 +13,7 @@ describe('MessageScreen', () => {
         <a href="/">처음 화면으로</a>
       </MessageScreen>,
     )
-    expect(screen.getByRole('banner')).toHaveTextContent('Earth_Plan')
+    expect(screen.getByRole('banner')).toHaveTextContent('TerraNova')
     const main = screen.getByRole('main')
     expect(
       screen.getByRole('heading', {

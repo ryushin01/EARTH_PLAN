@@ -15,9 +15,9 @@ test.describe('시뮬레이터 첫 화면', () => {
       if (r.url().includes('GlobeCanvas')) chunks.push(r.url())
     })
     await page.goto('/')
-    await expect(page).toHaveTitle(/EARTH PLAN/)
+    await expect(page).toHaveTitle(/TerraNova/)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      /Earth.*Plan/i,
+      /TerraNova/,
     )
     await expect(page.locator('html')).toHaveAttribute('lang', 'ko')
     await expect(page.getByRole('main')).toBeVisible()
@@ -367,7 +367,7 @@ test.describe('설치와 지점 정보', () => {
     const href = await page.locator('link[rel="manifest"]').getAttribute('href')
     expect(href).toBeTruthy()
     const manifest = await (await page.request.get(href!)).json()
-    expect(manifest.short_name).toBe('EARTH PLAN')
+    expect(manifest.short_name).toBe('TerraNova')
     await expect
       .poll(() =>
         page.evaluate(
@@ -441,7 +441,7 @@ test.describe('없는 주소와 배포 파일', () => {
     await expect(page).toHaveTitle(/페이지를 찾을 수 없습니다/)
     await page.getByRole('link', { name: '처음 화면으로' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      /Earth.*Plan/i,
+      /TerraNova/,
     )
   })
 
@@ -469,9 +469,25 @@ test.describe('없는 주소와 배포 파일', () => {
 
   test('서비스 워커 캐시 이름에 빌드 버전이 들어 있다', async ({ page }) => {
     const sw = await (await page.request.get('/sw.js')).text()
-    expect(sw).toMatch(/earth-plan-assets-[0-9a-f]{12}/)
-    expect(sw).toMatch(/earth-plan-textures-[0-9a-f]{12}/)
+    expect(sw).toMatch(/terranova-assets-[0-9a-f]{12}/)
+    expect(sw).toMatch(/terranova-textures-[0-9a-f]{12}/)
     expect(sw).not.toContain('__ASSETS_VERSION__')
+  })
+
+  test('새 서비스 워커가 옛 이름(earth-plan)의 캐시를 지운다', async ({
+    page,
+  }) => {
+    // 같은 출처라 옛 주소(/EARTH_PLAN/)에서 만든 캐시가 남아 있을 수 있음
+    await page.addInitScript(() => {
+      void caches.open('earth-plan-assets-000000000000')
+    })
+    await page.goto('/')
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready
+    })
+    await expect
+      .poll(() => page.evaluate(() => caches.keys()), { timeout: 15_000 })
+      .not.toContain('earth-plan-assets-000000000000')
   })
 
   test('공유 미리보기 메타와 이미지가 있다', async ({ page }) => {
@@ -479,10 +495,10 @@ test.describe('없는 주소와 배포 파일', () => {
     const og = (property: string) =>
       page.locator(`meta[property="${property}"]`).getAttribute('content')
     expect(await og('og:image')).toMatch(/\/og-image\.jpg$/)
-    expect(await og('og:title')).toContain('EARTH PLAN')
+    expect(await og('og:title')).toContain('TerraNova')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       'href',
-      'https://ryushin01.github.io/EARTH_PLAN/',
+      'https://ryushin01.github.io/TerraNova/',
     )
     const image = await page.request.get('/og-image.jpg')
     expect(image.ok()).toBe(true)

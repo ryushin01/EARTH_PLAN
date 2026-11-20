@@ -1,4 +1,4 @@
-// README 화면(docs/images/*.jpg)을 다시 찍습니다.
+// README 화면(docs/images/*.jpg)과 공유 미리보기(public/og-image.jpg)를 다시 찍습니다.
 // 먼저 프로덕션 빌드를 띄워 두세요: pnpm build:all && pnpm preview
 // 사용: BASE_URL=http://localhost:4173 pnpm screenshots
 import { chromium } from '@playwright/test'
@@ -226,6 +226,22 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
     .selectOption('cascadia')
   await page.getByRole('button', { name: /Cascadia/ }).click()
   await shot(page, 'english', 6000)
+  await context.close()
+}
+
+// 공유 미리보기(public/og-image.jpg): 1200×630 첫 화면
+{
+  const { page, context } = await open({
+    utc: 3,
+    viewport: { width: 1200, height: 630 },
+  })
+  await page.waitForTimeout(3500)
+  await page.screenshot({
+    path: 'public/og-image.jpg',
+    type: 'jpeg',
+    quality: 82,
+  })
+  console.log('저장', 'og-image')
   await context.close()
 }
 

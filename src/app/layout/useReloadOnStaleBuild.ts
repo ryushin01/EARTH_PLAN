@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-const STORAGE_KEY = 'earth-plan:stale-reload'
+const STORAGE_KEY = 'terranova:stale-reload'
 /** 이 시간 안에 이미 한 번 다시 불러왔으면 또 하지 않음 (파일이 정말 없을 때 무한 새로고침 방지) */
 export const RELOAD_GUARD_MS = 60_000
 

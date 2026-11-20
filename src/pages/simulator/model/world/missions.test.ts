@@ -120,8 +120,13 @@ describe('미션', () => {
     expect(s.running).toBe(false)
     expect(s.impacts[0].targetId).toBe('tokyo')
     expect(s.events.some((e) => e.text.ko.startsWith('미션 실패'))).toBe(true)
-    // 늦추기를 표시하지 않은 사건은 재생 속도를 바꾸지 않음
-    expect(s.speed).toBe('decade')
+    // 충돌 순간을 볼 수 있게 1일 속도로 늦춤
+    expect(s.speed).toBe('day')
+    expect(
+      s.events.some(
+        (e) => e.mission && e.text.ko.includes('1일 속도로 늦춥니다'),
+      ),
+    ).toBe(true)
   })
 
   it('행성 방위 요격망을 바로 지으면 소행성 미션에 성공한다', () => {

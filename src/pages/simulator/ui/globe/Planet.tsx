@@ -242,6 +242,7 @@ export function Planet({
   const gl = useThree((state) => state.gl)
   const camera = useThree((state) => state.camera)
   const scene = useThree((state) => state.scene)
+  const invalidate = useThree((state) => state.invalidate)
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
@@ -293,6 +294,8 @@ export function Planet({
         detail.needsUpdate = true
         material.uniforms.uDetail.value = detail
         material.uniforms.uDetailOn.value = 1
+        // 그리기를 쉬는 중(frameloop="demand")에도 바로 보이게
+        invalidate()
       },
       undefined,
       () => undefined,
@@ -304,7 +307,7 @@ export function Planet({
       detail?.dispose()
       detailBitmap?.close()
     }
-  }, [compiled])
+  }, [compiled, invalidate])
 
   return (
     <group ref={rootRef} visible={compiled}>

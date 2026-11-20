@@ -138,6 +138,69 @@ test.describe('키보드 조작', () => {
   })
 })
 
+test.describe('필요할 때만 그리기', () => {
+  test('동작 줄이기로 멈춰 있으면 지구본 그리기를 쉬고, 돌리거나 끌면 다시 그린다', async ({
+    page,
+  }) => {
+    // WebGL 화면을 지우는 횟수 = 그린 프레임 수
+    await page.addInitScript(() => {
+      const w = window as unknown as { frames: number }
+      w.frames = 0
+      const proto = WebGL2RenderingContext.prototype
+      const clear = proto.clear
+      proto.clear = function (mask) {
+        w.frames++
+        clear.call(this, mask)
+      }
+    })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    const canvas = page.locator('canvas')
+    await canvas.waitFor()
+    // 지구가 보이면(셰이더 컴파일·텍스처 완료) 정지 이미지를 지움. 그 전에는 그릴 것이 없어 0번
+    await expect(page.locator(POSTER)).toHaveCount(0, { timeout: 30_000 })
+    const frames = () =>
+      page.evaluate(() => (window as unknown as { frames: number }).frames)
+    // 지구가 보이고 카메라·효과가 가라앉을 때까지
+    await expect
+      .poll(
+        async () => {
+          const before = await frames()
+          await page.waitForTimeout(1500)
+          return (await frames()) - before
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(0)
+
+    const globe = page.getByRole('group', { name: '지구본 조작 영역' })
+    await globe.focus()
+    const beforeKey = await frames()
+    await page.keyboard.press('ArrowLeft')
+    await expect.poll(frames).toBeGreaterThan(beforeKey)
+
+    await expect
+      .poll(
+        async () => {
+          const before = await frames()
+          await page.waitForTimeout(1500)
+          return (await frames()) - before
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(0)
+    const box = (await canvas.boundingBox())!
+    const beforeDrag = await frames()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, {
+      steps: 6,
+    })
+    await page.mouse.up()
+    await expect.poll(frames).toBeGreaterThan(beforeDrag)
+  })
+})
+
 test.describe('시뮬레이션 흐름', () => {
   test('해수면을 올리면 도시가 잠기고 방조제로 막는다', async ({ page }) => {
     await page.goto('/')
@@ -279,6 +342,11 @@ test.describe('미션과 추이', () => {
     await page.getByRole('button', { name: /행성 방위 요격망 짓기/ }).click()
     await aside.getByRole('radio', { name: '10년' }).check({ force: true })
     await aside.getByRole('button', { name: '재생' }).click()
+    // 충돌 순간에는 1일 속도로 늦춰 보여 줌 → 다시 10년 속도로
+    await expect(aside.getByRole('radio', { name: '1일' })).toBeChecked({
+      timeout: 15_000,
+    })
+    await aside.getByRole('radio', { name: '10년' }).check({ force: true })
     await expect(aside.getByRole('region', { name: '미션' })).toContainText(
       '성공',
       { timeout: 15_000 },

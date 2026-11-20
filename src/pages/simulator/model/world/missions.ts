@@ -115,6 +115,8 @@ export const MISSIONS: Mission[] = [
           '지름 340m 소행성이 도쿄에 다가옵니다.',
           'A 340 m asteroid is approaching Tokyo.',
         ),
+        // 잔해 구름은 시뮬레이션 5년에 걸쳐 걷히지만 불덩이는 화면 25초뿐이라, 빠른 속도에서도 충돌 순간을 보이게
+        slowDown: true,
       },
     ],
     evaluate: (state) => {

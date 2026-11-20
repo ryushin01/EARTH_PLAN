@@ -2,6 +2,7 @@ import ReactThreeTestRenderer, {
   act,
   waitFor,
 } from '@react-three/test-renderer'
+import { useLayoutEffect } from 'react'
 import { ImageBitmapLoader } from 'three'
 import type { Mesh, ShaderMaterial, Texture } from 'three'
 import type { PlanetFrame } from '../../model/planet'
@@ -49,12 +50,23 @@ function CompileResult({ result }: { result: Promise<unknown> }) {
   return null
 }
 
+/** 다음 프레임 요청(invalidate)을 기록하는 대역으로 바꿈 */
+function InvalidateSpy({ spy }: { spy: () => void }) {
+  const set = useThree((state) => state.set)
+  useLayoutEffect(() => {
+    set({ invalidate: spy })
+  }, [set, spy])
+  return null
+}
+
 async function render(
   props: Partial<Parameters<typeof Planet>[0]> = {},
   compile: Promise<unknown> = Promise.resolve(),
 ) {
+  const invalidate = vi.fn()
   const renderer = await ReactThreeTestRenderer.create(
     <>
+      <InvalidateSpy spy={invalidate} />
       <CompileResult result={compile} />
       <Planet readFrame={() => frame()} {...props} />
     </>,
@@ -63,7 +75,7 @@ async function render(
   const earth = () => meshes().find((node) => node.instance.name === 'earth')!
   const uniforms = () =>
     ((earth().instance as Mesh).material as ShaderMaterial).uniforms
-  return { renderer, meshes, earth, uniforms }
+  return { renderer, meshes, earth, uniforms, invalidate }
 }
 
 describe('Planet', () => {
@@ -164,14 +176,19 @@ describe('Planet', () => {
   it('지구가 보이면 한반도 고해상도 고도를 받아 셰이더에 넣고, 사라지면 해제한다', async () => {
     const bitmap = { width: 2, height: 3, close: vi.fn() }
     vi.stubGlobal('createImageBitmap', vi.fn())
+    let deliver: (() => void) | undefined
     const load = vi
       .spyOn(ImageBitmapLoader.prototype, 'load')
       .mockImplementation((url, onLoad) => {
         expect(url).toContain('korea-elevation')
-        onLoad?.(bitmap)
+        deliver = () => onLoad?.(bitmap)
       })
-    const { renderer, uniforms } = await render()
+    const { renderer, uniforms, invalidate } = await render()
     await waitFor(() => expect(load).toHaveBeenCalledOnce())
+    invalidate.mockClear()
+    deliver!()
+    // 그리기를 쉬는 중에도 바로 보이게 다음 프레임을 요청
+    expect(invalidate).toHaveBeenCalled()
     const u = uniforms()
     expect(u.uDetailOn.value).toBe(1)
     const detail = u.uDetail.value as Texture

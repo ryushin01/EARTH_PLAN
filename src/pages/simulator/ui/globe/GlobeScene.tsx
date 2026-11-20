@@ -6,11 +6,12 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { ComponentRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Stars } from '@react-three/drei'
+import { Stars } from '@react-three/drei'
 import { Vector3 } from 'three'
 import { useShallow } from 'zustand/react/shallow'
+import { GlobeControls } from './GlobeControls'
+import type { GlobeControlsHandle } from './GlobeControls'
 import { Planet } from './Planet'
 import { Plumes } from './Plumes'
 import type { PlumeInput } from '../../model/planet'
@@ -29,6 +30,7 @@ import { buildFrame } from '../../model/frame'
 import type { FrameClock } from '../../model/frame'
 import { MAX_DISTANCE, MIN_DISTANCE, orbitPosition } from '../../model/camera'
 import type { CameraApi } from '../../model/camera'
+import { nextFrameDelay, renderMode, transientUntil } from '../../model/render'
 
 const scratchDir = new Vector3()
 const scratchGoal = new Vector3()
@@ -65,7 +67,9 @@ export function GlobeScene({
   onReady,
 }: GlobeSceneProps) {
   const camera = useThree((s) => s.camera)
-  const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
+  const controlsRef = useRef<GlobeControlsHandle>(null)
+  const invalidate = useThree((s) => s.invalidate)
+  const frameTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const goal = useRef<Vector3 | null>(null)
   const clock = useRef<FrameClock>({ cloudOffset: 0, lastTime: 0 })
   const plumesRef = useRef<PlumeInput[]>([])
@@ -98,24 +102,27 @@ export function GlobeScene({
         goal.current = new Vector3(
           ...orbitPosition([from.x, from.y, from.z], dTheta, dPhi),
         )
+        invalidate()
       },
       zoom: (factor) => {
         const from = goal.current ?? camera.position
         goal.current = new Vector3(
           ...orbitPosition([from.x, from.y, from.z], 0, 0, factor),
         )
+        invalidate()
       },
       focus: (direction) => {
         const distance = Math.min(camera.position.length(), 3)
         goal.current = new Vector3(...direction)
           .normalize()
           .multiplyScalar(Math.max(distance, 2.2))
+        invalidate()
       },
     }
     return () => {
       apiRef.current = null
     }
-  }, [apiRef, camera])
+  }, [apiRef, camera, invalidate])
 
   // 지점을 고르면 그쪽으로 돌림
   useEffect(() => {
@@ -139,6 +146,38 @@ export function GlobeScene({
     camera.lookAt(0, 0, 0)
     controlsRef.current?.update()
     if (camera.position.distanceTo(target) < 0.002) goal.current = null
+  })
+
+  // 필요할 때만 그리기 (Canvas는 frameloop="demand"). 세계 상태가 바뀌거나 설정이 바뀌면 다시 그리고,
+  // 프레임마다 다음 프레임을 바로·약 1/30초 뒤에 요청하거나 쉼
+  useEffect(() => useWorld.subscribe(() => invalidate()), [invalidate])
+  useEffect(() => {
+    invalidate()
+  }, [
+    autoRotate,
+    reducedMotion,
+    showClouds,
+    showMarkers,
+    showTraffic,
+    invalidate,
+  ])
+  useEffect(() => () => clearTimeout(frameTimer.current), [])
+  useFrame((state) => {
+    clearTimeout(frameTimer.current)
+    const world = useWorld.getState()
+    const delay = nextFrameDelay(
+      renderMode({
+        running: world.running,
+        interacting: controlsRef.current?.isActive() ?? false,
+        cameraMoving: goal.current !== null,
+        transient: performance.now() < transientUntil(world),
+        autoRotate,
+        ambientMotion: !reducedMotion,
+      }),
+    )
+    if (delay === 0) state.invalidate()
+    else if (delay !== null)
+      frameTimer.current = setTimeout(() => state.invalidate(), delay)
   })
 
   const readFrame = useCallback((elapsed: number) => {
@@ -205,9 +244,8 @@ export function GlobeScene({
         locate={locate}
       />
       {showTraffic ? <Traffic reducedMotion={reducedMotion} /> : null}
-      <OrbitControls
+      <GlobeControls
         ref={controlsRef}
-        enablePan={false}
         enableDamping={!reducedMotion}
         dampingFactor={0.08}
         rotateSpeed={0.45}

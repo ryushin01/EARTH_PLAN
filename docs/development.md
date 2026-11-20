@@ -120,7 +120,7 @@ Vitest는 두 프로젝트로 나뉩니다(`vitest.config.ts`).
 
 Dependabot(`.github/dependabot.yml`)이 매주 월요일 오전 9시(한국 시각)에 npm(pnpm)과 GitHub Actions 업데이트 PR을 엽니다. 개발 도구와 배포 의존성의 부·수 버전은 각각 한 PR로 묶고, 공개 뒤 3일이 지난 판만 올립니다(pnpm의 공개 대기 기간 1일보다 넉넉히). 보안 알림과 보안 업데이트 PR도 켜 두었습니다. CI가 통과하면 검토해 합칩니다.
 
-TypeScript는 두 판을 함께 둡니다. 타입 검사(`pnpm typecheck`의 `tsc`)는 TypeScript 7(Go로 다시 쓴 컴파일러, 이 저장소에서 약 5초 → 1초)이고, ESLint(typescript-eslint)와 Storybook 문서 생성처럼 TypeScript API가 필요한 도구는 6 호환 패키지를 씁니다. TypeScript 7.0에는 아직 공개 API가 없고 typescript-eslint가 `typescript <6.1`만 지원하기 때문이며, 공식 발표가 권한 별칭입니다: `"typescript": "npm:@typescript/typescript6"`(API와 `tsc6`), `"@typescript/native": "npm:typescript@^7"`(`tsc`). typescript-eslint가 7을 지원하면 하나로 합칩니다.
+TypeScript는 두 판을 함께 둡니다. 타입 검사(`pnpm typecheck`)는 TypeScript 7(Go로 다시 쓴 컴파일러, 이 저장소에서 약 5초 → 1초)이고, `@typescript/native` 별칭(`npm:typescript@^7`)의 `bin/tsc`를 경로로 직접 실행합니다. `typescript`는 완전한 TypeScript 6으로 두어 ESLint(typescript-eslint는 `typescript <6.1`만 지원)·Storybook 문서 생성·편집기(작업 공간 TypeScript로 언어 서버를 띄우는 IntelliJ·VS Code·typescript-language-server)가 전처럼 동작합니다. TypeScript 7.0에는 아직 공개 API가 없습니다. 공식 발표가 권한 6 호환 패키지(`@typescript/typescript6`)는 `lib/tsserver.js`와 `lib.*.d.ts`가 없어 편집기 언어 서버가 시작하지 못하므로 쓰지 않았습니다. 두 패키지가 모두 `tsc` 실행 파일을 내놓아 어느 쪽이 `tsc`로 연결될지 정해져 있지 않으니 `tsc`를 직접 부르지 말고 `pnpm typecheck`를 씁니다. typescript-eslint가 7을 지원하면 하나로 합칩니다.
 
 ## 접근성
 

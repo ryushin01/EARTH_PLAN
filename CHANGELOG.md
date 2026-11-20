@@ -2,7 +2,7 @@
 
 ## 1.3.0 - 2026-11-20
 
-- 개발: 타입 검사를 TypeScript 7로(이 저장소에서 약 5초 → 1초). ESLint(typescript-eslint)와 Storybook 문서 생성은 TypeScript API가 필요해 6 호환 패키지(`@typescript/typescript6`)를 함께 씀. TypeScript 7.0에는 아직 공개 API가 없고 typescript-eslint가 6.1 미만만 지원하기 때문
+- 개발: 타입 검사(`pnpm typecheck`)를 TypeScript 7로(이 저장소에서 약 5초 → 1초). `typescript`는 완전한 TypeScript 6으로 두어 ESLint(typescript-eslint가 6.1 미만만 지원)·Storybook 문서 생성·편집기 언어 서버가 그대로 동작. 7은 `@typescript/native` 별칭으로 함께 설치
 - 개발: 단위 테스트를 파일마다 VM 컨텍스트(`vmThreads`)로 돌려 jsdom 준비 비용을 줄임(같은 기계에서 번갈아 잰 세 쌍의 중앙값 32.7초 → 12.3초). 파일끼리 모듈·스토어 상태 격리는 그대로
 
 ## 1.2.0 - 2026-11-20

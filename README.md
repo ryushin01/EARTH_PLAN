@@ -73,7 +73,7 @@
 
 | 구분       | 사용 기술                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 프레임워크 | TanStack Start 1.169 (정적 사전 렌더링), TanStack Router, React 19, TypeScript 6                                                                                        |
+| 프레임워크 | TanStack Start 1.169 (정적 사전 렌더링), TanStack Router, React 19, TypeScript 7(타입 검사) · 6(편집기·ESLint·Storybook)                                                |
 | 3D         | three.js, React Three Fiber 9, drei, 직접 작성한 GLSL 셰이더                                                                                                            |
 | 상태       | zustand                                                                                                                                                                 |
 | 스타일     | Tailwind CSS 4, 웹 폰트(Sora, 페이퍼로지)                                                                                                                               |

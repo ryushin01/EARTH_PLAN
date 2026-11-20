@@ -113,12 +113,14 @@ E2E와 스토리 테스트는 GPU 없는 환경에서도 돌도록 Chromium을 S
 
 Vitest는 두 프로젝트로 나뉩니다(`vitest.config.ts`).
 
-- `unit`: jsdom. 3D 컴포넌트는 `@react-three/test-renderer`로 그려 장면 그래프를 검사합니다. React Three Fiber·drei·test-renderer는 `exports`가 없어 CJS판이 잡히므로 ESM 파일로 별칭을 걸고 Vite가 직접 처리하게 해, three.js가 한 벌만 쓰이게 합니다.
+- `unit`: jsdom. 파일마다 VM 컨텍스트(`pool: 'vmThreads'`)로 돌려 jsdom 준비 비용을 줄입니다(모듈·스토어 상태는 파일끼리 격리, 같은 기계에서 번갈아 잰 세 쌍의 중앙값으로 단위 테스트 전체 32.7초 → 12.3초). `isolate: false`는 더 빠르지만 파일끼리 상태가 섞여 순서를 바꾸면 실패합니다. 3D 컴포넌트는 `@react-three/test-renderer`로 그려 장면 그래프를 검사합니다. React Three Fiber·drei·test-renderer는 `exports`가 없어 CJS판이 잡히므로 ESM 파일로 별칭을 걸고 Vite가 직접 처리하게 해, three.js가 한 벌만 쓰이게 합니다.
 - `storybook`: 브라우저 모드(Playwright). 3D 스토리가 한 GPU 프로세스를 나눠 쓰면 서로 크게 느려져 파일을 차례로 실행합니다.
 
 ## 의존성 업데이트
 
 Dependabot(`.github/dependabot.yml`)이 매주 월요일 오전 9시(한국 시각)에 npm(pnpm)과 GitHub Actions 업데이트 PR을 엽니다. 개발 도구와 배포 의존성의 부·수 버전은 각각 한 PR로 묶고, 공개 뒤 3일이 지난 판만 올립니다(pnpm의 공개 대기 기간 1일보다 넉넉히). 보안 알림과 보안 업데이트 PR도 켜 두었습니다. CI가 통과하면 검토해 합칩니다.
+
+TypeScript는 두 판을 함께 둡니다. 타입 검사(`pnpm typecheck`)는 TypeScript 7(Go로 다시 쓴 컴파일러, 이 저장소에서 약 5초 → 1초)이고, `@typescript/native` 별칭(`npm:typescript@^7`)의 `bin/tsc`를 경로로 직접 실행합니다. `typescript`는 완전한 TypeScript 6으로 두어 ESLint(typescript-eslint는 `typescript <6.1`만 지원)·Storybook 문서 생성·편집기(작업 공간 TypeScript로 언어 서버를 띄우는 IntelliJ·VS Code·typescript-language-server)가 전처럼 동작합니다. TypeScript 7.0에는 아직 공개 API가 없습니다. 공식 발표가 권한 6 호환 패키지(`@typescript/typescript6`)는 `lib/tsserver.js`와 `lib.*.d.ts`가 없어 편집기 언어 서버가 시작하지 못하므로 쓰지 않았습니다. 두 패키지가 모두 `tsc` 실행 파일을 내놓아 어느 쪽이 `tsc`로 연결될지 정해져 있지 않으니 `tsc`를 직접 부르지 말고 `pnpm typecheck`를 씁니다. typescript-eslint가 7을 지원하면 하나로 합칩니다.
 
 ## 접근성
 

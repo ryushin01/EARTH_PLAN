@@ -4,7 +4,7 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { serviceWorkerVersion } from './scripts/vite-sw-version.ts'
 
-// GitHub Pages처럼 하위 경로에 올릴 때 BASE_PATH=/EARTH_PLAN/ 로 빌드
+// GitHub Pages처럼 하위 경로에 올릴 때 BASE_PATH=/TerraNova/ 로 빌드
 const base = process.env.BASE_PATH ?? '/'
 
 export default defineConfig({

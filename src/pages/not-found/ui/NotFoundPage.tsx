@@ -43,7 +43,7 @@ export function NotFoundPage() {
   const text = TEXT[locale]
   const hydratingShell = useHydratingEmptyShell()
   useEffect(() => {
-    document.title = `${text.title} · EARTH PLAN`
+    document.title = `${text.title} · TerraNova`
   }, [text])
   if (hydratingShell) return null
   return (

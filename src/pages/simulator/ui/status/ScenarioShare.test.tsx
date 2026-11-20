@@ -46,6 +46,22 @@ describe('ScenarioShare', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('옛 이름(earth-plan)으로 저장한 시나리오도 불러와 새 키로 옮긴다', () => {
+    const item = {
+      id: 'legacy-1',
+      name: '옛 저장',
+      savedAt: '2026-11-15T00:00:00.000Z',
+      snapshot: toSnapshot(useWorld.getState()),
+    }
+    window.localStorage.setItem('earth-plan:saves', JSON.stringify([item]))
+    render(<ScenarioShare />)
+    expect(
+      screen.getByRole('button', { name: '옛 저장 불러오기' }),
+    ).toBeInTheDocument()
+    expect(window.localStorage.getItem('earth-plan:saves')).toBeNull()
+    expect(window.localStorage.getItem('terranova:saves')).toContain('옛 저장')
+  })
+
   it('복사가 막히면 링크 칸을 보여 주고 안내한다', async () => {
     const user = userEvent.setup()
     Object.defineProperty(navigator, 'clipboard', {

@@ -54,7 +54,7 @@ export function MissionResultDialog({ mission }: { mission: Mission }) {
 
   const copyResult = async () => {
     const lines = [
-      `EARTH PLAN · ${t(success ? 'result.success' : 'result.failure')}: ${pick(mission.title)}`,
+      `TerraNova · ${t(success ? 'result.success' : 'result.failure')}: ${pick(mission.title)}`,
       pick(result.detail),
       ...stats.map(([k, v]) => `${k}: ${v}`),
       shareUrl(toSnapshot(useWorld.getState()), window.location.href),

@@ -63,7 +63,7 @@ export function SimulatorPage() {
   useLocaleSync()
   const { t, locale } = useT()
   useEffect(() => {
-    document.title = `EARTH PLAN · ${t('page.tagline')}`
+    document.title = `TerraNova · ${t('page.tagline')}`
   }, [locale, t])
   useSimulationClock()
   const setFloodCurve = useWorld((s) => s.setFloodCurve)
@@ -108,7 +108,7 @@ export function SimulatorPage() {
       <header className="relative z-20 flex items-center justify-between gap-4 px-4 pt-4 lg:absolute lg:inset-x-0 lg:top-0 lg:pointer-events-none">
         <div className="lg:pointer-events-auto">
           <h1 className="font-display text-2xl font-semibold uppercase leading-none tracking-[-0.03em]">
-            Earth<span className="text-accent">_</span>Plan
+            Terra<span className="text-accent">Nova</span>
           </h1>
           <p className="mt-1 text-xs text-muted">{t('page.tagline')}</p>
         </div>

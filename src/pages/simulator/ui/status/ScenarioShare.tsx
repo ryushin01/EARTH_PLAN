@@ -9,10 +9,13 @@ import {
 import type { Snapshot } from '../../model/world/snapshot'
 import { useWorld } from '../../model/world/store'
 import { formatSimDate } from './TimeControls'
+import { readMigrated } from '@/shared/lib'
 import { Button, StatusMessage } from '@/shared/ui'
 import { useT } from '../i18n'
 
-const STORAGE_KEY = 'earth-plan:saves'
+const STORAGE_KEY = 'terranova:saves'
+/** 이름을 바꾸기 전(EARTH_PLAN) 키 */
+const LEGACY_STORAGE_KEY = 'earth-plan:saves'
 const MAX_SAVES = 8
 
 interface SavedItem {
@@ -35,7 +38,9 @@ function subscribe(listener: () => void) {
 
 function readRaw(): string {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) ?? '[]'
+    return (
+      readMigrated(window.localStorage, STORAGE_KEY, LEGACY_STORAGE_KEY) ?? '[]'
+    )
   } catch {
     return '[]'
   }

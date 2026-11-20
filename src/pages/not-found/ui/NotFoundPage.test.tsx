@@ -40,7 +40,7 @@ describe('NotFoundPage', () => {
       'href',
       '/',
     )
-    expect(document.title).toBe('페이지를 찾을 수 없습니다 · EARTH PLAN')
+    expect(document.title).toBe('페이지를 찾을 수 없습니다 · TerraNova')
   })
 
   it('영어로 바꿔 두었으면 영어로 보여 준다', async () => {

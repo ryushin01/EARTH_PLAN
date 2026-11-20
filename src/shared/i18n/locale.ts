@@ -1,9 +1,12 @@
 import { useEffect } from 'react'
 import { create } from 'zustand'
+import { readMigrated } from '@/shared/lib'
 
 export type Locale = 'ko' | 'en'
 
-const STORAGE_KEY = 'earth-plan:locale'
+const STORAGE_KEY = 'terranova:locale'
+/** 이름을 바꾸기 전(EARTH_PLAN) 키 */
+const LEGACY_STORAGE_KEY = 'earth-plan:locale'
 
 interface LocaleState {
   locale: Locale
@@ -28,7 +31,11 @@ export function useLocaleSync() {
   const locale = useLocale((s) => s.locale)
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY)
+      const saved = readMigrated(
+        window.localStorage,
+        STORAGE_KEY,
+        LEGACY_STORAGE_KEY,
+      )
       if (saved === 'en' || saved === 'ko')
         useLocale.setState({ locale: saved })
     } catch {

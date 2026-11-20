@@ -1,7 +1,7 @@
 /** 화면 문구: [한국어, 영어] */
 export const MESSAGES = {
   // 페이지
-  'page.title': ['Earth_Plan', 'Earth_Plan'],
+  'page.title': ['TerraNova', 'TerraNova'],
   'page.tagline': [
     '지구 환경·재해 대응 시뮬레이터',
     'Planetary climate & disaster simulator',

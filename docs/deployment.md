@@ -33,7 +33,7 @@ BASE_PATH=/TerraNova/ pnpm build:all
 
 2026-11-20 EARTH_PLAN에서 TerraNova로 이름을 바꿨습니다. GitHub는 옛 저장소 주소(`github.com/ryushin01/EARTH_PLAN`)를 새 저장소로 넘겨 주지만, 옛 사이트 주소(`ryushin01.github.io/EARTH_PLAN/`)는 넘겨 주지 않아 404가 됩니다. 같은 출처(`ryushin01.github.io`)라 브라우저에 남은 값은 이렇게 이어받습니다.
 
-- 저장한 시나리오·화면 언어: 옛 키(`earth-plan:*`)에 값이 있으면 처음 읽을 때 새 키(`terranova:*`)로 옮깁니다(`readMigrated`).
+- 저장한 시나리오·화면 언어: 옛 키(`earth-plan:*`)에 값이 있으면 처음 읽을 때 새 키(`terranova:*`)로 옮깁니다(`readMigrated`). 저장 공간이 모자라 옮기지 못하면 옛 값을 지우지 않고 옛 키에 계속 씁니다(같은 출처의 다른 프로젝트와 저장 공간을 함께 씀).
 - 서비스 워커 캐시: 새 서비스 워커가 활성화될 때 옛 이름(`earth-plan-*`) 캐시를 지웁니다.
 
 ## 직접 실행

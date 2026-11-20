@@ -7,6 +7,8 @@ export type Locale = 'ko' | 'en'
 const STORAGE_KEY = 'terranova:locale'
 /** 이름을 바꾸기 전(EARTH_PLAN) 키 */
 const LEGACY_STORAGE_KEY = 'earth-plan:locale'
+/** 옛 키에서 옮기지 못했으면 옛 키에 계속 씀 */
+let storageKey = STORAGE_KEY
 
 interface LocaleState {
   locale: Locale
@@ -19,7 +21,7 @@ export const useLocale = create<LocaleState>()((set) => ({
   setLocale: (locale) => {
     set({ locale })
     try {
-      window.localStorage.setItem(STORAGE_KEY, locale)
+      window.localStorage.setItem(storageKey, locale)
     } catch {
       // 저장이 막혀도 이번 화면에서는 바뀐 언어를 씀
     }
@@ -31,11 +33,13 @@ export function useLocaleSync() {
   const locale = useLocale((s) => s.locale)
   useEffect(() => {
     try {
-      const saved = readMigrated(
+      const stored = readMigrated(
         window.localStorage,
         STORAGE_KEY,
         LEGACY_STORAGE_KEY,
       )
+      storageKey = stored.key
+      const saved = stored.value
       if (saved === 'en' || saved === 'ko')
         useLocale.setState({ locale: saved })
     } catch {

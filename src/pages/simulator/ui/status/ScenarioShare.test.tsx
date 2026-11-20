@@ -62,6 +62,55 @@ describe('ScenarioShare', () => {
     expect(window.localStorage.getItem('terranova:saves')).toContain('옛 저장')
   })
 
+  it('지우지 못하면 실패를 알리고 목록을 그대로 둔다', async () => {
+    const user = userEvent.setup()
+    render(<ScenarioShare />)
+    await user.type(
+      screen.getByRole('textbox', { name: '저장할 이름' }),
+      '남길 실험',
+    )
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    const setItem = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new DOMException('저장 공간 부족', 'QuotaExceededError')
+      })
+    await user.click(screen.getByRole('button', { name: '남길 실험 지우기' }))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '"남길 실험"을(를) 지우지 못했습니다',
+    )
+    expect(
+      screen.getByRole('button', { name: '남길 실험 불러오기' }),
+    ).toBeInTheDocument()
+    setItem.mockRestore()
+  })
+
+  it('새 키로 옮기지 못하면 옛 키에서 그대로 지운다', async () => {
+    const user = userEvent.setup()
+    const item = {
+      id: 'legacy-2',
+      name: '옛 실험',
+      savedAt: '2026-11-15T00:00:00.000Z',
+      snapshot: toSnapshot(useWorld.getState()),
+    }
+    window.localStorage.setItem('earth-plan:saves', JSON.stringify([item]))
+    const original = Storage.prototype.setItem
+    const setItem = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(function (this: Storage, key, value) {
+        if (key === 'terranova:saves')
+          throw new DOMException('저장 공간 부족', 'QuotaExceededError')
+        original.call(this, key, value)
+      })
+    render(<ScenarioShare />)
+    await user.click(screen.getByRole('button', { name: '옛 실험 지우기' }))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '"옛 실험"을(를) 지웠습니다',
+    )
+    expect(window.localStorage.getItem('earth-plan:saves')).toBe('[]')
+    setItem.mockRestore()
+  })
+
   it('복사가 막히면 링크 칸을 보여 주고 안내한다', async () => {
     const user = userEvent.setup()
     Object.defineProperty(navigator, 'clipboard', {

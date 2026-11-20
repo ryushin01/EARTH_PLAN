@@ -6,7 +6,8 @@
 
 - 저장소 `ryushin01/EARTH_PLAN` → `ryushin01/TerraNova`, 사이트 주소 https://ryushin01.github.io/TerraNova/ (Storybook은 `/storybook/`). 옛 저장소 주소는 GitHub가 새 저장소로 넘겨 주지만, 옛 사이트 주소(`/EARTH_PLAN/`)는 넘겨 주지 않음
 - 로고는 `TERRA`와 파란 `NOVA`(전에는 `EARTH_PLAN`의 밑줄만 파랑). 문서 제목, 공유 미리보기, 앱 설치 이름(매니페스트), 파비콘 제목도 TerraNova로
-- 저장한 시나리오와 화면 언어는 처음 읽을 때 옛 키(`earth-plan:*`)에서 새 키(`terranova:*`)로 옮김. 새 서비스 워커는 같은 출처에 남은 옛 이름 캐시(`earth-plan-*`)를 지움
+- 저장한 시나리오와 화면 언어는 처음 읽을 때 옛 키(`earth-plan:*`)에서 새 키(`terranova:*`)로 옮김(옮기지 못하면 옛 키에 계속 씀). 새 서비스 워커는 같은 출처에 남은 옛 이름 캐시(`earth-plan-*`)를 지움
+- 고침: 저장한 시나리오를 지우지 못했는데도 '지웠습니다'라고 알리던 문제. 이제 실패를 알리고 목록을 그대로 둠
 - 배포 워크플로가 경로 접두사(`BASE_PATH`)를 저장소 이름에서 계산(이름을 또 바꿔도 고칠 필요 없음)
 - README 화면과 공유 미리보기 이미지를 새 로고로 다시 찍음
 

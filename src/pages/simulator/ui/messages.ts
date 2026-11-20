@@ -443,6 +443,10 @@ export const MESSAGES = {
   ],
   'share.saved': ['"{name}"을(를) 저장했습니다.', 'Saved “{name}”.'],
   'share.removed': ['"{name}"을(를) 지웠습니다.', 'Deleted “{name}”.'],
+  'share.removeBlocked': [
+    '"{name}"을(를) 지우지 못했습니다. 브라우저 저장소에 쓸 수 없습니다.',
+    'Couldn’t delete “{name}”: browser storage isn’t writable.',
+  ],
   'share.loaded': ['"{name}"을(를) 불러왔습니다.', 'Loaded “{name}”.'],
   'share.list': ['저장한 시나리오', 'Saved scenarios'],
   'share.item': [

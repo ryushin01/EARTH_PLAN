@@ -41,7 +41,8 @@ export default defineConfig({
           pool: 'vmThreads',
           globals: true,
           setupFiles: ['./vitest.setup.ts'],
-          include: ['src/**/*.test.{ts,tsx}'],
+          // scripts/의 빌드 도구(서비스 워커 버전 등)도 함께
+          include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],
           // 위 패키지들이 서로 ESM판을 쓰도록 Vite가 직접 처리
           server: { deps: { inline: [/@react-three\//] } },
         },

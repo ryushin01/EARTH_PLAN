@@ -20,7 +20,7 @@ import {
   TEXTURES_SMALL,
   prefersSmallTextures,
 } from '@/shared/config'
-import { latLonToVector3 } from '@/shared/lib'
+import { latLonToVector3, warmOfflineCache } from '@/shared/lib'
 import type { Vec3 } from '@/shared/lib'
 import {
   MAX_ASHES,
@@ -287,6 +287,17 @@ export function Planet({
     const loaded: Array<{ texture: Texture; bitmap: ImageBitmap }> = []
     const loader = new ImageBitmapLoader()
     configureLoader(loader)
+    // 패치를 다 받으면(못 받은 것 포함) 지구에 쓴 파일을 오프라인 캐시에 넣음
+    let settled = 0
+    const settle = () => {
+      settled += 1
+      if (settled === DETAIL_PATCHES.length && !cancelled)
+        void warmOfflineCache([
+          ...TEXTURE_URLS,
+          TEXTURES.landGrid,
+          ...DETAIL_PATCHES.map((patch) => patch.url),
+        ])
+    }
     DETAIL_PATCHES.forEach((patch, i) => {
       loader.load(
         patch.url,
@@ -304,9 +315,10 @@ export function Planet({
           ;(material.uniforms.uDetailOn.value as number[])[i] = 1
           // 그리기를 쉬는 중(frameloop="demand")에도 바로 보이게
           invalidate()
+          settle()
         },
         undefined,
-        () => undefined,
+        settle,
       )
     })
     return () => {

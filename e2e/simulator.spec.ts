@@ -569,6 +569,57 @@ test.describe('없는 주소와 배포 파일', () => {
     expect(errors).toEqual([])
   })
 
+  test('한 번 방문하면 오프라인에서도 그대로 열리고 지구본·패널이 동작한다', async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(150_000)
+    await page.goto('/')
+    // 서비스 워커가 이 페이지를 맡을 때까지
+    await expect
+      .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), {
+        timeout: 30_000,
+      })
+      .toBe(true)
+    await page.mouse.move(200, 200)
+    await expect(page.locator(POSTER)).toHaveCount(0, { timeout: 30_000 })
+    // 지구가 보인 뒤 쓴 텍스처·고도 패치까지 서비스 워커 캐시에 들어갈 때까지
+    await expect
+      .poll(
+        () =>
+          page.evaluate(async () => {
+            const names = await caches.keys()
+            const name = names.find((n) => n.startsWith('terranova-textures-'))
+            if (!name) return 0
+            return (await (await caches.open(name)).keys()).length
+          }),
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThanOrEqual(16)
+
+    await context.setOffline(true)
+    const failed: string[] = []
+    page.on('requestfailed', (r) => failed.push(r.url()))
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.reload()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      /TerraNova/,
+    )
+    await page.mouse.move(220, 220)
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator(POSTER)).toHaveCount(0, { timeout: 30_000 })
+    await page.getByRole('tab', { name: '화산' }).click()
+    await expect(page.getByRole('tabpanel', { name: '화산' })).toBeVisible()
+    // 화면 글꼴도 캐시에서
+    expect(
+      await page.evaluate(() => document.fonts.check('16px Paperlogy', '지구')),
+    ).toBe(true)
+    expect(failed).toEqual([])
+    expect(errors).toEqual([])
+    await context.setOffline(false)
+  })
+
   test('서비스 워커 캐시 이름에 빌드 버전이 들어 있다', async ({ page }) => {
     const sw = await (await page.request.get('/sw.js')).text()
     expect(sw).toMatch(/terranova-assets-[0-9a-f]{12}/)

@@ -8,10 +8,17 @@ import type { Mesh, ShaderMaterial, Texture } from 'three'
 import type { PlanetFrame } from '../../model/planet'
 import { useThree } from '@react-three/fiber'
 import type * as Fiber from '@react-three/fiber'
-import { DETAIL_PATCHES } from '@/shared/config'
+import { DETAIL_PATCHES, TEXTURES } from '@/shared/config'
+import { warmOfflineCache } from '@/shared/lib'
+import type * as SharedLib from '@/shared/lib'
 import { COMPILE_TIMEOUT_MS, Planet, preloadPlanet } from './Planet'
 
 const preload = vi.hoisted(() => vi.fn())
+
+vi.mock('@/shared/lib', async (importOriginal) => ({
+  ...(await importOriginal<typeof SharedLib>()),
+  warmOfflineCache: vi.fn(),
+}))
 
 // 텍스처는 내려받지 않고 가짜 이미지로 대신함
 vi.mock('@react-three/fiber', async (importOriginal) => ({
@@ -222,6 +229,32 @@ describe('Planet', () => {
     for (const dispose of disposes) expect(dispose).toHaveBeenCalledOnce()
     // 직접 받은 패치 이미지도 닫음
     for (const bitmap of bitmaps) expect(bitmap.close).toHaveBeenCalledOnce()
+    vi.unstubAllGlobals()
+  })
+
+  it('고도 패치를 다 받으면 쓴 텍스처·육지 격자·패치를 오프라인 캐시에 넣는다', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn())
+    const deliveries: Array<() => void> = []
+    vi.spyOn(ImageBitmapLoader.prototype, 'load').mockImplementation(
+      (_url, onLoad) => {
+        deliveries.push(() => onLoad?.({ width: 1, height: 1, close: vi.fn() }))
+      },
+    )
+    const { renderer } = await render()
+    await waitFor(() => expect(deliveries).toHaveLength(DETAIL_PATCHES.length))
+    expect(warmOfflineCache).not.toHaveBeenCalled()
+    for (const deliver of deliveries) deliver()
+    await waitFor(() => expect(warmOfflineCache).toHaveBeenCalledOnce())
+    const urls = vi.mocked(warmOfflineCache).mock.calls[0][0]
+    expect(urls).toEqual(
+      expect.arrayContaining([
+        TEXTURES.albedo,
+        TEXTURES.elevation,
+        TEXTURES.landGrid,
+        ...DETAIL_PATCHES.map((patch) => patch.url),
+      ]),
+    )
+    await renderer.unmount()
     vi.unstubAllGlobals()
   })
 

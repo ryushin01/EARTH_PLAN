@@ -228,6 +228,51 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
   await context.close()
 }
 
+// 오늘의 지구: 배포할 때 받은 실제 지진(지난 7일 규모 4.5 이상)과 "오늘" 탭. 가장 큰 지진으로 이동
+{
+  const { page, context } = await open({ utc: 3 })
+  await page.getByRole('button', { name: '자동 회전' }).click()
+  await page.getByRole('button', { name: '오늘의 지구' }).click()
+  await tab(page, '오늘')
+  await panel(page, '오늘')
+    .getByRole('listitem')
+    .first()
+    .getByRole('button')
+    .click()
+  await shot(page, 'today', 5000)
+  await context.close()
+}
+
+// 인구 이동: 해수면 +8m로 잠긴 남아시아·동남아시아 해안 도시를 떠나는 흐름(남아시아 낮)
+{
+  const { page, context } = await open({ utc: 6 })
+  await page.getByRole('button', { name: '자동 회전' }).click()
+  await page.getByRole('slider', { name: '해수면 (2020년 대비)' }).fill('8')
+  await page
+    .getByRole('combobox', { name: '지점으로 이동' })
+    .selectOption('dhaka')
+  await page.evaluate(() => document.activeElement?.blur())
+  await shot(page, 'migration', 5000)
+  await context.close()
+}
+
+// 벵골 삼각주 해수면 +3m: 1분 고해상도 고도로 그린 하구 물길 침수(구름·지점·인구 이동 끔)
+{
+  const { page, context } = await open({ utc: 6 })
+  await page.getByRole('button', { name: '자동 회전' }).click()
+  await page.getByRole('button', { name: '구름' }).click()
+  await page.getByRole('button', { name: '인구 이동' }).click()
+  await page.getByRole('slider', { name: '해수면 (2020년 대비)' }).fill('3')
+  await page
+    .getByRole('combobox', { name: '지점으로 이동' })
+    .selectOption('dhaka')
+  for (let i = 0; i < 4; i++)
+    await page.getByRole('button', { name: '확대' }).click()
+  await page.getByRole('button', { name: '지점' }).click()
+  await shot(page, 'delta', 5000)
+  await context.close()
+}
+
 // 영어 화면: 캐스케이디아 섭입대 쓰나미(북미 서해안 밤)
 {
   const { page, context } = await open({ utc: 7, locale: 'en-US' })

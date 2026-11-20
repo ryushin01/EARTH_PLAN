@@ -11,6 +11,8 @@ export interface WorldEvent {
   year: number
   tone: EventTone
   text: Text
+  /** 미션이 정해 둔 사건의 안내 (같은 순간의 재해 기록보다 먼저 쌓임) */
+  mission?: boolean
 }
 
 export interface Eruption {

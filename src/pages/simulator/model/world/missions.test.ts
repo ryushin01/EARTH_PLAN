@@ -179,14 +179,15 @@ describe('태양 폭풍 미션', () => {
 
   it('예정된 폭풍마다 1일 속도로 늦추고 미션 사건 기록에 알린다', () => {
     useWorld.getState().startMission('solar-2031')
-    expect(runFast(2040)).toHaveLength(3)
-    const notices = useWorld
-      .getState()
-      .events.filter((e) => e.text.ko.startsWith('미션 사건'))
-    expect(notices).toHaveLength(3)
-    for (const e of notices) {
-      expect(e.text.ko).toContain('1일 속도로 늦춥니다')
-      expect(e.text.en).toContain('1 day per second')
+    // 사건 기록은 최근 60건만 남고 재생 중 태풍·산불 기록이 난수로 쌓이므로 폭풍마다 멈춰 확인
+    for (const level of ['g4', 'g5', 'carrington']) {
+      expect(runFast(2040, { stopWhenSlowed: true })).toHaveLength(1)
+      const [storm, notice] = useWorld.getState().events
+      expect(useWorld.getState().solarStorms.at(-1)?.level).toBe(level)
+      expect(storm.mission).toBeUndefined()
+      expect(notice.mission).toBe(true)
+      expect(notice.text.ko).toMatch(/^미션 사건: .*1일 속도로 늦춥니다\.$/)
+      expect(notice.text.en).toContain('1 day per second')
     }
   })
 

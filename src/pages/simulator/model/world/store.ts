@@ -222,6 +222,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
       log([
         {
           tone: 'warn',
+          mission: true,
           text: compose((l) => {
             const notice = `${l === 'ko' ? '미션 사건' : 'Mission event'}: ${item.warning[l]}`
             if (!slow) return notice

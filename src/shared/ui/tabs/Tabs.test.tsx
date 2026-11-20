@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Tabs } from './Tabs'
+import { Tabs, tabColumns } from './Tabs'
 
 const items = [
   { id: 'a', label: '가', content: <p>가 내용</p> },
@@ -15,6 +15,12 @@ function Demo() {
 }
 
 describe('Tabs', () => {
+  it('탭 수에 따라 한 줄에 놓을 칸 수를 정한다 (한 칸이 너무 좁아지지 않게 최대 4칸)', () => {
+    expect([1, 3, 4, 5, 6, 8, 9, 10, 12].map(tabColumns)).toEqual([
+      1, 3, 4, 3, 3, 4, 3, 4, 4,
+    ])
+  })
+
   it('선택 상태와 패널 연결을 표시한다', () => {
     render(<Demo />)
     const tab = screen.getByRole('tab', { name: '가' })

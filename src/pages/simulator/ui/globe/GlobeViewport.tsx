@@ -18,6 +18,9 @@ import { useT } from '../i18n'
 import type { MessageKey } from '../i18n'
 import { WAKE_EVENTS, wokeEarly } from './earlyWake'
 import { TrafficStatus } from './TrafficStatus'
+import { TodayStatus } from './TodayStatus'
+import { useToday } from '../../model/today/store'
+import { loadToday } from '../../api/loadToday'
 import poster600 from './poster/earth-600.webp'
 import poster800 from './poster/earth-800.webp'
 import poster1200 from './poster/earth-1200.webp'
@@ -244,6 +247,12 @@ export function GlobeViewport({
   const [showClouds, setShowClouds] = useState(true)
   const [showMarkers, setShowMarkers] = useState(true)
   const [showTraffic, setShowTraffic] = useState(true)
+  const todayEnabled = useToday((s) => s.enabled)
+  const setTodayEnabled = useToday((s) => s.setEnabled)
+  // 오늘의 지구를 켜면 사이트 안 자료를 불러옴 (서비스 워커가 미리 받아 두어 오프라인에서도)
+  useEffect(() => {
+    if (todayEnabled) void useToday.getState().ensureLoaded(() => loadToday())
+  }, [todayEnabled])
   // 모바일에서는 보기 토글을 접어 둠
   const [moreOpen, setMoreOpen] = useState(false)
   const optionsId = useId()
@@ -367,6 +376,11 @@ export function GlobeViewport({
             <TrafficStatus />
           </div>
         ) : null}
+        {todayEnabled ? (
+          <div className="sr-only lg:not-sr-only lg:self-center">
+            <TodayStatus />
+          </div>
+        ) : null}
         <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-xs border border-line bg-panel p-1.5">
           {BUTTONS.map((button) => (
             <Button
@@ -419,6 +433,12 @@ export function GlobeViewport({
               onClick={() => setShowTraffic((v) => !v)}
             >
               {t('globe.traffic')}
+            </ToggleButton>
+            <ToggleButton
+              pressed={todayEnabled}
+              onClick={() => setTodayEnabled(!todayEnabled)}
+            >
+              {t('globe.today')}
             </ToggleButton>
           </div>
         </div>

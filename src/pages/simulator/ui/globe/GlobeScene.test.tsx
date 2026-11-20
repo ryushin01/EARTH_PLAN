@@ -15,6 +15,9 @@ import { AMBIENT_FRAME_MS } from '../../model/render'
 import type { CameraApi } from '../../model/camera'
 import type { PlanetFrame } from '../../model/planet'
 import { useWorld } from '../../model/world/store'
+import { useToday } from '../../model/today/store'
+import { kpAurora } from '../../model/today/today'
+import type { TodayData } from '../../model/today/today'
 import { latLonToVector3 } from '@/shared/lib'
 import type { Vec3 } from '@/shared/lib'
 import { GlobeScene } from './GlobeScene'
@@ -116,6 +119,7 @@ const toVector = (v: Vec3) => new Vector3(...v)
 describe('GlobeScene', () => {
   beforeEach(() => {
     useWorld.getState().reset()
+    useToday.setState(useToday.getInitialState())
     seen.planet = null
     seen.controls = null
     seen.stars = null
@@ -172,6 +176,75 @@ describe('GlobeScene', () => {
       expect(invalidate).not.toHaveBeenCalled()
       vi.advanceTimersByTime(AMBIENT_FRAME_MS)
       expect(invalidate).toHaveBeenCalledTimes(1)
+      await renderer.unmount()
+    })
+  })
+
+  describe('오늘의 지구', () => {
+    const data: TodayData = {
+      fetchedAt: '2026-11-20T21:00:00Z',
+      quakes: [
+        {
+          id: 'q1',
+          time: Date.parse('2026-11-20T20:00:00Z'),
+          mag: 6.6,
+          depthKm: 68,
+          lat: -6.02,
+          lon: 131.46,
+          place: 'Tual',
+          tsunami: false,
+        },
+      ],
+      kp: [{ time: '2026-11-20T18:00:00Z', kp: 7 }],
+    }
+    const quakeLayers = (r: {
+      scene: {
+        findAll: (f: (n: { props: { name?: string } }) => boolean) => unknown[]
+      }
+    }) => r.scene.findAll((node) => node.props.name === 'today-quakes')
+
+    beforeEach(() =>
+      useToday.setState({
+        ...useToday.getInitialState(),
+        status: 'ready',
+        data,
+      }),
+    )
+
+    it('켜면 실제 지진을 그리고, 지금 Kp에 맞는 오로라를 셰이더 입력에 넣는다', async () => {
+      const off = await render()
+      expect(quakeLayers(off.renderer)).toHaveLength(0)
+      expect(seen.planet!.readFrame(0).aurora.strength).toBe(0)
+      await off.renderer.unmount()
+
+      useToday.getState().setEnabled(true)
+      const on = await render()
+      expect(quakeLayers(on.renderer)).toHaveLength(1)
+      expect(seen.planet!.readFrame(0).aurora).toEqual(kpAurora(7))
+      await on.renderer.unmount()
+    })
+
+    it('더 센 가상 태양 폭풍이 있으면 그 오로라를 쓴다', async () => {
+      useToday.getState().setEnabled(true)
+      useWorld
+        .getState()
+        .triggerSolarStorm('carrington', performance.now() - 5_000)
+      const { renderer } = await render()
+      const aurora = seen.planet!.readFrame(0).aurora
+      expect(aurora.strength).toBeGreaterThan(kpAurora(7).strength)
+      await renderer.unmount()
+    })
+
+    it('지진을 고르면 카메라가 그쪽으로 돈다', async () => {
+      const { renderer, camera } = await render()
+      await act(async () => {
+        useToday.getState().focus('q1')
+      })
+      await renderer.advanceFrames(1, 0.016)
+      const target = toVector(
+        latLonToVector3({ lat: -6.02, lon: 131.46 }),
+      ).normalize()
+      expect(camera().clone().normalize().dot(target)).toBeCloseTo(1, 5)
       await renderer.unmount()
     })
   })

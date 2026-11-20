@@ -385,6 +385,35 @@ test.describe('미션과 추이', () => {
   })
 })
 
+test.describe('오늘의 지구', () => {
+  test('켜면 실제 지진 요약을 보여 주고, 오늘 탭에서 지진을 골라 지구에서 본다', async ({
+    page,
+  }) => {
+    const external: string[] = []
+    page.on('request', (r) => {
+      if (!r.url().startsWith(new URL(page.url() || 'http://localhost').origin))
+        external.push(r.url())
+    })
+    await page.goto('/')
+    await page.getByRole('button', { name: '오늘의 지구' }).click()
+    await expect(
+      page.getByText(/^오늘의 지구 · .+ UTC 기준 · 지난 7일 지진 \d+회/),
+    ).toBeVisible()
+    await page.getByRole('tab', { name: '오늘' }).click()
+    const panel = page.getByRole('tabpanel', { name: '오늘' })
+    await expect(panel.getByText(/UTC 기준$/)).toBeVisible()
+    await expect(panel.getByText(/^Kp \d+\.\d · /)).toBeVisible()
+    await expect(panel.getByRole('listitem')).toHaveCount(10)
+    await panel.getByRole('checkbox', { name: '지구에 표시' }).uncheck()
+    await panel.getByRole('listitem').first().getByRole('button').click()
+    await expect(
+      panel.getByRole('checkbox', { name: '지구에 표시' }),
+    ).toBeChecked()
+    // 방문자 브라우저는 외부 API(USGS·NOAA)를 부르지 않음
+    expect(external.filter((url) => /usgs|noaa/.test(url))).toEqual([])
+  })
+})
+
 test.describe('지진과 모바일', () => {
   test('양산 단층 지진이 경주에 피해를 준다', async ({ page }) => {
     await page.goto('/')
@@ -611,6 +640,11 @@ test.describe('없는 주소와 배포 파일', () => {
     await expect(page.locator(POSTER)).toHaveCount(0, { timeout: 30_000 })
     await page.getByRole('tab', { name: '화산' }).click()
     await expect(page.getByRole('tabpanel', { name: '화산' })).toBeVisible()
+    // 오늘의 지구 자료도 사이트 안의 파일이라 오프라인에서 보임
+    await page.getByRole('tab', { name: '오늘' }).click()
+    await expect(
+      page.getByRole('tabpanel', { name: '오늘' }).getByText(/UTC 기준$/),
+    ).toBeVisible()
     // 화면 글꼴도 캐시에서
     expect(
       await page.evaluate(() => document.fonts.check('16px Paperlogy', '지구')),

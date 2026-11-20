@@ -206,6 +206,24 @@ export function routePath(route: FlightRoute): Path {
   return path
 }
 
+/** 경로가 어느 화산재 구역이든 지나는지 */
+function crossesAsh(path: Path, ash: readonly Zone[]): boolean {
+  return ash.some((zone) => nearestOnPath(path, zone.center).km < zone.radiusKm)
+}
+
+/** 우회로가 다른 화산재 구역도 피하면 우회, 아니면 결항(안전한 하늘길이 없음) */
+function divert(
+  a: LatLon,
+  b: LatLon,
+  via: LatLon,
+  cause: FlightCause,
+  ash: readonly Zone[],
+): FlightPlan {
+  return crossesAsh(makePath([a, via, b]), ash)
+    ? { status: 'cancelled', cause: 'ash' }
+    : { status: 'rerouted', via, cause }
+}
+
 export function flightPlan(
   route: FlightRoute,
   c: TrafficConditions,
@@ -214,20 +232,19 @@ export function flightPlan(
     return { status: 'cancelled', cause: 'airport' }
   const [a, b] = routeEnds(route)
   const path = routePath(route)
-  for (const zone of c.ash)
-    if (nearestOnPath(path, zone.center).km < zone.radiusKm)
-      return {
-        status: 'rerouted',
-        via: detourAround(a, b, zone.center, zone.radiusKm),
-        cause: 'ash',
-      }
+  const zone = c.ash.find((z) => nearestOnPath(path, z.center).km < z.radiusKm)
+  if (zone)
+    return divert(
+      a,
+      b,
+      detourAround(a, b, zone.center, zone.radiusKm),
+      'ash',
+      c.ash,
+    )
   if (c.polarReroute && peakLatitude(path) > POLAR_LIMIT_LAT) {
     const peak = peakPoint(path)
-    return {
-      status: 'rerouted',
-      via: { lat: Math.sign(peak.lat) * POLAR_DETOUR_LAT, lon: peak.lon },
-      cause: 'solar',
-    }
+    const via = { lat: Math.sign(peak.lat) * POLAR_DETOUR_LAT, lon: peak.lon }
+    return divert(a, b, via, 'solar', c.ash)
   }
   return { status: 'normal' }
 }

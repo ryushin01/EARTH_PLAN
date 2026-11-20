@@ -168,6 +168,96 @@ describe('운항 움직임', () => {
     expect(traffic.ships[index].holding).toBe(true)
   })
 
+  it('태풍을 빠져나갈 때 바로 옆의 다른 태풍으로 들어가지 않는다', () => {
+    const traffic = createTraffic()
+    const base = world()
+    const index = traffic.ships.findIndex(
+      (s) => s.lane.id === 'carrier-west-pacific',
+    )
+    const ship = traffic.ships[index]
+    const here = vector3ToLatLon(pointAt(ship.path, ship.s))
+    const bCenter = vector3ToLatLon(pointAt(ship.path, (ship.s + 0.2) % 1))
+    // B 가장자리가 배에서 5km 앞 (반지름 300 + 80 × 등급)
+    const radiusB = distanceKm(here, bCenter) - 5
+    const storm = (
+      id: string,
+      lat: number,
+      lon: number,
+      category: number,
+    ): Storm => ({
+      id,
+      lat,
+      lon,
+      category,
+      bornYear: base.year,
+      lifeDays: 365,
+      hemisphere: 1,
+    })
+    const w = {
+      ...base,
+      storms: [
+        storm('a', here.lat, here.lon, 3),
+        storm('b', bCenter.lat, bCenter.lon, (radiusB - 300) / 80),
+      ],
+    }
+    let nearestB = Infinity
+    let now = 0
+    for (let i = 0; i < 30; i++) {
+      now = run(traffic, w, 0.1, now)
+      nearestB = Math.min(
+        nearestB,
+        distanceKm(
+          vector3ToLatLon(shipPose(ship, newPose()).position),
+          bCenter,
+        ),
+      )
+    }
+    expect(nearestB).toBeGreaterThan(radiusB)
+  })
+
+  it('태풍을 피하다가 닫힌 항구를 지나치지 않는다', () => {
+    const traffic = createTraffic()
+    const base = world()
+    const ship = traffic.ships.find(
+      (s) => s.lane.id === 'cruise-northeast-asia',
+    )!
+    const jeju = ship.portS.find((p) => p.cityId === 'jeju')!.s
+    // 제주 약 30km 앞에서 제주 쪽으로 가는 중, 뒤쪽에 태풍(배가 반경 안)
+    ship.s = jeju - 30 / 6371 / ship.path.length
+    ship.dir = 1
+    const behind = vector3ToLatLon(pointAt(ship.path, ship.s - 0.15))
+    const w = {
+      ...base,
+      storms: [
+        {
+          id: 'st',
+          lat: behind.lat,
+          lon: behind.lon,
+          category: 1,
+          bornYear: base.year,
+          lifeDays: 365,
+          hemisphere: 1 as const,
+        },
+      ],
+      quakes: [
+        {
+          id: 'q1',
+          faultId: 'jeju',
+          magnitude: 7,
+          year: base.year,
+          startedAt: 0,
+          severeRadiusKm: 50,
+          strongRadiusKm: 150,
+          impacts: [
+            { cityId: 'jeju', distanceKm: 10, outcome: 'severe' as const },
+          ],
+        },
+      ],
+    }
+    run(traffic, w, 3)
+    expect(ship.s).toBeLessThanOrEqual(jeju)
+  })
+
   it('기항지가 닫히면 그 항구에 닿기 전에 기다리고, 열려 있으면 지나간다', () => {
     const jejuS = (traffic: Traffic) => {
       const ship = traffic.ships.find(

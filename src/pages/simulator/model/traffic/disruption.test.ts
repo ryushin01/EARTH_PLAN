@@ -92,6 +92,34 @@ describe('운항 조건', () => {
     expect(c.ash[0].radiusKm).toBe(ashRadiusKm(5))
   })
 
+  it('우회로가 다른 화산재 구역을 지나면 결항한다', () => {
+    const base = world()
+    const c = trafficConditions(
+      { ...base, eruptions: [eruption('eyjafjallajokull', 5, base.year)] },
+      NOW,
+    )
+    const via = flightPlan(route('ams-yvr'), c).via!
+    const second = { ...c, ash: [...c.ash, { center: via, radiusKm: 10 }] }
+    expect(flightPlan(route('ams-yvr'), second)).toMatchObject({
+      status: 'cancelled',
+      cause: 'ash',
+    })
+  })
+
+  it('극항로 우회로가 화산재 구역을 지나면 결항한다', () => {
+    const base = world()
+    const c = trafficConditions(
+      { ...base, solarStorms: [solar('carrington', base.year)] },
+      NOW,
+    )
+    const via = flightPlan(route('icn-jfk'), c).via!
+    const ashy = { ...c, ash: [{ center: via, radiusKm: 300 }] }
+    expect(flightPlan(route('icn-jfk'), ashy)).toMatchObject({
+      status: 'cancelled',
+      cause: 'ash',
+    })
+  })
+
   it('화산재가 걷히면(화면 60초 또는 시뮬레이션 3년) 다시 정상 운항', () => {
     const base = world()
     const late = {

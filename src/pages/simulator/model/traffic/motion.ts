@@ -358,15 +358,51 @@ function move(ship: ShipState, delta: number) {
   }
 }
 
-/** 가는 방향으로 다음 기항지 */
-function nextPort(ship: ShipState) {
+/** direction(+1 또는 -1) 쪽으로 다음 기항지 */
+function nextPort(ship: ShipState, direction: number) {
   let best: { cityId: string; s: number } | null = null
   for (const port of ship.portS) {
-    const ahead = ship.dir > 0 ? port.s > ship.s + 1e-6 : port.s < ship.s - 1e-6
+    const ahead =
+      direction > 0 ? port.s > ship.s + 1e-6 : port.s < ship.s - 1e-6
     if (!ahead) continue
-    if (!best || (ship.dir > 0 ? port.s < best.s : port.s > best.s)) best = port
+    if (!best || (direction > 0 ? port.s < best.s : port.s > best.s))
+      best = port
   }
   return best
+}
+
+/**
+ * 바닷길을 따라 delta만큼 옮겨도 되는지. 어느 태풍이든 반경 안으로 더 들어가면 안 되고,
+ * 닫힌 기항지에는 정해진 거리보다 가까이 가거나 지나치면 안 됨
+ */
+function canMove(
+  ship: ShipState,
+  traffic: Traffic,
+  here: Vec3,
+  delta: number,
+): boolean {
+  const s = shifted(ship, delta)
+  const next = pointAt(ship.path, s, scratchB)
+  for (const zone of traffic.stormZones) {
+    const after = arc(next, zone.v)
+    if (after < zone.r && after < arc(here, zone.v)) return false
+  }
+  const port = nextPort(ship, Math.sign(delta))
+  if (port && traffic.conditions.closedPorts.has(port.cityId)) {
+    const passed = delta > 0 ? s >= port.s : s <= port.s
+    if (passed || Math.abs(port.s - s) * ship.path.length < PORT_HOLD_RAD)
+      return false
+  }
+  return true
+}
+
+/** delta만큼 옮긴 자리에서 가장 가까운 태풍 가장자리까지 여유 (라디안, 안이면 음수) */
+function clearance(ship: ShipState, traffic: Traffic, delta: number): number {
+  const at = pointAt(ship.path, shifted(ship, delta), scratchC)
+  let min = Infinity
+  for (const zone of traffic.stormZones)
+    min = Math.min(min, arc(at, zone.v) - zone.r)
+  return min
 }
 
 function stepShip(ship: ShipState, traffic: Traffic, dt: number) {
@@ -379,34 +415,20 @@ function stepShip(ship: ShipState, traffic: Traffic, dt: number) {
   const speed = ship.lane.kind === 'carrier' ? CARRIER_SPEED : SHIP_SPEED
   const ds = (speed / ship.path.length) * dt
   const here = pointAt(ship.path, ship.s, scratchA)
-  for (const zone of traffic.stormZones) {
-    if (arc(here, zone.v) < zone.r) {
-      // 태풍 반경 안이면 바닷길을 따라 멀어지는 쪽으로
-      const forward = arc(
-        pointAt(ship.path, shifted(ship, ds), scratchB),
-        zone.v,
-      )
-      const back = arc(pointAt(ship.path, shifted(ship, -ds), scratchB), zone.v)
-      move(ship, forward >= back ? ds : -ds)
-      ship.holding = true
-      return
-    }
-    const next = pointAt(ship.path, shifted(ship, ship.dir * ds), scratchB)
-    if (arc(next, zone.v) < zone.r) {
-      ship.holding = true
-      return
-    }
-  }
-  const port = nextPort(ship)
-  if (
-    port &&
-    traffic.conditions.closedPorts.has(port.cityId) &&
-    Math.abs(port.s - ship.s) * ship.path.length < PORT_HOLD_RAD
-  ) {
+  if (traffic.stormZones.some((zone) => arc(here, zone.v) < zone.r)) {
+    // 태풍 반경 안: 바닷길을 따라 태풍에서 더 멀어지는 쪽부터 해 보고, 안전한 쪽이 없으면 기다림
     ship.holding = true
+    const forward = clearance(ship, traffic, ds)
+    const back = clearance(ship, traffic, -ds)
+    for (const delta of forward >= back ? [ds, -ds] : [-ds, ds])
+      if (canMove(ship, traffic, here, delta)) {
+        move(ship, delta)
+        return
+      }
     return
   }
-  move(ship, ship.dir * ds)
+  if (canMove(ship, traffic, here, ship.dir * ds)) move(ship, ship.dir * ds)
+  else ship.holding = true
 }
 
 /** 우주왕복선 궤도: 케네디에서 정동쪽으로 떠나는 대권 */

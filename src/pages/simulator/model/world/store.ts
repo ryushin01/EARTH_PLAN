@@ -60,7 +60,7 @@ import { snapshotStructures } from './snapshot'
 import type { Snapshot } from './snapshot'
 import type { SolarLevel, WorldState } from './types'
 import { trafficConditions } from '../traffic/disruption'
-import { trafficEvent } from '../traffic/events'
+import { trafficImpactText } from '../traffic/events'
 import { trafficSummary } from '../traffic/summary'
 import type { TrafficSummary } from '../traffic/summary'
 
@@ -185,13 +185,19 @@ export const useWorld = create<WorldStore>()((set, get) => {
   const trafficBefore = (now: number) =>
     trafficSummary(trafficConditions(get(), now))
   /**
-   * 재해로 운항이 바뀌었으면 사건 한 줄. 재해 사건보다 먼저 넣어 재해가 가장 최근 사건으로 남음.
+   * 재해로 운항이 바뀌었으면 재해 기록 끝에 운항 영향을 덧붙임(사건 알림으로 함께 읽힘).
    * 태양 폭풍은 처음 몇 초에 걸쳐 밝아지므로 1초 뒤 상태와 비교
    */
-  const trafficNote = (before: TrafficSummary, now: number): NewEvent[] => {
+  const withTraffic = (
+    message: Text,
+    before: TrafficSummary,
+    now: number,
+  ): Text => {
     const after = trafficSummary(trafficConditions(get(), now + 1000))
-    const event = trafficEvent(before, after)
-    return event ? [event] : []
+    const impact = trafficImpactText(before, after)
+    return impact
+      ? { ko: `${message.ko} ${impact.ko}`, en: `${message.en} ${impact.en}` }
+      : message
   }
 
   /** 미션: 예정된 재해를 일으키고, 마지막 해에 판정 */
@@ -456,11 +462,9 @@ export const useWorld = create<WorldStore>()((set, get) => {
           : ` No major city within the ${r} km ash radius.`
         return `${name} erupts at VEI ${effective}${reduced}.${people}`
       })
-      log([
-        ...trafficNote(trafficBeforeEvent, now),
-        { tone: effective >= 6 ? 'danger' : 'warn', text: message },
-      ])
-      return { ok: true, message }
+      const text = withTraffic(message, trafficBeforeEvent, now)
+      log([{ tone: effective >= 6 ? 'danger' : 'warn', text }])
+      return { ok: true, message: text }
     },
 
     triggerTsunami: (sourceId, magnitude, now = nowMs()) => {
@@ -503,11 +507,9 @@ export const useWorld = create<WorldStore>()((set, get) => {
             `${hit.length} cities badly hit${first ? ` (first: ${siteName(first.cityId, l)} in about ${first.arrivalHours.toFixed(1)} h, ${first.waveHeight.toFixed(1)} m)` : ''}` +
             `, ${blocked.length} protected by barriers.`,
       )
-      log([
-        ...trafficNote(trafficBeforeEvent, now),
-        { tone: hit.length ? 'danger' : 'warn', text: message },
-      ])
-      return { ok: true, message }
+      const text = withTraffic(message, trafficBeforeEvent, now)
+      log([{ tone: hit.length ? 'danger' : 'warn', text }])
+      return { ok: true, message: text }
     },
 
     triggerImpact: (targetId, diameterM, now = nowMs()) => {
@@ -629,11 +631,9 @@ export const useWorld = create<WorldStore>()((set, get) => {
             : ` The impact tsunami strikes ${tsunamiHits} cities.`
         return `A ${size} asteroid hits ${name}${reduced}: about ${formatEnergy(energyMt, l)}.${people}${wave}`
       })
-      log([
-        ...trafficNote(trafficBeforeEvent, now),
-        { tone: effective >= 140 ? 'danger' : 'warn', text: message },
-      ])
-      return { ok: true, message }
+      const text = withTraffic(message, trafficBeforeEvent, now)
+      log([{ tone: effective >= 140 ? 'danger' : 'warn', text }])
+      return { ok: true, message: text }
     },
 
     startWildfire: (regionId, now = nowMs()) => {
@@ -737,11 +737,9 @@ export const useWorld = create<WorldStore>()((set, get) => {
           '.'
         )
       })
-      log([
-        ...trafficNote(trafficBeforeEvent, now),
-        { tone: severe.length ? 'danger' : 'warn', text: message },
-      ])
-      return { ok: true, message }
+      const text = withTraffic(message, trafficBeforeEvent, now)
+      log([{ tone: severe.length ? 'danger' : 'warn', text }])
+      return { ok: true, message: text }
     },
 
     startDrought: (regionId, severity) => {
@@ -844,14 +842,14 @@ export const useWorld = create<WorldStore>()((set, get) => {
           : ''
         return `${SOLAR_LABEL_EN[level]} solar storm. Aurora reaches down to ${auroraLat}° magnetic latitude.${grid}${shield}${sats}`
       })
+      const text = withTraffic(message, trafficBeforeEvent, now)
       log([
-        ...trafficNote(trafficBeforeEvent, now),
         {
           tone: damaged.length || level === 'carrington' ? 'danger' : 'warn',
-          text: message,
+          text,
         },
       ])
-      return { ok: true, message }
+      return { ok: true, message: text }
     },
 
     loadSnapshot: (snapshot, source) => {

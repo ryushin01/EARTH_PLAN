@@ -90,16 +90,19 @@ describe('새 재해', () => {
     expect(storms.map((s) => s.level)).toEqual(['g3', 'g4', 'g5'])
   })
 
-  it('재해로 운항이 바뀌면 그 재해 바로 앞에 운항 영향을 기록한다', () => {
+  it('재해로 운항이 바뀌면 그 재해 기록과 결과 문구에 운항 영향을 덧붙인다', () => {
     useWorld.getState().reset()
-    useWorld.getState().triggerSolarStorm('carrington')
-    const [storm, traffic] = useWorld.getState().events
-    expect(storm.text.ko).not.toContain('운항 영향')
-    expect(traffic.text.ko).toContain('운항 영향')
-    expect(traffic.text.ko).toContain('우주왕복선 발사 보류')
+    const before = useWorld.getState().events.length
+    const result = useWorld.getState().triggerSolarStorm('carrington')
+    const { events } = useWorld.getState()
+    // 운항 영향은 따로 기록하지 않고 재해 기록 한 건에 담아, 사건 알림으로 함께 읽힘
+    expect(events).toHaveLength(before + 1)
+    expect(events[0].text.ko).toContain('운항 영향')
+    expect(events[0].text.ko).toContain('우주왕복선 발사 보류')
+    expect(result.message.ko).toContain('운항 영향')
   })
 
-  it('운항에 영향이 없는 재해는 운항 사건을 남기지 않는다', () => {
+  it('운항에 영향이 없는 재해는 운항 영향을 덧붙이지 않는다', () => {
     useWorld.getState().reset()
     useWorld.getState().triggerEruption('eyjafjallajokull', 2)
     expect(

@@ -1,6 +1,7 @@
 import { CITIES } from '../site/data'
 import { cityState, floodedArea, riseRate, warming } from './engine'
 import type { CityState, WorldState } from './types'
+import { displacedFromFlooding } from '../migration/flows'
 
 export function cityStates(
   state: Pick<WorldState, 'seaLevel' | 'structures' | 'year'>,
@@ -30,10 +31,8 @@ export function summarize(state: WorldState): WorldSummary {
     const s = states[city.id]
     if (s === 'flooded') {
       floodedCities++
-      // 저지대 침수 시 도시권 인구의 일부가 이주한다고 가정
-      displacedMillions +=
-        city.population *
-        Math.min(1, 0.15 + (state.seaLevel - city.elevation) * 0.08)
+      // 저지대 침수 시 도시권 인구의 일부가 이주한다고 가정 (인구 이동 흐름과 같은 식)
+      displacedMillions += displacedFromFlooding(city, state.seaLevel)
     } else if (s === 'protected') protectedCities++
     else if (s === 'at-risk') atRiskCities++
   }

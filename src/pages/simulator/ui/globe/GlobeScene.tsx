@@ -21,6 +21,7 @@ import type { MarkerTone } from './SiteMarkers'
 import { StructureModels } from './StructureModels'
 import { Traffic } from './Traffic'
 import { TodayLayer } from './TodayLayer'
+import { MigrationLayer } from './MigrationLayer'
 import { useToday } from '../../model/today/store'
 import { kpAurora } from '../../model/today/today'
 import { cityStates } from '../../model/world/selectors'
@@ -52,6 +53,8 @@ interface GlobeSceneProps {
   showMarkers: boolean
   /** 항공·선박 운항 */
   showTraffic: boolean
+  /** 인구 이동 흐름 */
+  showMigration?: boolean
   reducedMotion: boolean
   /** 별 배경 (정지 이미지를 찍을 때는 끔) */
   showStars?: boolean
@@ -65,6 +68,7 @@ export function GlobeScene({
   showClouds,
   showMarkers,
   showTraffic,
+  showMigration = false,
   reducedMotion,
   showStars = true,
   onReady,
@@ -265,6 +269,7 @@ export function GlobeScene({
         locate={locate}
       />
       {showTraffic ? <Traffic reducedMotion={reducedMotion} /> : null}
+      {showMigration ? <MigrationLayer reducedMotion={reducedMotion} /> : null}
       {todayEnabled && todayData ? (
         <TodayLayer
           // 인스턴스 수가 바뀌면 메시를 새로 만듦

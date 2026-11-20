@@ -19,6 +19,7 @@ import type { MessageKey } from '../i18n'
 import { WAKE_EVENTS, wokeEarly } from './earlyWake'
 import { TrafficStatus } from './TrafficStatus'
 import { TodayStatus } from './TodayStatus'
+import { MigrationStatus } from './MigrationStatus'
 import { useToday } from '../../model/today/store'
 import { loadToday } from '../../api/loadToday'
 import poster600 from './poster/earth-600.webp'
@@ -247,6 +248,7 @@ export function GlobeViewport({
   const [showClouds, setShowClouds] = useState(true)
   const [showMarkers, setShowMarkers] = useState(true)
   const [showTraffic, setShowTraffic] = useState(true)
+  const [showMigration, setShowMigration] = useState(true)
   const todayEnabled = useToday((s) => s.enabled)
   const setTodayEnabled = useToday((s) => s.setEnabled)
   // 오늘의 지구를 켜면 사이트 안 자료를 불러옴 (서비스 워커가 미리 받아 두어 오프라인에서도)
@@ -328,6 +330,7 @@ export function GlobeViewport({
                 showClouds={showClouds}
                 showMarkers={showMarkers}
                 showTraffic={showTraffic}
+                showMigration={showMigration}
                 reducedMotion={reducedMotion}
                 onProgress={setPercent}
                 onReady={onReady}
@@ -379,6 +382,11 @@ export function GlobeViewport({
         {todayEnabled ? (
           <div className="sr-only lg:not-sr-only lg:self-center">
             <TodayStatus />
+          </div>
+        ) : null}
+        {showMigration ? (
+          <div className="sr-only lg:not-sr-only lg:self-center">
+            <MigrationStatus />
           </div>
         ) : null}
         <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-xs border border-line bg-panel p-1.5">
@@ -433,6 +441,12 @@ export function GlobeViewport({
               onClick={() => setShowTraffic((v) => !v)}
             >
               {t('globe.traffic')}
+            </ToggleButton>
+            <ToggleButton
+              pressed={showMigration}
+              onClick={() => setShowMigration((v) => !v)}
+            >
+              {t('globe.migration')}
             </ToggleButton>
             <ToggleButton
               pressed={todayEnabled}

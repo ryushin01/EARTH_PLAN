@@ -221,6 +221,17 @@ test.describe('시뮬레이션 흐름', () => {
     ).toBeVisible()
   })
 
+  test('해수면을 올리면 잠긴 도시의 인구 이동 요약이 나오고, 끄면 감춘다', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.getByRole('slider', { name: '해수면 (2020년 대비)' }).fill('6')
+    const summary = page.getByText(/^인구 이동 · 해수면 이주 약 [\d.,]+백만 명/)
+    await expect(summary).toBeVisible()
+    await page.getByRole('button', { name: '인구 이동' }).click()
+    await expect(summary).toBeHidden()
+  })
+
   test('쓰나미 도달 표와 분화 결과를 보여 준다', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('tab', { name: '쓰나미' }).click()

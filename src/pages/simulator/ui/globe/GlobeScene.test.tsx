@@ -96,6 +96,7 @@ const defaults = {
 async function render(
   props: Partial<typeof defaults> & {
     showStars?: boolean
+    showMigration?: boolean
     onReady?: () => void
   } = {},
 ) {
@@ -247,6 +248,21 @@ describe('GlobeScene', () => {
       expect(camera().clone().normalize().dot(target)).toBeCloseTo(1, 5)
       await renderer.unmount()
     })
+  })
+
+  it('인구 이동을 켜면 잠긴 도시가 있을 때 이동 흐름을 그린다', async () => {
+    const migration = (r: Awaited<ReturnType<typeof render>>) =>
+      r.renderer.scene.findAll((node) => node.props.name === 'migration')
+    const none = await render({ showMigration: true })
+    expect(migration(none)).toHaveLength(0)
+    await none.renderer.unmount()
+    useWorld.getState().setSeaLevel(6)
+    const flooded = await render({ showMigration: true })
+    expect(migration(flooded)).toHaveLength(1)
+    await flooded.renderer.unmount()
+    const off = await render({ showMigration: false })
+    expect(migration(off)).toHaveLength(0)
+    await off.renderer.unmount()
   })
 
   it('항공·선박을 켜면 운항 레이어를 그리고, 끄면 그리지 않는다', async () => {

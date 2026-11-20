@@ -1,10 +1,10 @@
 # 데이터 출처
 
-| 파일 (`public/textures/`)                                                                                                     | 출처                                                                                                                                                    | 사용 허락                                                              |
-| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `earth-albedo.webp`, `earth-lights.webp`, `earth-clouds.webp`, 작은 화면용 `earth-albedo-1024.webp`, `earth-lights-1024.webp` | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160)                                                   | MIT (three.js 저장소)                                                  |
-| `earth-elevation.webp`, 작은 화면용 `earth-elevation-1024.webp`, `land-elevation-512x256.u8`                                  | NOAA NGDC ETOPO1 얼음 표면판. [NOAA CoastWatch ERDDAP `etopo180`](https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html)에서 1/6° 간격으로 받음 | 자유롭게 쓰고 다시 배포할 수 있음. 법적 용도가 아니며 정확성 보증 없음 |
-| `korea-elevation.webp`                                                                                                        | 같은 ETOPO1에서 한반도(북위 33~43°, 동경 124~131°)만 원래 해상도인 1분(약 1.8km) 간격으로 받음                                                          | 위와 같음                                                              |
+| 파일 (`public/textures/`)                                                                                                     | 출처                                                                                                                                                                                         | 사용 허락                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `earth-albedo.webp`, `earth-lights.webp`, `earth-clouds.webp`, 작은 화면용 `earth-albedo-1024.webp`, `earth-lights-1024.webp` | [three.js 예제 텍스처](https://github.com/mrdoob/three.js/tree/r160/examples/textures/planets) (r160)                                                                                        | MIT (three.js 저장소)                                                  |
+| `earth-elevation.webp`, 작은 화면용 `earth-elevation-1024.webp`, `land-elevation-512x256.u8`                                  | NOAA NGDC ETOPO1 얼음 표면판. [NOAA CoastWatch ERDDAP `etopo180`](https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.html)에서 1/6° 간격으로 받음                                      | 자유롭게 쓰고 다시 배포할 수 있음. 법적 용도가 아니며 정확성 보증 없음 |
+| `korea-elevation.webp`, `tokyo-bay-elevation.webp`, `netherlands-elevation.webp`                                              | 같은 ETOPO1에서 한반도(북위 33~43°, 동경 124~131°)·도쿄만과 간토 평야(북위 34.8~36.5°, 동경 139.2~141°)·네덜란드(북위 50.7~53.8°, 동경 2.5~7.5°)만 원래 해상도인 1분(약 1.8km) 간격으로 받음 | 위와 같음                                                              |
 
 ETOPO1을 쓸 때 NOAA가 밝히도록 한 문헌입니다.
 
@@ -28,16 +28,27 @@ ETOPO1을 쓸 때 NOAA가 밝히도록 한 문헌입니다.
 
 `land-elevation-512x256.u8`은 같은 R 채널 값을 512×256 Uint8 격자로 줄인 것입니다(0 바다, 1~254는 `값 − 51`m, 255는 204m 이상). 브라우저에서 위도별 면적 가중치를 곱해 해수면별 침수 면적 곡선을 만듭니다.
 
-## 한반도 고해상도 고도
+## 고해상도 고도 패치
 
-`korea-elevation.webp` (421×601, 무손실 WebP, 회색조)는 ETOPO1 1분 격자를 한 칸 = 한 픽셀로 옮긴 것입니다. 픽셀 값은 전 세계 고도 텍스처의 R 채널과 같은 척도(고도 −50~205m, `값 − 50`)이고, 첫 줄이 북쪽(43°), 첫 칸이 서쪽(124°)입니다. 격자점이 픽셀 가운데라 덮는 범위는 사방으로 반 칸(1/120°)씩 넓습니다(`src/shared/config`의 `KOREA_DETAIL_BOUNDS`).
+세 패치(무손실 WebP, 회색조)는 ETOPO1 1분 격자를 한 칸 = 한 픽셀로 옮긴 것입니다. 픽셀 값은 전 세계 고도 텍스처의 R 채널과 같은 척도(고도 −50~205m, `값 − 50`)이고, 첫 줄이 북쪽, 첫 칸이 서쪽입니다. 격자점이 픽셀 가운데라 덮는 범위는 사방으로 반 칸(1/120°)씩 넓습니다(`src/shared/config`의 `DETAIL_PATCHES`).
 
-지구 셰이더는 이 범위 안에서 침수 판정에 이 고도를 쓰고(가장자리는 전 세계 고도와 부드럽게 섞음), 육지·바다 구분과 색은 전 세계 텍스처를 그대로 씁니다. 지구가 보인 뒤에 받아 첫 화면을 늦추지 않습니다.
+| 파일                         | 범위                             | 크기    | 용량   |
+| ---------------------------- | -------------------------------- | ------- | ------ |
+| `korea-elevation.webp`       | 북위 33~43°, 동경 124~131°       | 421×601 | 60KB   |
+| `tokyo-bay-elevation.webp`   | 북위 34.8~36.5°, 동경 139.2~141° | 109×103 | 5.0KB  |
+| `netherlands-elevation.webp` | 북위 50.7~53.8°, 동경 2.5~7.5°   | 301×187 | 20.5KB |
+
+지구 셰이더는 각 범위 안에서 침수 판정에 이 고도를 쓰고(가장자리는 전 세계 고도와 부드럽게 섞음), 육지·바다 구분과 색은 전 세계 텍스처를 그대로 씁니다. 해발 0m 아래 육지(네덜란드 간척지 등)는 전 세계 고도처럼 기존 제방이 0.5m까지 지킨다고 봅니다. 섞는 가장자리(패치 크기의 4%)에 낮은 해안이 걸리지 않게 범위를 넉넉히 잡았습니다(젤란트·바덴 제도·돌라르트, 조시·보소 반도 끝). 지구가 보인 뒤에 받아 첫 화면을 늦추지 않습니다.
 
 ```bash
+# ERDDAP etopo180은 가끔 503을 돌려주므로 실패하면 다시 받습니다
 curl -o korea.nc "https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?altitude%5B(33.0):1:(43.0)%5D%5B(124.0):1:(131.0)%5D"
-pnpm data:korea korea.nc korea-elevation.png
-cwebp -lossless -exact -z 9 korea-elevation.png -o public/textures/korea-elevation.webp
+curl -o tokyo-bay.nc "https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?altitude%5B(34.8):1:(36.5)%5D%5B(139.2):1:(141.0)%5D"
+curl -o netherlands.nc "https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?altitude%5B(50.7):1:(53.8)%5D%5B(2.5):1:(7.5)%5D"
+for r in korea tokyo-bay netherlands; do
+  pnpm data:detail $r.nc $r-elevation.png
+  cwebp -lossless -exact -z 9 $r-elevation.png -o public/textures/$r-elevation.webp
+done
 ```
 
 ## 다시 만들기

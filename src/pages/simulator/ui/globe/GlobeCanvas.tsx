@@ -40,8 +40,10 @@ export function GlobeCanvas({ onProgress, ...scene }: GlobeCanvasProps) {
   const { t } = useT()
   return (
     <>
+      {/* 필요할 때만 그림: 언제 그릴지는 GlobeScene이 정함(model/render) */}
       <Canvas
         camera={CAMERA}
+        frameloop="demand"
         dpr={[1, 1.75]}
         gl={{ antialias: true }}
         fallback={

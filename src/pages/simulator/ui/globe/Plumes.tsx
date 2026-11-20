@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { CylinderGeometry, Quaternion, RingGeometry, Vector3 } from 'three'
+import { IMPACT_PLUME_SECONDS } from '../../model/planet'
 import type { PlumeInput } from '../../model/planet'
 
 const UP = new Vector3(0, 1, 0)
@@ -175,7 +176,7 @@ function ImpactBurst({
   quaternion: Quaternion
 }) {
   const t = plume.age
-  if (t > 25) return null
+  if (t > IMPACT_PLUME_SECONDS) return null
   const flash = Math.max(0, 1 - t / 1.5)
   const ball = Math.min(1, t / 1.2)
   const cool = Math.min(1, t / 6)

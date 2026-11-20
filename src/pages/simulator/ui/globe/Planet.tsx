@@ -15,7 +15,7 @@ import type { DirectionalLight, Group, ShaderMaterial } from 'three'
 import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import {
-  KOREA_DETAIL_BOUNDS,
+  DETAIL_PATCHES,
   TEXTURES,
   TEXTURES_SMALL,
   prefersSmallTextures,
@@ -72,12 +72,15 @@ export function preloadPlanet() {
   useLoader.preload(ImageBitmapLoader, TEXTURE_URLS, configureLoader)
 }
 
-/** 한반도 고도 패치 범위를 지구 텍스처 좌표(u: 경도, v: 위도)로 */
-const DETAIL_RECT = new Vector4(
-  (KOREA_DETAIL_BOUNDS.west + 180) / 360,
-  (KOREA_DETAIL_BOUNDS.south + 90) / 180,
-  (KOREA_DETAIL_BOUNDS.east + 180) / 360,
-  (KOREA_DETAIL_BOUNDS.north + 90) / 180,
+/** 고도 패치 범위를 지구 텍스처 좌표(u: 경도, v: 위도)로 */
+const DETAIL_RECTS = DETAIL_PATCHES.map(
+  ({ bounds }) =>
+    new Vector4(
+      (bounds.west + 180) / 360,
+      (bounds.south + 90) / 180,
+      (bounds.east + 180) / 360,
+      (bounds.north + 90) / 180,
+    ),
 )
 
 /** 지자기 북극 방향 (오로라 띠의 중심) */
@@ -130,9 +133,14 @@ export function Planet({
       uAlbedo: { value: albedo },
       uLights: { value: lights },
       uElevation: { value: elevation },
-      uDetail: { value: null as Texture | null },
-      uDetailRect: { value: DETAIL_RECT },
-      uDetailOn: { value: 0 },
+      ...Object.fromEntries(
+        DETAIL_PATCHES.map((_, i) => [
+          `uDetail${i}`,
+          { value: null as Texture | null },
+        ]),
+      ),
+      uDetailRect: { value: DETAIL_RECTS },
+      uDetailOn: { value: DETAIL_PATCHES.map(() => 0) },
       uSun: { value: new Vector3(1, 0, 0) },
       uSeaLevel: { value: 0 },
       uIceN: { value: 75 },
@@ -242,6 +250,7 @@ export function Planet({
   const gl = useThree((state) => state.gl)
   const camera = useThree((state) => state.camera)
   const scene = useThree((state) => state.scene)
+  const invalidate = useThree((state) => state.invalidate)
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
@@ -266,45 +275,52 @@ export function Planet({
     if (compiled) onReady?.()
   }, [compiled, onReady])
 
-  // 한반도 고해상도 고도(약 60KB)는 지구가 보인 뒤에 받아 첫 화면을 늦추지 않음.
-  // 받지 못하면 전 세계 고도만으로 그림.
+  // 고해상도 고도 패치(한반도 약 60KB·도쿄만 5KB·네덜란드 21KB)는 지구가 보인 뒤에 받아 첫 화면을 늦추지 않음.
+  // 받지 못한 곳은 전 세계 고도만으로 그림.
   // React Three Fiber는 uniforms 항목을 재질 쪽 객체로 복사하므로, 나중에 바꿀 값은 재질의 uniforms에 씀
   useEffect(() => {
     const material = earthRef.current
     if (!compiled || !material || typeof createImageBitmap === 'undefined')
       return
     let cancelled = false
-    let detail: Texture | undefined
-    // 이 패치 이미지는 useLoader 캐시가 아니라 여기서 직접 받으므로, 텍스처를 해제할 때 함께 닫음
-    let detailBitmap: ImageBitmap | undefined
+    // 패치 이미지는 useLoader 캐시가 아니라 여기서 직접 받으므로, 텍스처를 해제할 때 함께 닫음
+    const loaded: Array<{ texture: Texture; bitmap: ImageBitmap }> = []
     const loader = new ImageBitmapLoader()
     configureLoader(loader)
-    loader.load(
-      TEXTURES.koreaElevation,
-      (bitmap) => {
-        if (cancelled) {
-          bitmap.close()
-          return
-        }
-        detailBitmap = bitmap
-        detail = new Texture(bitmap)
-        detail.flipY = false
-        detail.colorSpace = NoColorSpace
-        detail.needsUpdate = true
-        material.uniforms.uDetail.value = detail
-        material.uniforms.uDetailOn.value = 1
-      },
-      undefined,
-      () => undefined,
-    )
+    DETAIL_PATCHES.forEach((patch, i) => {
+      loader.load(
+        patch.url,
+        (bitmap) => {
+          if (cancelled) {
+            bitmap.close()
+            return
+          }
+          const texture = new Texture(bitmap)
+          texture.flipY = false
+          texture.colorSpace = NoColorSpace
+          texture.needsUpdate = true
+          loaded.push({ texture, bitmap })
+          material.uniforms[`uDetail${i}`].value = texture
+          ;(material.uniforms.uDetailOn.value as number[])[i] = 1
+          // 그리기를 쉬는 중(frameloop="demand")에도 바로 보이게
+          invalidate()
+        },
+        undefined,
+        () => undefined,
+      )
+    })
     return () => {
       cancelled = true
-      material.uniforms.uDetailOn.value = 0
-      material.uniforms.uDetail.value = null
-      detail?.dispose()
-      detailBitmap?.close()
+      DETAIL_PATCHES.forEach((_, i) => {
+        ;(material.uniforms.uDetailOn.value as number[])[i] = 0
+        material.uniforms[`uDetail${i}`].value = null
+      })
+      for (const { texture, bitmap } of loaded) {
+        texture.dispose()
+        bitmap.close()
+      }
     }
-  }, [compiled])
+  }, [compiled, invalidate])
 
   return (
     <group ref={rootRef} visible={compiled}>

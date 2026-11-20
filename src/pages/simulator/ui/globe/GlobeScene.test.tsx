@@ -11,6 +11,7 @@ import { Vector3 } from 'three'
 import type { Camera } from 'three'
 import { ALL_SITES, getSite } from '../../model/site/data'
 import { MAX_DISTANCE, MIN_DISTANCE, orbitPosition } from '../../model/camera'
+import { AMBIENT_FRAME_MS } from '../../model/render'
 import type { CameraApi } from '../../model/camera'
 import type { PlanetFrame } from '../../model/planet'
 import { useWorld } from '../../model/world/store'
@@ -32,6 +33,7 @@ const seen = vi.hoisted(() => ({
     onStart?: () => void
   },
   stars: null as null | { speed?: number },
+  controlsActive: false,
 }))
 
 vi.mock('./Planet', () => ({
@@ -41,12 +43,18 @@ vi.mock('./Planet', () => ({
   },
 }))
 
-vi.mock('@react-three/drei', () => ({
-  OrbitControls: forwardRef((props: NonNullable<typeof seen.controls>, ref) => {
+vi.mock('./GlobeControls', () => ({
+  GlobeControls: forwardRef((props: NonNullable<typeof seen.controls>, ref) => {
     seen.controls = props
-    useImperativeHandle(ref, () => ({ update: () => {} }))
+    useImperativeHandle(ref, () => ({
+      update: () => {},
+      isActive: () => seen.controlsActive,
+    }))
     return null
   }),
+}))
+
+vi.mock('@react-three/drei', () => ({
   Stars: (props: NonNullable<typeof seen.stars>) => {
     seen.stars = props
     return null
@@ -55,6 +63,15 @@ vi.mock('@react-three/drei', () => ({
     <group name="label" userData={{ text: children.props.children }} />
   ),
 }))
+
+/** 다음 프레임 요청(invalidate)을 기록하는 대역으로 바꿈 */
+function InvalidateSpy({ spy }: { spy: () => void }) {
+  const set = useThree((state) => state.set)
+  useLayoutEffect(() => {
+    set({ invalidate: spy })
+  }, [set, spy])
+  return null
+}
 
 /** 장면을 그리는 카메라를 받아 둠 */
 function CameraProbe({ cameraRef }: { cameraRef: RefObject<Camera | null> }) {
@@ -81,15 +98,17 @@ async function render(
 ) {
   const apiRef = createRef<CameraApi>()
   const cameraRef = createRef<Camera>()
+  const invalidate = vi.fn()
   const renderer = await ReactThreeTestRenderer.create(
     <>
+      <InvalidateSpy spy={invalidate} />
       <CameraProbe cameraRef={cameraRef} />
       <GlobeScene apiRef={apiRef} {...defaults} {...props} />
     </>,
   )
   const camera = () => cameraRef.current!.position
   const api = () => apiRef.current!
-  return { renderer, camera, api }
+  return { renderer, camera, api, invalidate }
 }
 
 const toVector = (v: Vec3) => new Vector3(...v)
@@ -100,6 +119,61 @@ describe('GlobeScene', () => {
     seen.planet = null
     seen.controls = null
     seen.stars = null
+    seen.controlsActive = false
+  })
+
+  describe('필요할 때만 그리기', () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('멈춰 있고 움직이는 것이 없으면 다음 프레임을 요청하지 않는다', async () => {
+      const { renderer, invalidate } = await render()
+      await renderer.advanceFrames(1, 0.016)
+      invalidate.mockClear()
+      await renderer.advanceFrames(3, 0.016)
+      expect(invalidate).not.toHaveBeenCalled()
+      await renderer.unmount()
+    })
+
+    it('세계 상태가 바뀌거나 카메라 조작 API를 부르면 바로 다시 그린다', async () => {
+      const { renderer, invalidate, api } = await render()
+      invalidate.mockClear()
+      act(() => {
+        useWorld.getState().setSeaLevel(3)
+      })
+      expect(invalidate).toHaveBeenCalled()
+      invalidate.mockClear()
+      api().rotate(0.3, 0)
+      expect(invalidate).toHaveBeenCalled()
+      await renderer.unmount()
+    })
+
+    it('끌기 중이거나 재생 중이면 매 프레임 그린다', async () => {
+      const { renderer, invalidate } = await render()
+      seen.controlsActive = true
+      invalidate.mockClear()
+      await renderer.advanceFrames(1, 0.016)
+      expect(invalidate).toHaveBeenCalledTimes(1)
+      seen.controlsActive = false
+      act(() => {
+        useWorld.getState().setRunning(true)
+      })
+      invalidate.mockClear()
+      await renderer.advanceFrames(1, 0.016)
+      expect(invalidate).toHaveBeenCalledTimes(1)
+      await renderer.unmount()
+    })
+
+    it('자동 회전만 있으면 약 1/30초 뒤에 다음 프레임을 요청한다', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      const { renderer, invalidate } = await render({ autoRotate: true })
+      await renderer.advanceFrames(1, 0.016)
+      invalidate.mockClear()
+      await renderer.advanceFrames(1, 0.016)
+      expect(invalidate).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(AMBIENT_FRAME_MS)
+      expect(invalidate).toHaveBeenCalledTimes(1)
+      await renderer.unmount()
+    })
   })
 
   it('항공·선박을 켜면 운항 레이어를 그리고, 끄면 그리지 않는다', async () => {

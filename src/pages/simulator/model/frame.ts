@@ -1,3 +1,4 @@
+import { IMPACT_PLUME_SECONDS } from './planet'
 import type { PlanetFrame, PlumeInput } from './planet'
 import { climateVisuals, TSUNAMI_SPEED_KMH } from './world/engine'
 import { ashCloud, solarFade } from './world/fade'
@@ -77,13 +78,15 @@ export function buildFrame(
     if (!target || impact.effectiveDiameterM <= 0) continue
     const age = (nowMs - impact.startedAt) / 1000
     const center = latLonToVector3(target)
-    plumes.push({
-      id: impact.id,
-      kind: 'impact',
-      center,
-      age,
-      size: Math.min(1, Math.log10(impact.effectiveDiameterM / 20) / 2.7),
-    })
+    // 다 그린 불덩이는 넘기지 않음 (넘기면 분출 기둥 층이 매 프레임 다시 그려 렌더링을 쉬지 못함)
+    if (age <= IMPACT_PLUME_SECONDS)
+      plumes.push({
+        id: impact.id,
+        kind: 'impact',
+        center,
+        age,
+        size: Math.min(1, Math.log10(impact.effectiveDiameterM / 20) / 2.7),
+      })
     const realFade = age < 40 ? 1 : Math.max(0, 1 - (age - 40) / 20)
     const simFade = Math.max(0, 1 - (state.year - impact.year) / 5)
     const amount = 0.9 * Math.min(realFade, simFade)

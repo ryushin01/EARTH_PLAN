@@ -5,6 +5,16 @@ import {
   MAX_STORMS,
   MAX_WAVES,
 } from '../model/planet'
+import { DETAIL_PATCHES } from '@/shared/config'
+
+/** 고해상도 고도 패치마다 샘플러 하나 (GLSL ES 3.0은 샘플러 배열을 반복문 변수로 고를 수 없음) */
+const detailSamplers = DETAIL_PATCHES.map(
+  (_, i) => `uniform sampler2D uDetail${i};`,
+).join('\n')
+const applyDetails = DETAIL_PATCHES.map(
+  (_, i) =>
+    `  hLow = withDetail(hLow, uDetail${i}, uDetailRect[${i}], uDetailOn[${i}]);`,
+).join('\n')
 
 export const earthVertex = /* glsl */ `
 varying vec2 vUv;
@@ -31,10 +41,10 @@ export const earthFragment = /* glsl */ `
 uniform sampler2D uAlbedo;
 uniform sampler2D uLights;
 uniform sampler2D uElevation;
-// 한반도 고해상도 고도 (uDetailRect: 텍스처 좌표의 서·남·동·북, uDetailOn: 받았으면 1)
-uniform sampler2D uDetail;
-uniform vec4 uDetailRect;
-uniform float uDetailOn;
+// 고해상도 고도 패치 (uDetailRect: 텍스처 좌표의 서·남·동·북, uDetailOn: 받았으면 1)
+${detailSamplers}
+uniform vec4 uDetailRect[${DETAIL_PATCHES.length}];
+uniform float uDetailOn[${DETAIL_PATCHES.length}];
 uniform vec3 uSun;
 uniform float uSeaLevel;
 uniform float uIceN;
@@ -82,17 +92,22 @@ float fbm(vec2 p) {
   return noise(p) * 0.55 + noise(p * 2.3) * 0.3 + noise(p * 5.1) * 0.15;
 }
 
+// 패치 안이면 10배 촘촘한 고도로 침수를 판정 (가장자리는 바깥 고도와 부드럽게 섞음)
+float withDetail(float h, sampler2D tex, vec4 rect, float on) {
+  vec2 dUv = (vUv - rect.xy) / (rect.zw - rect.xy);
+  vec2 dIn = min(dUv, 1.0 - dUv);
+  float w = on * smoothstep(0.0, 0.04, min(dIn.x, dIn.y));
+  float hDetail = max(texture2D(tex, clamp(dUv, 0.0, 1.0)).r * 255.0 - 50.0, 0.5);
+  return mix(h, hDetail, w);
+}
+
 void main() {
   vec4 elev = texture2D(uElevation, vUv);
   float land = step(0.5, elev.b);
   // 해발 0m 미만 육지(간척지 등)는 기존 제방이 0.5m까지 지킨다고 봅니다
   float hLow = max(elev.r * 255.0 - 50.0, 0.5);
-  // 한반도는 10배 촘촘한 고도로 침수를 판정 (가장자리는 전 세계 고도와 부드럽게 섞음)
-  vec2 dUv = (vUv - uDetailRect.xy) / (uDetailRect.zw - uDetailRect.xy);
-  vec2 dIn = min(dUv, 1.0 - dUv);
-  float detailW = uDetailOn * smoothstep(0.0, 0.04, min(dIn.x, dIn.y));
-  float hDetail = max(texture2D(uDetail, clamp(dUv, 0.0, 1.0)).r * 255.0 - 50.0, 0.5);
-  hLow = mix(hLow, hDetail, detailW);
+  // 한반도·도쿄만·네덜란드는 10배 촘촘한 고도로 (src/shared/config의 DETAIL_PATCHES)
+${applyDetails}
   float h = fullHeight(elev.g);
   float lat = degrees(asin(clamp(vPos.y, -1.0, 1.0)));
   vec3 albedo = texture2D(uAlbedo, vUv).rgb;

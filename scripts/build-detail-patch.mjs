@@ -1,11 +1,12 @@
 import fs from 'node:fs'
 import { NetCDFReader } from 'netcdfjs'
 import { PNG } from 'pngjs'
-// 사용법: node scripts/build-korea-detail.mjs <etopo-한반도.nc> <출력.png>
-// 한반도(북위 33~43°, 동경 124~131°) ETOPO1 1분 격자를 그대로 한 칸 = 한 픽셀로 옮깁니다.
+// 사용법: pnpm data:detail <etopo-지역.nc> <출력.png>
+// 고해상도 고도 패치(한반도·도쿄만·네덜란드, src/shared/config의 DETAIL_PATCHES)를 만듭니다.
+// ERDDAP에서 받은 ETOPO1 1분 격자를 그대로 한 칸 = 한 픽셀로 옮깁니다.
 // 픽셀 값: 고도 −50~205m를 1m 단위로 (값 − 50). 전 세계 고도 텍스처의 R 채널과 같은 척도입니다.
-// 첫 줄이 북쪽(43°), 첫 칸이 서쪽(124°)입니다. 웹용으로는 무손실 WebP로 바꿉니다:
-//   cwebp -lossless -exact -z 9 <png> -o public/textures/korea-elevation.webp
+// 첫 줄이 북쪽, 첫 칸이 서쪽입니다. 웹용으로는 무손실 WebP로 바꿉니다 (docs/data-sources.md):
+//   cwebp -lossless -exact -z 9 <png> -o public/textures/<지역>-elevation.webp
 const [nc, out] = process.argv.slice(2)
 const r = new NetCDFReader(fs.readFileSync(nc))
 const lat = r.getDataVariable('latitude')

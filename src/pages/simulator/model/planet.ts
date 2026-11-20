@@ -47,6 +47,9 @@ export interface PlumeInput {
   size: number
 }
 
+/** 소행성 충돌 불덩이·버섯구름을 그리는 시간 (화면 초) */
+export const IMPACT_PLUME_SECONDS = 25
+
 /** 태양 폭풍 오로라: 지자기 극을 둘러싼 빛의 띠 */
 export interface AuroraInput {
   /** 밝기 0~1 (0이면 그리지 않음) */

@@ -42,6 +42,14 @@ export const MESSAGES = {
   'globe.markers': ['지점', 'Sites'],
   'globe.traffic': ['항공·선박', 'Air & sea'],
   'globe.today': ['오늘의 지구', "Today's Earth"],
+  'globe.migration': ['인구 이동', 'Migration'],
+  // 인구 이동 (단순 추정)
+  'migration.heading': ['인구 이동', 'Migration'],
+  'migration.sea': [
+    '해수면 이주 약 {n}백만 명',
+    'about {n}M leaving flooded cities',
+  ],
+  'migration.disaster': ['재해 피난 약 {n}백만 명', 'about {n}M evacuating'],
   // 오늘의 지구 (배포할 때 받은 실제 기록)
   'today.heading': ['오늘의 지구', "Today's Earth"],
   'today.intro': [

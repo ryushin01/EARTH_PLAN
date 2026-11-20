@@ -366,6 +366,22 @@ describe('GlobeViewport', () => {
     vi.unstubAllGlobals()
   })
 
+  it('인구 이동은 처음부터 켜져 있고, 해수면으로 도시가 잠기면 지구 아래에 이주 요약을 보여 준다', async () => {
+    setup()
+    const toggle = screen.getByRole('button', { name: '인구 이동' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText(/^인구 이동 · /)).toBeNull()
+    act(() => {
+      useWorld.getState().setSeaLevel(6)
+    })
+    expect(
+      await screen.findByText(/^인구 이동 · 해수면 이주 약 [\d.,]+백만 명$/),
+    ).toBeInTheDocument()
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText(/^인구 이동 · /)).toBeNull()
+  })
+
   it('운항 요약을 보여 주고, 재해로 결항이 생기면 덧붙이며, 항공·선박을 끄면 감춘다', async () => {
     const user = userEvent.setup()
     setup()

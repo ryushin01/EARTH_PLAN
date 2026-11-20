@@ -16,6 +16,8 @@ function Frame({ size, stars }: { size: number; stars: boolean }) {
         autoRotate={false}
         showClouds
         showMarkers
+        // 정지 이미지에는 항공·선박을 넣지 않음 (위치가 매번 달라서)
+        showTraffic={false}
         reducedMotion
         showStars={stars}
         onReady={() => setReady(true)}

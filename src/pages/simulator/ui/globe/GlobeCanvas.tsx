@@ -26,6 +26,7 @@ export interface GlobeCanvasProps {
   autoRotate: boolean
   showClouds: boolean
   showMarkers: boolean
+  showTraffic: boolean
   reducedMotion: boolean
   showStars?: boolean
   /** 텍스처 내려받기 진행률(%). 내려받는 중이 아니면 null */

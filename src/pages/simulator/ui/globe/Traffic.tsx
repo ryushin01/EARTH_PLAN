@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import {
   AdditiveBlending,
@@ -14,9 +14,11 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  Points,
+  PointsMaterial,
   Vector3,
 } from 'three'
-import type { Material } from 'three'
+import type { Material, Object3D } from 'three'
 import type { Vec3 } from '@/shared/lib'
 import {
   createTraffic,
@@ -135,6 +137,91 @@ class Trails {
   }
 }
 
+/** 밤 쪽 탈것의 불빛 점 (항공기는 충돌 방지등처럼 깜빡임) */
+class NightLights {
+  readonly points: Points
+  private readonly positions: Float32Array
+  private readonly colors: Float32Array
+  private count = 0
+  private readonly sun = new Vector3()
+  private hasSun = false
+
+  constructor(max: number) {
+    this.positions = new Float32Array(max * 3)
+    this.colors = new Float32Array(max * 4)
+    const geometry = new BufferGeometry()
+    geometry.setAttribute(
+      'position',
+      new BufferAttribute(this.positions, 3).setUsage(DynamicDrawUsage),
+    )
+    geometry.setAttribute(
+      'color',
+      new BufferAttribute(this.colors, 4).setUsage(DynamicDrawUsage),
+    )
+    geometry.setDrawRange(0, 0)
+    this.points = new Points(
+      geometry,
+      new PointsMaterial({
+        size: 3.5,
+        sizeAttenuation: false,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending,
+      }),
+    )
+    this.points.name = 'night-lights'
+    this.points.frustumCulled = false
+    this.points.renderOrder = 3
+  }
+
+  /** 태양 방향을 정함 (태양을 못 찾으면 불빛을 켜지 않음) */
+  begin(sun: Object3D | undefined) {
+    this.count = 0
+    this.hasSun = !!sun
+    if (sun) this.sun.copy(sun.position).normalize()
+  }
+
+  add(pose: Pose, color: Vec3, alpha: number) {
+    if (!this.hasSun || pose.scale <= 0) return
+    if (this.count * 3 >= this.positions.length) return
+    const [x, y, z] = pose.position
+    const r = Math.hypot(x, y, z) || 1
+    const day = (x * this.sun.x + y * this.sun.y + z * this.sun.z) / r
+    // 해가 지평선 가까이 지면서(0.05 → -0.15) 서서히 켜짐
+    const night = Math.min(1, Math.max(0, (0.05 - day) / 0.2))
+    if (night <= 0) return
+    const p = this.count * 3
+    const c = this.count * 4
+    this.positions[p] = x
+    this.positions[p + 1] = y
+    this.positions[p + 2] = z
+    this.colors[c] = color[0]
+    this.colors[c + 1] = color[1]
+    this.colors[c + 2] = color[2]
+    this.colors[c + 3] = alpha * night * pose.scale
+    this.count++
+  }
+
+  end() {
+    const { geometry } = this.points
+    geometry.setDrawRange(0, this.count)
+    geometry.getAttribute('position').needsUpdate = true
+    geometry.getAttribute('color').needsUpdate = true
+  }
+
+  dispose() {
+    this.points.geometry.dispose()
+    ;(this.points.material as PointsMaterial).dispose()
+  }
+}
+
+const AIR_LIGHT: Vec3 = [1, 0.95, 0.85]
+const JET_LIGHT: Vec3 = [1, 0.45, 0.4]
+const SHIP_LIGHT: Vec3 = [1, 0.85, 0.55]
+/** 충돌 방지등: 1.2초마다 0.12초 밝게 */
+const strobe = (time: number) => (time % 1.2 < 0.12 ? 1 : 0.45)
+
 const points = (n: number): Vec3[] =>
   Array.from({ length: n }, () => [0, 0, 0] as Vec3)
 
@@ -212,6 +299,9 @@ function createAssets(traffic: TrafficState) {
     traffic.ships.length * (TRAIL.ship - 1),
     -1,
   )
+  const lights = new NightLights(
+    traffic.planes.length + traffic.ships.length + traffic.fighters.length + 1,
+  )
 
   return {
     meshes,
@@ -221,6 +311,7 @@ function createAssets(traffic: TrafficState) {
     flame,
     air,
     sea,
+    lights,
     dispose() {
       for (const mesh of Object.values(meshes)) {
         mesh.geometry.dispose()
@@ -233,6 +324,7 @@ function createAssets(traffic: TrafficState) {
       flameMaterial.dispose()
       air.dispose()
       sea.dispose()
+      lights.dispose()
     },
   }
 }
@@ -280,14 +372,21 @@ export function Traffic({ reducedMotion }: TrafficProps) {
     [],
   )
 
-  useFrame(({ camera }, delta) => {
+  // 태양 방향 그룹(Planet 안)은 한 번 찾아 두고, 지구가 다시 만들어지면 다시 찾음
+  const sunRef = useRef<Object3D | undefined>(undefined)
+
+  useFrame(({ camera, clock, scene }, delta) => {
     const dt = reducedMotion ? 0 : Math.min(delta, 0.1)
     stepTraffic(traffic, useWorld.getState(), performance.now(), dt)
     const zoom = zoomScale(camera.position.length())
-    const { meshes, shipSlots, air, sea } = assets
+    const { meshes, shipSlots, air, sea, lights } = assets
     const { pose } = scratch
+    if (!sunRef.current?.parent)
+      sunRef.current = scene.getObjectByName('sun-light')
+    const blink = reducedMotion ? 0.8 : strobe(clock.elapsedTime)
     air.begin()
     sea.begin()
+    lights.begin(sunRef.current)
 
     for (let i = 0; i < traffic.planes.length; i++) {
       const plane = traffic.planes[i]
@@ -298,6 +397,7 @@ export function Traffic({ reducedMotion }: TrafficProps) {
       )
       const n = planeTrail(plane, scratch.plane)
       air.add(scratch.plane, n, CONTRAIL, 0.55 * pose.scale)
+      lights.add(pose, AIR_LIGHT, blink)
     }
     for (let i = 0; i < traffic.ships.length; i++) {
       const ship = traffic.ships[i]
@@ -308,6 +408,7 @@ export function Traffic({ reducedMotion }: TrafficProps) {
         compose(matrix, pose, SIZE[slot.kind] * zoom),
       )
       sea.add(scratch.ship, shipTrail(ship, scratch.ship), WAKE, 0.4)
+      lights.add(pose, SHIP_LIGHT, 0.8)
     }
     for (let i = 0; i < traffic.fighters.length; i++) {
       fighterPose(traffic, i, pose)
@@ -318,6 +419,7 @@ export function Traffic({ reducedMotion }: TrafficProps) {
         JET,
         0.5,
       )
+      lights.add(pose, JET_LIGHT, blink)
     }
     for (const mesh of Object.values(meshes))
       mesh.instanceMatrix.needsUpdate = true
@@ -329,6 +431,7 @@ export function Traffic({ reducedMotion }: TrafficProps) {
     const body = stacked ? stack : orbiter
     compose(body.matrix, pose, SIZE[stacked ? 'stack' : 'orbiter'] * zoom)
     body.matrixWorldNeedsUpdate = true
+    lights.add(pose, AIR_LIGHT, 0.9)
     fire.visible = flame > 0
     if (fire.visible) {
       const length = flame * (reducedMotion ? 1 : 0.85 + 0.3 * Math.random())
@@ -344,6 +447,7 @@ export function Traffic({ reducedMotion }: TrafficProps) {
 
     air.end()
     sea.end()
+    lights.end()
   })
 
   return (
@@ -356,6 +460,7 @@ export function Traffic({ reducedMotion }: TrafficProps) {
       <primitive object={assets.flame} />
       <primitive object={assets.air.line} />
       <primitive object={assets.sea.line} />
+      <primitive object={assets.lights.points} />
     </group>
   )
 }

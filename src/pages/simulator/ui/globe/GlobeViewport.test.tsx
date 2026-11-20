@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocale } from '@/shared/i18n'
+import { useWorld } from '../../model/world/store'
 import type { GlobeCanvasProps } from './GlobeCanvas'
 import { GlobeViewport, IDLE_LOAD_MS, PREFETCH_DELAY_MS } from './GlobeViewport'
 
@@ -85,6 +86,7 @@ describe('GlobeViewport', () => {
     vi.useRealTimers()
     Reflect.deleteProperty(window, '__terraNovaWoke')
     useLocale.setState({ locale: 'ko' })
+    useWorld.getState().reset()
     window.history.replaceState(null, '', '/')
   })
 
@@ -313,6 +315,30 @@ describe('GlobeViewport', () => {
       showClouds: false,
       showMarkers: false,
     })
+  })
+
+  it('항공·선박 토글은 눌림 상태를 알리고 장면에 전달한다', async () => {
+    const user = userEvent.setup()
+    setup()
+    await wakeAndShow()
+    const traffic = screen.getByRole('button', { name: '항공·선박' })
+    expect(traffic).toHaveAttribute('aria-pressed', 'true')
+    expect(seen.canvas).toMatchObject({ showTraffic: true })
+    await user.click(traffic)
+    expect(traffic).toHaveAttribute('aria-pressed', 'false')
+    expect(seen.canvas).toMatchObject({ showTraffic: false })
+  })
+
+  it('운항 요약을 보여 주고, 재해로 결항이 생기면 덧붙이며, 항공·선박을 끄면 감춘다', async () => {
+    const user = userEvent.setup()
+    setup()
+    expect(screen.getByText('여객기 30편 · 선박 11척')).toBeInTheDocument()
+    act(() => useWorld.getState().setSeaLevel(10))
+    expect(screen.getByText(/결항 \d+편/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '항공·선박' }))
+    expect(
+      screen.queryByText('여객기 30편 · 선박 11척'),
+    ).not.toBeInTheDocument()
   })
 
   it('운영체제의 동작 줄이기가 켜져 있으면 처음부터 자동 회전을 끄고, 정지 이미지를 바로 지운다', async () => {

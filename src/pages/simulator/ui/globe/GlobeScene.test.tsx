@@ -69,6 +69,7 @@ const defaults = {
   autoRotate: false,
   showClouds: true,
   showMarkers: true,
+  showTraffic: false,
   reducedMotion: true,
 }
 
@@ -99,6 +100,17 @@ describe('GlobeScene', () => {
     seen.planet = null
     seen.controls = null
     seen.stars = null
+  })
+
+  it('항공·선박을 켜면 운항 레이어를 그리고, 끄면 그리지 않는다', async () => {
+    const airliners = (r: Awaited<ReturnType<typeof render>>) =>
+      r.renderer.scene.findAll((node) => node.instance.name === 'airliner')
+    const shown = await render({ showTraffic: true })
+    expect(airliners(shown)).toHaveLength(1)
+    await shown.renderer.unmount()
+    const hidden = await render({ showTraffic: false })
+    expect(airliners(hidden)).toHaveLength(0)
+    await hidden.renderer.unmount()
   })
 
   it('카메라 조작 API로 돌리고, 확대·축소 범위를 지킨다', async () => {

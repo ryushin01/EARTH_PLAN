@@ -1,6 +1,6 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer'
 import { Matrix4, Vector3 } from 'three'
-import type { InstancedMesh, LineSegments } from 'three'
+import type { InstancedMesh, LineSegments, Points } from 'three'
 import { flightPlan, trafficConditions } from '../../model/traffic/disruption'
 import { FLIGHT_ROUTES } from '../../model/traffic/routes'
 import { useWorld } from '../../model/world/store'
@@ -90,6 +90,29 @@ describe('Traffic', () => {
     ])
     for (const line of lines)
       expect(line.geometry.drawRange.count).toBeGreaterThan(0)
+    await renderer.unmount()
+  })
+
+  it('밤 쪽에 있는 탈것에만 불빛 점을 켠다', async () => {
+    // 태양이 +X 쪽(경도 0°)에 있으면 x < 0 쪽이 밤
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <group name="sun-light" position={[10, 0, 0]} />
+        <Traffic reducedMotion />
+      </>,
+    )
+    await renderer.advanceFrames(1, 0.1)
+    const lights = renderer.scene.find(
+      (node) => node.instance.name === 'night-lights',
+    ).instance as Points
+    const count = lights.geometry.drawRange.count
+    expect(count).toBeGreaterThan(0)
+    const position = lights.geometry.getAttribute('position')
+    for (let i = 0; i < count; i++) {
+      const x = position.getX(i)
+      const r = Math.hypot(x, position.getY(i), position.getZ(i))
+      expect(x / r).toBeLessThan(0.05)
+    }
     await renderer.unmount()
   })
 

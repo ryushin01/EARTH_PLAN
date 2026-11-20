@@ -35,6 +35,10 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'jsdom',
+          // 파일마다 VM 컨텍스트를 새로 만들어(모듈·스토어 상태는 파일끼리 격리) jsdom 준비 비용을 줄임.
+          // 측정(같은 기계에서 번갈아 세 쌍, 중앙값): 단위 테스트 전체 32.7초 → 12.3초.
+          // isolate: false는 더 빠르지만 파일끼리 스토어·저장소 상태가 섞여 순서를 바꾸면 실패함
+          pool: 'vmThreads',
           globals: true,
           setupFiles: ['./vitest.setup.ts'],
           include: ['src/**/*.test.{ts,tsx}'],

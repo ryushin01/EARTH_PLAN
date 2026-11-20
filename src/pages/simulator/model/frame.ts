@@ -1,5 +1,6 @@
 import type { PlanetFrame, PlumeInput } from './planet'
-import { ashRadiusKm, climateVisuals, TSUNAMI_SPEED_KMH } from './world/engine'
+import { climateVisuals, TSUNAMI_SPEED_KMH } from './world/engine'
+import { ashCloud, solarFade } from './world/fade'
 import { isHourFrozen, SPEED_BY_ID, withUtcHour } from './world/time'
 import type { WorldState } from './world/types'
 import { getSite } from './site/data'
@@ -55,25 +56,18 @@ export function buildFrame(
   const ashes = state.eruptions.flatMap((e) => {
     const volcano = getSite(e.volcanoId)
     if (!volcano) return []
-    const age = (nowMs - e.startedAt) / 1000
-    const realFade = age < 40 ? 1 : Math.max(0, 1 - (age - 40) / 20)
-    const simFade = Math.max(0, 1 - (state.year - e.year) / 3)
-    const amount = 0.85 * Math.min(realFade, simFade)
-    if (amount <= 0) return []
+    const cloud = ashCloud(e, state.year, nowMs)
+    if (!cloud) return []
     const center = latLonToVector3(volcano)
     plumes.push({
       id: e.id,
       kind: 'volcano',
       center,
-      age,
+      age: (nowMs - e.startedAt) / 1000,
       size: (e.vei - 2) / 6,
     })
     return [
-      {
-        center,
-        radius: kmToRadians(ashRadiusKm(e.vei)) * Math.min(1, 0.2 + age / 6),
-        amount,
-      },
+      { center, radius: kmToRadians(cloud.radiusKm), amount: cloud.amount },
     ]
   })
 
@@ -173,12 +167,8 @@ export function buildFrame(
   const solar = state.solarStorms.at(-1)
   let aurora = { strength: 0, lat: 90 }
   if (solar) {
-    const age = (nowMs - solar.startedAt) / 1000
-    const realFade =
-      age < 30 ? Math.min(1, age / 2) : Math.max(0, 1 - (age - 30) / 20)
-    const simFade = Math.max(0, 1 - (state.year - solar.year) / 0.03)
     const strength =
-      Math.max(0, Math.min(realFade, simFade)) * SOLAR_SPEC[solar.level].glow
+      solarFade(solar, state.year, nowMs) * SOLAR_SPEC[solar.level].glow
     if (strength > 0) aurora = { strength, lat: solar.auroraLat }
   }
 

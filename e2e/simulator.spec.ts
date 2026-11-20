@@ -294,6 +294,27 @@ test.describe('미션과 추이', () => {
       aside.getByRole('table', { name: /해수면, 평균 기온/ }),
     ).toContainText('2031.')
   })
+
+  test('태양 폭풍 미션은 폭풍이 오면 1일 속도로 늦추고 운항 영향을 알린다', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    const aside = page.getByRole('complementary', { name: '지구 상태' })
+    await aside
+      .getByRole('button', { name: '2031년 태양 폭풍 견디기 시작' })
+      .click()
+    await aside.getByRole('radio', { name: '1년' }).check({ force: true })
+    await aside.getByRole('button', { name: '재생' }).click()
+    await expect(aside.getByRole('radio', { name: '1일' })).toBeChecked({
+      timeout: 15_000,
+    })
+    await expect(
+      aside.getByRole('list', { name: '예정된 사건' }).getByRole('listitem'),
+    ).toContainText(['일어남', '2030', '2031'])
+    const log = page.getByRole('list', { name: '사건 기록' })
+    await expect(log).toContainText('1일 속도로 늦춥니다')
+    await expect(log).toContainText('운항 영향')
+  })
 })
 
 test.describe('지진과 모바일', () => {

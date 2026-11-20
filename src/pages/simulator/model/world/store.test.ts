@@ -90,6 +90,22 @@ describe('새 재해', () => {
     expect(storms.map((s) => s.level)).toEqual(['g3', 'g4', 'g5'])
   })
 
+  it('태양 폭풍 피해는 최근 세 번이 지워져도 누계로 남는다', () => {
+    for (const level of ['g5', 'g5', 'g3', 'g4'] as const)
+      useWorld.getState().triggerSolarStorm(level, 0)
+    const s = useWorld.getState()
+    expect(s.solarStorms).toHaveLength(3)
+    // 변압기가 탄 도시는 한 번만 세고, 고장 위성은 폭풍마다 더함
+    expect(s.gridDamagedCityIds).toContain('reykjavik')
+    expect(new Set(s.gridDamagedCityIds).size).toBe(s.gridDamagedCityIds.length)
+    expect(s.satellitesLost).toBe(40 + 40 + 0 + 5)
+    useWorld.getState().reset()
+    expect(useWorld.getState()).toMatchObject({
+      gridDamagedCityIds: [],
+      satellitesLost: 0,
+    })
+  })
+
   it('재해로 운항이 바뀌면 그 재해 기록과 결과 문구에 운항 영향을 덧붙인다', () => {
     useWorld.getState().reset()
     const before = useWorld.getState().events.length

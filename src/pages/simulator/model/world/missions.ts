@@ -2,12 +2,13 @@ import { both, compose, nameList } from '../text'
 import type { Text } from '../text'
 import { dateToDecimalYear } from '@/shared/lib'
 import type { ScenarioId } from './scenario'
-import type { WorldState } from './types'
+import type { SolarLevel, WorldState } from './types'
 
 export type ScheduledHazard =
   | { kind: 'impact'; targetId: string; diameterM: number }
   | { kind: 'tsunami'; sourceId: string; magnitude: number }
   | { kind: 'eruption'; volcanoId: string; vei: number }
+  | { kind: 'solar'; level: SolarLevel }
 
 export interface MissionResult {
   ok: boolean
@@ -29,6 +30,8 @@ export interface Mission {
     year: number
     hazard: ScheduledHazard
     warning: Text
+    /** 며칠 만에 지나가는 사건: 일어날 때 1일보다 빠르면 1일 속도로 늦춰 보여 줌 */
+    slowDown?: boolean
   }>
   evaluate: (state: WorldState) => MissionResult
 }
@@ -128,6 +131,66 @@ export const MISSIONS: Mission[] = [
                   ? `피해 도시 ${damaged}곳 (${nameList(impact.affectedCityIds, l)})`
                   : `${damaged} cities damaged (${nameList(impact.affectedCityIds, l)})`,
               ),
+      }
+    },
+  },
+  {
+    id: 'solar-2031',
+    title: both('2031년 태양 폭풍 견디기', 'Weather the 2031 Solar Storm'),
+    brief: both(
+      '2031년 9월, 1859년과 같은 캐링턴급 태양 폭풍이 옵니다. 그 전에 G4·G5 폭풍이 먼저 오고, 폭풍 때마다 극항로 여객기는 남쪽으로 돌고 우주왕복선 발사는 보류됩니다. 변압기가 타면 몇 달씩 정전됩니다.',
+      'In September 2031 a Carrington-class solar storm, like the one in 1859, will strike. G4 and G5 storms come first, and each one sends polar flights south and holds shuttle launches. A burned-out transformer means months without power.',
+    ),
+    goal: both(
+      '2031년 10월까지 변압기 손상 도시 0곳, 고장 위성 350기 이하',
+      'By October 2031: no burned-out transformers and at most 350 satellites lost',
+    ),
+    scenario: 'mid',
+    budget: 200,
+    endYear: year(2031, 10),
+    // 날짜는 2024년 5월 10일 폭풍, 2012년 7월 23일 지구를 비껴간 코로나 질량 방출, 1859년 9월 1일 캐링턴 사건에서 따옴.
+    // 경보망은 짓는 데 3년이 걸려서, 첫 폭풍(G4)을 겪고 바로 지어도 G5 전에 완공됨
+    schedule: [
+      {
+        id: 'g4-2027',
+        year: year(2027, 5, 10),
+        hazard: { kind: 'solar', level: 'g4' },
+        warning: both(
+          'G4 심한 태양 폭풍이 옵니다.',
+          'A severe G4 solar storm is coming.',
+        ),
+        slowDown: true,
+      },
+      {
+        id: 'g5-2030',
+        year: year(2030, 7, 23),
+        hazard: { kind: 'solar', level: 'g5' },
+        warning: both(
+          'G5 극심한 태양 폭풍이 옵니다.',
+          'An extreme G5 solar storm is coming.',
+        ),
+        slowDown: true,
+      },
+      {
+        id: 'carrington-2031',
+        year: year(2031, 9, 1),
+        hazard: { kind: 'solar', level: 'carrington' },
+        warning: both(
+          '캐링턴급 태양 폭풍이 옵니다.',
+          'A Carrington-class solar storm is coming.',
+        ),
+        slowDown: true,
+      },
+    ],
+    evaluate: (state) => {
+      const burned = state.gridDamagedCityIds.length
+      const lost = state.satellitesLost
+      return {
+        ok: burned === 0 && lost <= 350,
+        detail: both(
+          `변압기 손상 ${burned}곳 / 0곳 · 고장 위성 ${lost}기 / 350기 이하`,
+          `Burned-out transformers ${burned} / 0 · Satellites lost ${lost} / 350 or fewer`,
+        ),
       }
     },
   },

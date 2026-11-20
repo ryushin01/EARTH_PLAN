@@ -176,6 +176,10 @@ export interface WorldState {
   history: HistoryPoint[]
   /** 열대 저기압 해일로 큰 피해를 입은 횟수 */
   stormDamage: number
+  /** 태양 폭풍으로 변압기가 타 수개월 정전된 적 있는 도시 (최근 폭풍 기록이 지워져도 남음) */
+  gridDamagedCityIds: string[]
+  /** 태양 폭풍으로 고장 난 위성 수 (누적) */
+  satellitesLost: number
   /** 지금까지 구조물에 쓴 예산 (십억 달러) */
   spent: number
   /** 진행 중이거나 끝난 미션 */

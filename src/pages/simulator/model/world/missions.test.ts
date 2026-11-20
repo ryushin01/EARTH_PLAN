@@ -1,3 +1,4 @@
+import { decimalYearToDate } from '@/shared/lib'
 import { CITIES } from '../site/data'
 import { recordHistory, stormLandfalls, stormSurge } from './engine'
 import { MISSION_BY_ID } from './missions'
@@ -119,6 +120,8 @@ describe('미션', () => {
     expect(s.running).toBe(false)
     expect(s.impacts[0].targetId).toBe('tokyo')
     expect(s.events.some((e) => e.text.ko.startsWith('미션 실패'))).toBe(true)
+    // 늦추기를 표시하지 않은 사건은 재생 속도를 바꾸지 않음
+    expect(s.speed).toBe('decade')
   })
 
   it('행성 방위 요격망을 바로 지으면 소행성 미션에 성공한다', () => {
@@ -131,6 +134,106 @@ describe('미션', () => {
     expect(
       MISSION_BY_ID['asteroid-2032'].evaluate(useWorld.getState()).detail.ko,
     ).toContain('빗나가게')
+  })
+})
+
+describe('태양 폭풍 미션', () => {
+  beforeEach(() => useWorld.getState().reset())
+
+  const solar = MISSION_BY_ID['solar-2031']
+
+  /** 폭풍 때 1일 속도로 늦춰지면 다시 10년 속도로 올리는 사용자처럼 진행 */
+  const runFast = (until: number, { stopWhenSlowed = false } = {}) => {
+    const slowedAt: number[] = []
+    useWorld.getState().setRunning(true)
+    let guard = 0
+    while (
+      useWorld.getState().running &&
+      useWorld.getState().year < until &&
+      guard++ < 10000
+    ) {
+      useWorld.getState().setSpeed('decade')
+      useWorld.getState().tick(0.1)
+      if (useWorld.getState().speed === 'day') {
+        slowedAt.push(useWorld.getState().year)
+        if (stopWhenSlowed) break
+      }
+    }
+    return slowedAt
+  }
+
+  it('경보망 없이 진행하면 변압기가 타고 위성을 잃어 실패한다', () => {
+    useWorld.getState().startMission('solar-2031')
+    expect(useWorld.getState().budget).toBe(200)
+    runFast(2040)
+    const s = useWorld.getState()
+    expect(s.solarStorms.map((x) => x.level)).toEqual([
+      'g4',
+      'g5',
+      'carrington',
+    ])
+    expect(s.mission?.status).toBe('failed')
+    expect(s.gridDamagedCityIds).toContain('reykjavik')
+    expect(s.satellitesLost).toBe(5 + 40 + 600)
+  })
+
+  it('예정된 폭풍마다 1일 속도로 늦추고 미션 사건 기록에 알린다', () => {
+    useWorld.getState().startMission('solar-2031')
+    expect(runFast(2040)).toHaveLength(3)
+    const notices = useWorld
+      .getState()
+      .events.filter((e) => e.text.ko.startsWith('미션 사건'))
+    expect(notices).toHaveLength(3)
+    for (const e of notices) {
+      expect(e.text.ko).toContain('1일 속도로 늦춥니다')
+      expect(e.text.en).toContain('1 day per second')
+    }
+  })
+
+  it('시간이 빨리 흘러도 미션 사건은 정해진 날에 일어난다', () => {
+    useWorld.getState().startMission('solar-2031')
+    runFast(2040)
+    // 1일 속도로 늦출 때 시각은 고정해 둔 시각으로 맞춰지므로(낮·밤 깜빡임 방지) 날짜만 비교
+    const day = (y: number) => decimalYearToDate(y).toISOString().slice(0, 10)
+    expect(useWorld.getState().solarStorms.map((x) => day(x.year))).toEqual([
+      '2027-05-10',
+      '2030-07-23',
+      '2031-09-01',
+    ])
+  })
+
+  it('이미 1일보다 느리면 미션 사건이 와도 속도를 바꾸지 않는다', () => {
+    useWorld.getState().startMission('solar-2031')
+    useWorld.setState({ year: solar.schedule[0].year - 1e-7 })
+    useWorld.getState().setSpeed('hour')
+    useWorld.getState().setRunning(true)
+    useWorld.getState().tick(0.1)
+    expect(useWorld.getState().solarStorms).toHaveLength(1)
+    expect(useWorld.getState().speed).toBe('hour')
+  })
+
+  it('우주 기상 경보망을 바로 지으면 성공한다', () => {
+    useWorld.getState().startMission('solar-2031')
+    expect(useWorld.getState().build('space-weather-shield', 'orbit').ok).toBe(
+      true,
+    )
+    runFast(2040)
+    const s = useWorld.getState()
+    expect(s.mission?.status).toBe('success')
+    expect(s.gridDamagedCityIds).toEqual([])
+    expect(s.satellitesLost).toBe(5 + 20 + 300)
+    expect(solar.evaluate(s).detail.ko).toContain('고장 위성 325기')
+  })
+
+  it('첫 폭풍(G4)을 겪고 나서 경보망을 지어도 G5 전에 완공돼 성공한다', () => {
+    useWorld.getState().startMission('solar-2031')
+    runFast(2040, { stopWhenSlowed: true })
+    expect(useWorld.getState().solarStorms.map((x) => x.level)).toEqual(['g4'])
+    expect(useWorld.getState().build('space-weather-shield', 'orbit').ok).toBe(
+      true,
+    )
+    runFast(2040)
+    expect(useWorld.getState().mission?.status).toBe('success')
   })
 })
 

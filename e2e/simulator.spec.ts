@@ -377,6 +377,19 @@ test.describe('설치와 지점 정보', () => {
       .toBeGreaterThan(0)
   })
 
+  test('항공·선박을 끄고 켤 수 있고, 넓은 화면에는 운항 요약이 보인다', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/')
+    const traffic = page.getByRole('button', { name: '항공·선박' })
+    await expect(traffic).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByText('여객기 30편 · 선박 11척')).toBeVisible()
+    await traffic.click()
+    await expect(traffic).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByText('여객기 30편 · 선박 11척')).toHaveCount(0)
+  })
+
   test('지점을 고르면 정보 카드가 나온다', async ({ page }) => {
     await page.goto('/')
     await page

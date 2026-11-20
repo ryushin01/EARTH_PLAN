@@ -19,6 +19,7 @@ const meta = {
     autoRotate: true,
     showClouds: true,
     showMarkers: true,
+    showTraffic: true,
     reducedMotion: false,
   },
   beforeEach: () => {
@@ -52,7 +53,12 @@ export const Disasters: Story = {
   },
 }
 
-/** 구름·지점 표시를 끈 모습 */
+/** 구름·지점·항공·선박 표시를 끈 모습 */
 export const Plain: Story = {
-  args: { showClouds: false, showMarkers: false, autoRotate: false },
+  args: {
+    showClouds: false,
+    showMarkers: false,
+    showTraffic: false,
+    autoRotate: false,
+  },
 }

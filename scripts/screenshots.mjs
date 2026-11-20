@@ -214,6 +214,20 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
   await context.close()
 }
 
+// 항공·선박: 부산 쪽 확대(지점 표시 끔). 인천·김포 여객기, 부산·제주·상하이 바닷길의 배
+{
+  const { page, context } = await open({ utc: 3 })
+  await page.getByRole('button', { name: '자동 회전' }).click()
+  await page
+    .getByRole('combobox', { name: '지점으로 이동' })
+    .selectOption('busan')
+  for (let i = 0; i < 3; i++)
+    await page.getByRole('button', { name: '확대' }).click()
+  await page.getByRole('button', { name: '지점' }).click()
+  await shot(page, 'traffic', 6000)
+  await context.close()
+}
+
 // 영어 화면: 캐스케이디아 섭입대 쓰나미(북미 서해안 밤)
 {
   const { page, context } = await open({ utc: 7, locale: 'en-US' })

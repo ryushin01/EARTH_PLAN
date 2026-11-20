@@ -40,6 +40,17 @@ export const MESSAGES = {
   'globe.autoRotate': ['자동 회전', 'Auto-rotate'],
   'globe.clouds': ['구름', 'Clouds'],
   'globe.markers': ['지점', 'Sites'],
+  'globe.traffic': ['항공·선박', 'Air & sea'],
+  // 항공·선박 운항
+  'traffic.heading': ['운항', 'Traffic'],
+  'traffic.summary': [
+    '여객기 {flights}편 · 선박 {ships}척',
+    '{flights} flights · {ships} ships',
+  ],
+  'traffic.rerouted': ['우회 {count}편', '{count} rerouted'],
+  'traffic.cancelled': ['결항 {count}편', '{count} cancelled'],
+  'traffic.waiting': ['대기 {count}척', '{count} ships holding'],
+  'traffic.launchHold': ['우주왕복선 발사 보류', 'Shuttle launch on hold'],
   // 시간
   'time.date': ['시뮬레이션 날짜 (UTC)', 'Simulation date (UTC)'],
   'time.season': [

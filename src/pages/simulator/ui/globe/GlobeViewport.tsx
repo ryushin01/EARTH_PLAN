@@ -17,6 +17,7 @@ import { SHARE_PARAM } from '../../model/world/snapshot'
 import { useT } from '../i18n'
 import type { MessageKey } from '../i18n'
 import { WAKE_EVENTS, wokeEarly } from './earlyWake'
+import { TrafficStatus } from './TrafficStatus'
 import poster600 from './poster/earth-600.webp'
 import poster800 from './poster/earth-800.webp'
 import poster1200 from './poster/earth-1200.webp'
@@ -242,6 +243,7 @@ export function GlobeViewport({
   const autoRotate = autoRotateChoice ?? !reducedMotion
   const [showClouds, setShowClouds] = useState(true)
   const [showMarkers, setShowMarkers] = useState(true)
+  const [showTraffic, setShowTraffic] = useState(true)
   // 모바일에서는 보기 토글을 접어 둠
   const [moreOpen, setMoreOpen] = useState(false)
   const optionsId = useId()
@@ -316,6 +318,7 @@ export function GlobeViewport({
                 autoRotate={autoRotate && ready}
                 showClouds={showClouds}
                 showMarkers={showMarkers}
+                showTraffic={showTraffic}
                 reducedMotion={reducedMotion}
                 onProgress={setPercent}
                 onReady={onReady}
@@ -358,6 +361,12 @@ export function GlobeViewport({
         {status}
       </p>
       <div className="pointer-events-none absolute inset-x-0 bottom-1 flex flex-wrap items-end justify-center gap-2 px-3 lg:bottom-8 lg:gap-3 lg:p-3">
+        {showTraffic ? (
+          // 좁은 화면에서는 지구를 가리지 않게 낭독기에만 둠
+          <div className="sr-only lg:not-sr-only lg:self-center">
+            <TrafficStatus />
+          </div>
+        ) : null}
         <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-xs border border-line bg-panel p-1.5">
           {BUTTONS.map((button) => (
             <Button
@@ -404,6 +413,12 @@ export function GlobeViewport({
               onClick={() => setShowMarkers((v) => !v)}
             >
               {t('globe.markers')}
+            </ToggleButton>
+            <ToggleButton
+              pressed={showTraffic}
+              onClick={() => setShowTraffic((v) => !v)}
+            >
+              {t('globe.traffic')}
             </ToggleButton>
           </div>
         </div>

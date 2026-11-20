@@ -18,6 +18,7 @@ import { ALL_SITES, getSite } from '../../model/site/data'
 import { SiteMarkers } from './SiteMarkers'
 import type { MarkerTone } from './SiteMarkers'
 import { StructureModels } from './StructureModels'
+import { Traffic } from './Traffic'
 import { cityStates } from '../../model/world/selectors'
 import { useWorld } from '../../model/world/store'
 import { useWorldSampled } from '../../model/world/sampled'
@@ -44,6 +45,8 @@ interface GlobeSceneProps {
   autoRotate: boolean
   showClouds: boolean
   showMarkers: boolean
+  /** 항공·선박 운항 */
+  showTraffic: boolean
   reducedMotion: boolean
   /** 별 배경 (정지 이미지를 찍을 때는 끔) */
   showStars?: boolean
@@ -56,6 +59,7 @@ export function GlobeScene({
   autoRotate,
   showClouds,
   showMarkers,
+  showTraffic,
   reducedMotion,
   showStars = true,
   onReady,
@@ -200,6 +204,7 @@ export function GlobeScene({
         activeIds={activeIds}
         locate={locate}
       />
+      {showTraffic ? <Traffic reducedMotion={reducedMotion} /> : null}
       <OrbitControls
         ref={controlsRef}
         enablePan={false}

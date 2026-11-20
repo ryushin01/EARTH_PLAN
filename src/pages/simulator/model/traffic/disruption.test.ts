@@ -83,6 +83,15 @@ describe('운항 조건', () => {
     ).toBeGreaterThan(zone.radiusKm)
   })
 
+  it('화산재 구역은 분화 직후부터 다 퍼진 반지름으로 피한다 (경로가 자꾸 바뀌지 않게)', () => {
+    const base = world()
+    const c = trafficConditions(
+      { ...base, eruptions: [eruption('eyjafjallajokull', 5, base.year, 0)] },
+      NOW,
+    )
+    expect(c.ash[0].radiusKm).toBe(ashRadiusKm(5))
+  })
+
   it('화산재가 걷히면(화면 60초 또는 시뮬레이션 3년) 다시 정상 운항', () => {
     const base = world()
     const late = {

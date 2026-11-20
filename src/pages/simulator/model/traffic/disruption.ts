@@ -1,4 +1,5 @@
 import { CITIES, getSite } from '../site/data'
+import { ashRadiusKm } from '../world/engine'
 import { ashCloud, solarFade } from '../world/fade'
 import { cityStates } from '../world/selectors'
 import type { SolarLevel, WorldState } from '../world/types'
@@ -101,7 +102,8 @@ export function trafficConditions(
     const volcano = getSite(e.volcanoId)
     const cloud = ashCloud(e, state.year, nowMs)
     if (!volcano || !cloud || cloud.amount < ASH_MIN_AMOUNT) continue
-    const zone = { center: volcano, radiusKm: cloud.radiusKm }
+    // 화면의 구름은 몇 초에 걸쳐 퍼지지만, 비행기는 처음부터 다 퍼질 범위를 피함
+    const zone = { center: volcano, radiusKm: ashRadiusKm(e.vei) }
     ash.push(zone)
     for (const city of CITIES)
       if (distanceKm(city, zone.center) < zone.radiusKm) airports.add(city.id)

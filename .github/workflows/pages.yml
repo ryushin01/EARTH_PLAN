@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # 오늘의 지구 자료(USGS 지진·NOAA 지자기 Kp)를 매일 새로 받아 다시 배포 (한국 시각 오전 6시)
+  schedule:
+    - cron: '0 21 * * *'
 
 permissions:
   contents: read
@@ -29,6 +32,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 오늘의 지구 자료를 받아 public/data/today.json에 씀. 받지 못하면 저장소의 마지막 자료로 배포(실패하지 않음)
+      - run: node scripts/fetch-today.ts
       # 저장소 이름 하위 경로(https://ryushin01.github.io/TerraNova/)에 맞춰 빌드, Storybook은 /storybook/
       # 경로는 저장소 이름에서 계산하므로 이름을 바꿔도 고칠 필요가 없음
       # 없는 주소에 내주는 404.html(SPA 셸)도 빌드가 만듦

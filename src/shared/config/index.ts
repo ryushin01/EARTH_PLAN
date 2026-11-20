@@ -23,6 +23,12 @@ export const TEXTURES = {
   landGrid: `${BASE}textures/land-elevation-512x256.u8`,
 } as const
 
+/**
+ * 오늘의 지구 자료 (배포할 때 USGS 지진·NOAA 지자기 Kp를 받아 넣음, scripts/fetch-today.ts).
+ * 사이트 안의 파일이라 서비스 워커가 미리 받아 두어 오프라인에서도 마지막 자료가 보임
+ */
+export const TODAY_DATA = `${BASE}data/today.json`
+
 export interface DetailPatch {
   id: string
   /** 회색조 ETOPO1 1분 고도: −50~205m (값 − 50), 첫 줄이 북쪽·첫 칸이 서쪽 */

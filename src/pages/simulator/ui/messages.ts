@@ -41,6 +41,53 @@ export const MESSAGES = {
   'globe.clouds': ['구름', 'Clouds'],
   'globe.markers': ['지점', 'Sites'],
   'globe.traffic': ['항공·선박', 'Air & sea'],
+  'globe.today': ['오늘의 지구', "Today's Earth"],
+  // 오늘의 지구 (배포할 때 받은 실제 기록)
+  'today.heading': ['오늘의 지구', "Today's Earth"],
+  'today.intro': [
+    '사이트를 배포할 때 USGS·NOAA에서 받은 실제 기록입니다. 매일 새로 받고, 인터넷이 끊겨도 마지막 자료로 보입니다.',
+    'Real records from USGS and NOAA, fetched whenever the site is built. Refreshed daily, and the last copy still shows offline.',
+  ],
+  'today.show': ['지구에 표시', 'Show on the globe'],
+  'today.asOf': ['{time} UTC 기준', 'As of {time} UTC'],
+  'today.sources': ['출처', 'Sources'],
+  'today.newWindow': ['새 창', 'opens in a new tab'],
+  'today.loading': ['자료를 불러오는 중', 'Loading records'],
+  'today.error': ['자료를 불러오지 못했습니다.', 'Could not load the records.'],
+  'today.retry': ['다시 시도', 'Try again'],
+  'today.kpHeading': ['지자기 활동', 'Geomagnetic activity'],
+  'today.kpNow': ['Kp {kp} · {level}', 'Kp {kp} · {level}'],
+  'today.kpMax': ['24시간 최대 Kp {kp}', '24-hour max Kp {kp}'],
+  'today.auroraHint': [
+    '지구에 표시하면 밤 쪽 극지방에 지금 Kp에 맞는 오로라를 그립니다.',
+    'On the globe, the night-side aurora follows the current Kp.',
+  ],
+  'today.level.quiet': ['조용함', 'Quiet'],
+  'today.level.active': ['활발함', 'Active'],
+  'today.level.g1': ['G1 약한 지자기 폭풍', 'G1 minor storm'],
+  'today.level.g2': ['G2 보통 지자기 폭풍', 'G2 moderate storm'],
+  'today.level.g3': ['G3 강한 지자기 폭풍', 'G3 strong storm'],
+  'today.level.g4': ['G4 심한 지자기 폭풍', 'G4 severe storm'],
+  'today.level.g5': ['G5 극심한 지자기 폭풍', 'G5 extreme storm'],
+  'today.quakesHeading': [
+    '지난 7일 지진 (규모 4.5 이상)',
+    'Earthquakes in the past 7 days (M4.5+)',
+  ],
+  'today.quakeCount': [
+    '모두 {n}회 · 큰 순서 {shown}개',
+    '{n} in all · largest {shown}',
+  ],
+  'today.quake': ['M{mag} {place}', 'M{mag} {place}'],
+  'today.quakeMeta': [
+    '{time} UTC · 깊이 {depth}km',
+    '{time} UTC · {depth} km deep',
+  ],
+  'today.tsunami': ['쓰나미 정보', 'Tsunami message'],
+  'today.focus': ['{label}, 지구에서 보기', '{label}, show on the globe'],
+  'today.summary': [
+    '오늘의 지구 · {asOf} · 지난 7일 지진 {n}회(최대 M{mag}) · Kp {kp} {level}',
+    "Today's Earth · {asOf} · {n} quakes in 7 days (max M{mag}) · Kp {kp} {level}",
+  ],
   // 항공·선박 운항
   'traffic.heading': ['운항', 'Traffic'],
   'traffic.summary': [
@@ -92,6 +139,7 @@ export const MESSAGES = {
   'tabs.solar': ['태양 폭풍', 'Solar storm'],
   'tabs.hazard': ['산불·가뭄', 'Hazards'],
   'tabs.build': ['구조물', 'Build'],
+  'tabs.today': ['오늘', 'Today'],
   // 지점 종류
   'kind.city': ['도시', 'City'],
   'kind.volcano': ['화산', 'Volcano'],

@@ -10,3 +10,5 @@ test-results
 lhci-report
 public/sw.js
 src/app/styles/fonts/
+# 배포할 때 scripts/fetch-today.ts가 새로 쓰는 오늘의 지구 자료
+public/data/

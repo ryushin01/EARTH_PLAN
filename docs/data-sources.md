@@ -72,6 +72,23 @@ for r in korea tokyo-bay netherlands bengal-delta mekong-delta chao-phraya yangt
 done
 ```
 
+## 오늘의 지구 (USGS·NOAA)
+
+`public/data/today.json`은 사이트를 배포할 때 `node scripts/fetch-today.ts`가 받아 씁니다.
+
+| 자료      | 출처                                                                                                                | 내용                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 지진      | [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) `4.5_week.geojson` | 지난 7일 규모 4.5 이상 지진(시각·규모·깊이·위치·설명·쓰나미 정보). 위치는 0.01°, 깊이는 1km 단위로 줄임 |
+| 지자기 Kp | [NOAA SWPC](https://www.swpc.noaa.gov/products/planetary-k-index) `noaa-planetary-k-index.json`                     | 3시간 간격 행성 Kp 지수 최근 7일(56개)                                                                  |
+
+두 자료 모두 미국 정부 공공 자료(퍼블릭 도메인)입니다. Pages 배포 워크플로가 매일 한국 시각 오전 6시(`cron: '0 21 * * *'`)와 main에 합칠 때마다 다시 받습니다. 받지 못하거나 응답이 이상하면(지진 0건, Kp 없음) 저장소에 들어 있는 마지막 자료로 배포합니다. 방문자 브라우저는 외부 API를 부르지 않고 이 파일만 읽으므로, API가 멈추거나 오프라인이어도 마지막 자료가 보입니다(화면에 기준 시각 표시). CI는 받지 않고 저장소의 자료로 테스트합니다. GitHub는 60일 동안 활동이 없는 저장소의 예약 실행을 멈추므로, 그때는 Actions에서 다시 켭니다.
+
+Kp는 오로라 띠가 내려오는 지자기 위도와 밝기로 바꿉니다. G3·G4·G5(Kp 7·8·9)는 태양 폭풍 기능과 같은 값(지자기 위도 50·45·40°, 밝기 0.6·0.75·0.9)이고, 조용할 때(Kp 0~3)는 지자기 위도 63~67°의 옅은 띠입니다.
+
+```bash
+node scripts/fetch-today.ts   # public/data/today.json
+```
+
 ## 다시 만들기
 
 ```bash

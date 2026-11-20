@@ -2,6 +2,8 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocale } from '@/shared/i18n'
 import { useWorld } from '../../model/world/store'
+import { useToday } from '../../model/today/store'
+import type { TodayData } from '../../model/today/today'
 import type { GlobeCanvasProps } from './GlobeCanvas'
 import { GlobeViewport, IDLE_LOAD_MS, PREFETCH_DELAY_MS } from './GlobeViewport'
 
@@ -327,6 +329,41 @@ describe('GlobeViewport', () => {
     await user.click(traffic)
     expect(traffic).toHaveAttribute('aria-pressed', 'false')
     expect(seen.canvas).toMatchObject({ showTraffic: false })
+  })
+
+  it('오늘의 지구 토글을 켜면 사이트 안 자료를 불러와 기준 시각과 요약을 보여 주고, 끄면 감춘다', async () => {
+    const today: TodayData = {
+      fetchedAt: '2026-11-20T21:00:00Z',
+      quakes: [
+        {
+          id: 'q1',
+          time: Date.parse('2026-11-20T20:00:00Z'),
+          mag: 6.6,
+          depthKm: 68,
+          lat: -6.02,
+          lon: 131.46,
+          place: 'Tual',
+          tsunami: false,
+        },
+      ],
+      kp: [{ time: '2026-11-20T18:00:00Z', kp: 2 }],
+    }
+    useToday.setState(useToday.getInitialState())
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(today)))
+    setup()
+    const toggle = screen.getByRole('button', { name: '오늘의 지구' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(useToday.getState().enabled).toBe(true)
+    expect(
+      await screen.findByText(
+        '오늘의 지구 · 11월 20일 21:00 UTC 기준 · 지난 7일 지진 1회(최대 M6.6) · Kp 2.0 조용함',
+      ),
+    ).toBeInTheDocument()
+    await userEvent.click(toggle)
+    expect(screen.queryByText(/지난 7일 지진/)).toBeNull()
+    vi.unstubAllGlobals()
   })
 
   it('운항 요약을 보여 주고, 재해로 결항이 생기면 덧붙이며, 항공·선박을 끄면 감춘다', async () => {

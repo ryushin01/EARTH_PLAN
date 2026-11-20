@@ -20,6 +20,9 @@ import { SiteMarkers } from './SiteMarkers'
 import type { MarkerTone } from './SiteMarkers'
 import { StructureModels } from './StructureModels'
 import { Traffic } from './Traffic'
+import { TodayLayer } from './TodayLayer'
+import { useToday } from '../../model/today/store'
+import { kpAurora } from '../../model/today/today'
 import { cityStates } from '../../model/world/selectors'
 import { useWorld } from '../../model/world/store'
 import { useWorldSampled } from '../../model/world/sampled'
@@ -74,6 +77,9 @@ export function GlobeScene({
   const clock = useRef<FrameClock>({ cloudOffset: 0, lastTime: 0 })
   const plumesRef = useRef<PlumeInput[]>([])
 
+  const todayEnabled = useToday((s) => s.enabled)
+  const todayData = useToday((s) => s.data)
+  const todayFocus = useToday((s) => s.focusTick)
   const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
   const select = useWorldSampled((s) => s.select)
   const structures = useWorldSampled((s) => s.structures)
@@ -129,6 +135,14 @@ export function GlobeScene({
     const site = selectedSiteId ? getSite(selectedSiteId) : undefined
     if (site) apiRef.current?.focus(latLonToVector3(site))
   }, [selectedSiteId, apiRef])
+
+  // 오늘의 지구에서 지진을 고르면 그쪽으로 돌림
+  useEffect(() => {
+    if (todayFocus === 0) return
+    const { data, focusId } = useToday.getState()
+    const quake = data?.quakes.find((q) => q.id === focusId)
+    if (quake) apiRef.current?.focus(latLonToVector3(quake))
+  }, [todayFocus, apiRef])
 
   useFrame((_, delta) => {
     const target = goal.current
@@ -188,6 +202,13 @@ export function GlobeScene({
       elapsed,
     )
     plumesRef.current = frame.plumes
+    // 오늘의 지구: 지금 Kp에 맞는 오로라 (더 센 가상 태양 폭풍이 있으면 그쪽)
+    const today = useToday.getState()
+    const kp = today.enabled ? today.data?.kp.at(-1) : undefined
+    if (kp) {
+      const real = kpAurora(kp.kp)
+      if (real.strength > frame.aurora.strength) frame.aurora = real
+    }
     return frame
   }, [])
 
@@ -244,6 +265,14 @@ export function GlobeScene({
         locate={locate}
       />
       {showTraffic ? <Traffic reducedMotion={reducedMotion} /> : null}
+      {todayEnabled && todayData ? (
+        <TodayLayer
+          // 인스턴스 수가 바뀌면 메시를 새로 만듦
+          key={todayData.quakes.length}
+          quakes={todayData.quakes}
+          now={Date.parse(todayData.fetchedAt)}
+        />
+      ) : null}
       <GlobeControls
         ref={controlsRef}
         enableDamping={!reducedMotion}

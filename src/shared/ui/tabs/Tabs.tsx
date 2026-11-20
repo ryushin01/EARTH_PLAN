@@ -18,6 +18,16 @@ interface TabsProps {
 }
 
 /** WAI-ARIA APG 탭 패턴 (자동 활성화, 화살표·Home·End 이동, roving tabindex) */
+/**
+ * 한 줄에 놓을 탭 수: 4개까지는 한 줄, 8개까지는 두 줄, 그보다 많으면 세 줄 이상.
+ * 한 칸이 너무 좁아 탭 이름이 줄바꿈되지 않게 최대 4칸
+ */
+export function tabColumns(count: number): number {
+  if (count <= 4) return count
+  if (count <= 8) return Math.ceil(count / 2)
+  return Math.min(4, Math.ceil(count / 3))
+}
+
 export function Tabs({ items, value, onChange, label, className }: TabsProps) {
   const baseId = useId()
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -56,7 +66,7 @@ export function Tabs({ items, value, onChange, label, className }: TabsProps) {
         onKeyDown={onKeyDown}
         className="grid border-b border-line"
         style={{
-          gridTemplateColumns: `repeat(${items.length > 4 ? Math.ceil(items.length / 2) : items.length}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${tabColumns(items.length)}, minmax(0, 1fr))`,
         }}
       >
         {items.map((item, index) => {

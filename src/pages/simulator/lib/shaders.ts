@@ -7,13 +7,18 @@ import {
 } from '../model/planet'
 import { DETAIL_PATCHES } from '@/shared/config'
 
-/** 고해상도 고도 패치마다 샘플러 하나 (GLSL ES 3.0은 샘플러 배열을 반복문 변수로 고를 수 없음) */
+/**
+ * 고해상도 고도 패치마다 샘플러 하나 (GLSL ES 3.0은 샘플러 배열을 반복문 변수로 고를 수 없음).
+ * 셰이더의 withDetail은 패치 밖 픽셀이면 텍스처를 읽지 않고 돌아가고, 분기 안에서도 밉맵을 맞게
+ * 고르도록 미분(dFdx·dFdy)을 분기 밖에서 구해 textureGrad로 읽음.
+ * 템플릿 문자열 안의 한글은 화면 글꼴(pnpm fonts)에 들어가므로 셰이더 설명은 여기(JS 주석)에 씀
+ */
 const detailSamplers = DETAIL_PATCHES.map(
   (_, i) => `uniform sampler2D uDetail${i};`,
 ).join('\n')
 const applyDetails = DETAIL_PATCHES.map(
   (_, i) =>
-    `  hLow = withDetail(hLow, uDetail${i}, uDetailRect[${i}], uDetailOn[${i}]);`,
+    `  hLow = withDetail(hLow, uDetail${i}, uDetailRect[${i}], uDetailOn[${i}], uvDx, uvDy);`,
 ).join('\n')
 
 export const earthVertex = /* glsl */ `
@@ -93,11 +98,13 @@ float fbm(vec2 p) {
 }
 
 // 패치 안이면 10배 촘촘한 고도로 침수를 판정 (가장자리는 바깥 고도와 부드럽게 섞음)
-float withDetail(float h, sampler2D tex, vec4 rect, float on) {
-  vec2 dUv = (vUv - rect.xy) / (rect.zw - rect.xy);
+float withDetail(float h, sampler2D tex, vec4 rect, float on, vec2 uvDx, vec2 uvDy) {
+  vec2 size = rect.zw - rect.xy;
+  vec2 dUv = (vUv - rect.xy) / size;
   vec2 dIn = min(dUv, 1.0 - dUv);
   float w = on * smoothstep(0.0, 0.04, min(dIn.x, dIn.y));
-  float hDetail = max(texture2D(tex, clamp(dUv, 0.0, 1.0)).r * 255.0 - 50.0, 0.5);
+  if (w <= 0.0) return h;
+  float hDetail = max(textureGrad(tex, clamp(dUv, 0.0, 1.0), uvDx / size, uvDy / size).r * 255.0 - 50.0, 0.5);
   return mix(h, hDetail, w);
 }
 
@@ -106,7 +113,9 @@ void main() {
   float land = step(0.5, elev.b);
   // 해발 0m 미만 육지(간척지 등)는 기존 제방이 0.5m까지 지킨다고 봅니다
   float hLow = max(elev.r * 255.0 - 50.0, 0.5);
-  // 한반도·도쿄만·네덜란드는 10배 촘촘한 고도로 (src/shared/config의 DETAIL_PATCHES)
+  // 고도 패치 (src/shared/config의 DETAIL_PATCHES)
+  vec2 uvDx = dFdx(vUv);
+  vec2 uvDy = dFdy(vUv);
 ${applyDetails}
   float h = fullHeight(elev.g);
   float lat = degrees(asin(clamp(vPos.y, -1.0, 1.0)));

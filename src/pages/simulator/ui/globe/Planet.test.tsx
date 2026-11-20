@@ -174,7 +174,7 @@ describe('Planet', () => {
     for (const spy of disposed) expect(spy).toHaveBeenCalledOnce()
   })
 
-  it('지구가 보이면 고해상도 고도 패치(한반도·도쿄만·네덜란드)를 받아 셰이더에 넣고, 사라지면 해제한다', async () => {
+  it('지구가 보이면 고해상도 고도 패치를 모두 받아 셰이더에 넣고, 사라지면 해제한다', async () => {
     vi.stubGlobal('createImageBitmap', vi.fn())
     const deliveries = new Map<string, () => void>()
     const bitmaps = DETAIL_PATCHES.map(() => ({
@@ -190,12 +190,9 @@ describe('Planet', () => {
         deliveries.set(url, () => onLoad?.(bitmaps[i]))
       })
     const { renderer, uniforms, invalidate } = await render()
-    await waitFor(() => expect(load).toHaveBeenCalledTimes(3))
-    expect(DETAIL_PATCHES.map((patch) => patch.id)).toEqual([
-      'korea',
-      'tokyo-bay',
-      'netherlands',
-    ])
+    await waitFor(() =>
+      expect(load).toHaveBeenCalledTimes(DETAIL_PATCHES.length),
+    )
     const u = uniforms()
     DETAIL_PATCHES.forEach((patch, i) => {
       invalidate.mockClear()

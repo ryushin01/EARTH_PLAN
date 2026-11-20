@@ -59,6 +59,10 @@ import type { Locale } from '@/shared/i18n'
 import { snapshotStructures } from './snapshot'
 import type { Snapshot } from './snapshot'
 import type { SolarLevel, WorldState } from './types'
+import { trafficConditions } from '../traffic/disruption'
+import { trafficEvent } from '../traffic/events'
+import { trafficSummary } from '../traffic/summary'
+import type { TrafficSummary } from '../traffic/summary'
 
 export interface ActionResult {
   ok: boolean
@@ -176,6 +180,19 @@ export const isTicking = () => ticking
 export const useWorld = create<WorldStore>()((set, get) => {
   const log = (events: NewEvent[]) =>
     set((state) => appendEvents(state, events))
+
+  /** 재해 직전 운항 요약 (재해를 넣은 뒤와 비교) */
+  const trafficBefore = (now: number) =>
+    trafficSummary(trafficConditions(get(), now))
+  /**
+   * 재해로 운항이 바뀌었으면 사건 한 줄. 재해 사건보다 먼저 넣어 재해가 가장 최근 사건으로 남음.
+   * 태양 폭풍은 처음 몇 초에 걸쳐 밝아지므로 1초 뒤 상태와 비교
+   */
+  const trafficNote = (before: TrafficSummary, now: number): NewEvent[] => {
+    const after = trafficSummary(trafficConditions(get(), now + 1000))
+    const event = trafficEvent(before, after)
+    return event ? [event] : []
+  }
 
   /** 미션: 예정된 재해를 일으키고, 마지막 해에 판정 */
   const runMission = () => {
@@ -388,6 +405,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
 
     triggerEruption: (volcanoId, vei, now = nowMs()) => {
       const state = get()
+      const trafficBeforeEvent = trafficBefore(now)
       const volcano = getSite(volcanoId)
       if (volcano?.kind !== 'volcano')
         return {
@@ -438,12 +456,16 @@ export const useWorld = create<WorldStore>()((set, get) => {
           : ` No major city within the ${r} km ash radius.`
         return `${name} erupts at VEI ${effective}${reduced}.${people}`
       })
-      log([{ tone: effective >= 6 ? 'danger' : 'warn', text: message }])
+      log([
+        ...trafficNote(trafficBeforeEvent, now),
+        { tone: effective >= 6 ? 'danger' : 'warn', text: message },
+      ])
       return { ok: true, message }
     },
 
     triggerTsunami: (sourceId, magnitude, now = nowMs()) => {
       const state = get()
+      const trafficBeforeEvent = trafficBefore(now)
       const trench = getSite(sourceId)
       if (trench?.kind !== 'trench')
         return {
@@ -481,12 +503,16 @@ export const useWorld = create<WorldStore>()((set, get) => {
             `${hit.length} cities badly hit${first ? ` (first: ${siteName(first.cityId, l)} in about ${first.arrivalHours.toFixed(1)} h, ${first.waveHeight.toFixed(1)} m)` : ''}` +
             `, ${blocked.length} protected by barriers.`,
       )
-      log([{ tone: hit.length ? 'danger' : 'warn', text: message }])
+      log([
+        ...trafficNote(trafficBeforeEvent, now),
+        { tone: hit.length ? 'danger' : 'warn', text: message },
+      ])
       return { ok: true, message }
     },
 
     triggerImpact: (targetId, diameterM, now = nowMs()) => {
       const state = get()
+      const trafficBeforeEvent = trafficBefore(now)
       const target = getSite(targetId)
       if (!target)
         return {
@@ -603,7 +629,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
             : ` The impact tsunami strikes ${tsunamiHits} cities.`
         return `A ${size} asteroid hits ${name}${reduced}: about ${formatEnergy(energyMt, l)}.${people}${wave}`
       })
-      log([{ tone: effective >= 140 ? 'danger' : 'warn', text: message }])
+      log([
+        ...trafficNote(trafficBeforeEvent, now),
+        { tone: effective >= 140 ? 'danger' : 'warn', text: message },
+      ])
       return { ok: true, message }
     },
 
@@ -649,6 +678,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
 
     triggerQuake: (faultId, magnitude, now = nowMs()) => {
       const state = get()
+      const trafficBeforeEvent = trafficBefore(now)
       const fault = getSite(faultId)
       if (fault?.kind !== 'fault')
         return {
@@ -707,7 +737,10 @@ export const useWorld = create<WorldStore>()((set, get) => {
           '.'
         )
       })
-      log([{ tone: severe.length ? 'danger' : 'warn', text: message }])
+      log([
+        ...trafficNote(trafficBeforeEvent, now),
+        { tone: severe.length ? 'danger' : 'warn', text: message },
+      ])
       return { ok: true, message }
     },
 
@@ -758,6 +791,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
 
     triggerSolarStorm: (level, now = nowMs()) => {
       const state = get()
+      const trafficBeforeEvent = trafficBefore(now)
       const { impacts, satellitesLost, auroraLat } = solarStormImpacts(
         level,
         state.structures,
@@ -811,6 +845,7 @@ export const useWorld = create<WorldStore>()((set, get) => {
         return `${SOLAR_LABEL_EN[level]} solar storm. Aurora reaches down to ${auroraLat}° magnetic latitude.${grid}${shield}${sats}`
       })
       log([
+        ...trafficNote(trafficBeforeEvent, now),
         {
           tone: damaged.length || level === 'carrington' ? 'danger' : 'warn',
           text: message,

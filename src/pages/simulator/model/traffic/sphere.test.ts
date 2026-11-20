@@ -121,9 +121,7 @@ describe('구면 경로', () => {
     const b = { lat: 0, lon: 60 }
     const center = { lat: 1, lon: 30 }
     const via = detourAround(a, b, center, 800)
-    expect(nearestOnPath(makePath([a, via, b]), center).km).toBeGreaterThan(
-      800,
-    )
+    expect(nearestOnPath(makePath([a, via, b]), center).km).toBeGreaterThan(800)
   })
 
   it('끝점이 원에 가까워도 우회 경로는 원 밖으로 지난다', () => {
@@ -132,8 +130,6 @@ describe('구면 경로', () => {
     const center = { lat: 2, lon: 10 }
     expect(distanceKm(a, center)).toBeGreaterThan(900)
     const via = detourAround(a, b, center, 900)
-    expect(nearestOnPath(makePath([a, via, b]), center).km).toBeGreaterThan(
-      900,
-    )
+    expect(nearestOnPath(makePath([a, via, b]), center).km).toBeGreaterThan(900)
   })
 })

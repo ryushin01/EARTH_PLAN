@@ -304,6 +304,37 @@ const panel = (page, name) => page.getByRole('tabpanel', { name })
   await context.close()
 }
 
+// 위성·군사: 항모 타격단(북태평양 낮), 5세대 스텔스 편대, GPS 궤도와 위성들
+{
+  const { page, context } = await open({ utc: 1 })
+  await page.getByRole('button', { name: '자동 회전' }).click()
+  await page.getByRole('button', { name: '지점' }).click()
+  await page.getByRole('button', { name: '항공·선박' }).click()
+  await tab(page, '위성·군사')
+  const picker = panel(page, '위성·군사').getByRole('combobox', {
+    name: '위성·편대·함대 고르기',
+  })
+  // 고른 개체의 정보 카드가 보이게 제어판을 내림
+  const pick = async (id) => {
+    await picker.selectOption(id)
+    await panel(page, '위성·군사')
+      .getByRole('region')
+      .nth(1)
+      .scrollIntoViewIfNeeded()
+  }
+  await pick('fleet-csg')
+  for (let i = 0; i < 3; i++)
+    await page.getByRole('button', { name: '확대' }).click()
+  await shot(page, 'military-fleet', 6000)
+  await pick('flight-gen5')
+  await shot(page, 'military-flight', 6000)
+  await pick('gps-1')
+  for (let i = 0; i < 5; i++)
+    await page.getByRole('button', { name: '축소' }).click()
+  await shot(page, 'military-orbits', 6000)
+  await context.close()
+}
+
 // 모바일
 {
   const { page, context } = await open({

@@ -8,6 +8,7 @@ import { HazardPanel } from './HazardPanel'
 import { QuakePanel } from './QuakePanel'
 import { SolarStormPanel } from './SolarStormPanel'
 import { TodayPanel } from './TodayPanel'
+import { MilitaryPanel } from './MilitaryPanel'
 import { Tabs } from '@/shared/ui'
 import { useT } from '../i18n'
 
@@ -25,6 +26,11 @@ const ITEMS = [
   { id: 'hazard', label: 'tabs.hazard' as const, content: <HazardPanel /> },
   { id: 'build', label: 'tabs.build' as const, content: <BuildPanel /> },
   { id: 'today', label: 'tabs.today' as const, content: <TodayPanel /> },
+  {
+    id: 'military',
+    label: 'tabs.military' as const,
+    content: <MilitaryPanel />,
+  },
 ]
 
 /** 환경 요소·재해·구조물을 다루는 탭 제어판 */

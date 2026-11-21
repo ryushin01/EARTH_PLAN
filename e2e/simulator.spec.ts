@@ -83,7 +83,7 @@ test.describe('시뮬레이터 첫 화면', () => {
   }
 
   test('모든 탭에서 axe 접근성 검사를 통과한다', async ({ page }) => {
-    // 탭 8개를 차례로 검사하므로 느린 CI에서도 끝나도록 넉넉히
+    // 탭 9개를 차례로 검사하므로 느린 CI에서도 끝나도록 넉넉히
     test.setTimeout(150_000)
     await page.goto('/')
     await page.locator('canvas').waitFor()
@@ -96,6 +96,7 @@ test.describe('시뮬레이터 첫 화면', () => {
       '태양 폭풍',
       '산불·가뭄',
       '구조물',
+      '위성·군사',
     ]) {
       await page.getByRole('tab', { name }).click()
       const results = await new AxeBuilder({ page })
@@ -517,6 +518,33 @@ test.describe('설치와 지점 정보', () => {
     await traffic.click()
     await expect(traffic).toHaveAttribute('aria-pressed', 'false')
     await expect(page.getByText('여객기 30편 · 선박 11척')).toHaveCount(0)
+  })
+
+  test('위성·군사: 종류별로 끄고 켜고, 편대를 고르면 대형 정보와 상태 안내가 나온다', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/')
+    const toggle = page.getByRole('button', { name: '위성·군사' })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    const summary = page.getByText(
+      /^위성·군사위성 32기 · 전투기 편대 5개\(20기\) · 함대 2개\(13척\)$/,
+    )
+    await expect(summary).toBeVisible()
+    await page.getByRole('tab', { name: '위성·군사' }).click()
+    const panel = page.getByRole('tabpanel', { name: '위성·군사' })
+    await panel.getByRole('checkbox', { name: '함대' }).uncheck()
+    await expect(page.getByText(/함대 0개\(0척\)/)).toBeVisible()
+    await panel
+      .getByRole('combobox', { name: '위성·편대·함대 고르기' })
+      .selectOption('flight-gen5')
+    const card = panel.getByRole('region', { name: '5세대 스텔스 편대' })
+    await expect(card).toContainText('F-22 · F-35 · J-20 · Su-57')
+    await expect(card).toContainText('마하 0.85')
+    await expect(card.getByRole('status')).toContainText(/대형/)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(summary).toHaveCount(0)
   })
 
   test('지점을 고르면 정보 카드가 나온다', async ({ page }) => {

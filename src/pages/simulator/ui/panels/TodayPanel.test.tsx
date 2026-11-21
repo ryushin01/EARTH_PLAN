@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useToday } from '../../model/today/store'
 import type { TodayData, TodayQuake } from '../../model/today/today'
@@ -83,19 +83,26 @@ describe('TodayPanel', () => {
     expect(useToday.getState().enabled).toBe(false)
   })
 
-  it('불러오지 못하면 알리고 다시 시도할 수 있다', async () => {
+  it('자료 파일을 받지 못하면 넣어 둔 스냅숏으로 대신 보여 주고 알리며, 다시 시도할 수 있다', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(new Response('', { status: 404 })),
     )
     render(<TodayPanel />)
-    expect(
-      await screen.findByText('자료를 불러오지 못했습니다.'),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.getByText(/^오프라인 자료로 표시 중/, {
+          selector: '[role="status"]',
+        }),
+      ).toBeInTheDocument(),
+    )
+    // 스냅숏도 지진 목록을 보여 줌
+    expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(data)))
     await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
     expect(
       await screen.findByText('11월 20일 21:00 UTC 기준'),
     ).toBeInTheDocument()
+    expect(screen.queryByText(/^오프라인 자료로 표시 중/)).toBeNull()
   })
 })

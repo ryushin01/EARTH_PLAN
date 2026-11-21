@@ -22,6 +22,9 @@ import { StructureModels } from './StructureModels'
 import { Traffic } from './Traffic'
 import { TodayLayer } from './TodayLayer'
 import { MigrationLayer } from './MigrationLayer'
+import { MilitaryLayer } from './MilitaryLayer'
+import { findUnit, unitDirection } from '../../model/military/catalog'
+import { militaryClock, useMilitary } from '../../model/military/store'
 import { useToday } from '../../model/today/store'
 import { kpAurora } from '../../model/today/today'
 import { cityStates } from '../../model/world/selectors'
@@ -84,6 +87,14 @@ export function GlobeScene({
   const todayEnabled = useToday((s) => s.enabled)
   const todayData = useToday((s) => s.data)
   const todayFocus = useToday((s) => s.focusTick)
+  const militaryOn = useMilitary((s) => s.enabled)
+  // 위성·군사는 지구가 보인 뒤에 올려 첫 화면(셰이더 컴파일·텍스처)과 겹치지 않게 함
+  const [planetReady, setPlanetReady] = useState(false)
+  const handleReady = useCallback(() => {
+    setPlanetReady(true)
+    onReady?.()
+  }, [onReady])
+  const militaryFocus = useMilitary((s) => s.focusTick)
   const selectedSiteId = useWorldSampled((s) => s.selectedSiteId)
   const select = useWorldSampled((s) => s.select)
   const structures = useWorldSampled((s) => s.structures)
@@ -148,6 +159,13 @@ export function GlobeScene({
     if (quake) apiRef.current?.focus(latLonToVector3(quake))
   }, [todayFocus, apiRef])
 
+  // 위성·편대·함대를 고르면 지금 있는 쪽으로 돌림
+  useEffect(() => {
+    if (militaryFocus === 0) return
+    const unit = findUnit(useMilitary.getState().selectedId)
+    if (unit) apiRef.current?.focus(unitDirection(unit, militaryClock.t))
+  }, [militaryFocus, apiRef])
+
   useFrame((_, delta) => {
     const target = goal.current
     if (!target) return
@@ -169,6 +187,7 @@ export function GlobeScene({
   // 필요할 때만 그리기 (Canvas는 frameloop="demand"). 세계 상태가 바뀌거나 설정이 바뀌면 다시 그리고,
   // 프레임마다 다음 프레임을 바로·약 1/30초 뒤에 요청하거나 쉼
   useEffect(() => useWorld.subscribe(() => invalidate()), [invalidate])
+  useEffect(() => useMilitary.subscribe(() => invalidate()), [invalidate])
   useEffect(() => {
     invalidate()
   }, [
@@ -251,7 +270,7 @@ export function GlobeScene({
           readFrame={readFrame}
           showClouds={showClouds}
           onSurfaceClick={onSurfaceClick}
-          onReady={onReady}
+          onReady={handleReady}
         />
         <PlumeLayer plumesRef={plumesRef} />
       </Suspense>
@@ -270,6 +289,9 @@ export function GlobeScene({
       />
       {showTraffic ? <Traffic reducedMotion={reducedMotion} /> : null}
       {showMigration ? <MigrationLayer reducedMotion={reducedMotion} /> : null}
+      {militaryOn && planetReady ? (
+        <MilitaryLayer reducedMotion={reducedMotion} />
+      ) : null}
       {todayEnabled && todayData ? (
         <TodayLayer
           // 인스턴스 수가 바뀌면 메시를 새로 만듦

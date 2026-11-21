@@ -16,6 +16,7 @@ import type { CameraApi } from '../../model/camera'
 import type { PlanetFrame } from '../../model/planet'
 import { useWorld } from '../../model/world/store'
 import { useToday } from '../../model/today/store'
+import { useMilitary } from '../../model/military/store'
 import { kpAurora } from '../../model/today/today'
 import type { TodayData } from '../../model/today/today'
 import { latLonToVector3 } from '@/shared/lib'
@@ -121,6 +122,8 @@ describe('GlobeScene', () => {
   beforeEach(() => {
     useWorld.getState().reset()
     useToday.setState(useToday.getInitialState())
+    // 위성·군사는 따로 검사하고 나머지 검사에서는 끔
+    useMilitary.setState({ ...useMilitary.getInitialState(), enabled: false })
     seen.planet = null
     seen.controls = null
     seen.stars = null
@@ -276,6 +279,43 @@ describe('GlobeScene', () => {
     await hidden.renderer.unmount()
   })
 
+  it('위성·군사를 켜면 위성·전투기·함선을 그리고, 고르면 그쪽으로 카메라를 돌린다', async () => {
+    useMilitary.setState({ enabled: true })
+    const shown = await render()
+    // 지구가 보인 뒤에 올라옴
+    expect(
+      shown.renderer.scene.findAll((node) =>
+        `${node.instance.name}`.startsWith('satellite-'),
+      ),
+    ).toHaveLength(0)
+    await act(async () => seen.planet?.onReady?.())
+    const named = (prefix: string) =>
+      shown.renderer.scene.findAll((node) =>
+        `${node.instance.name}`.startsWith(prefix),
+      )
+    expect(named('satellite-').length).toBeGreaterThan(3)
+    expect(named('aircraft-gen5')).toHaveLength(1)
+    expect(named('ship-battleship')).toHaveLength(1)
+    const before = shown.camera().clone()
+    // 정지궤도 위성(천리안 2A호, 동경 128.2°) 쪽으로
+    await act(async () => useMilitary.getState().select('gk2a'))
+    await shown.renderer.advanceFrames(40, 0.1)
+    const dir = shown.camera().clone().normalize()
+    expect(shown.camera().distanceTo(before)).toBeGreaterThan(0.01)
+    expect(
+      dir.angleTo(toVector(latLonToVector3({ lat: 0, lon: 128.2 }))),
+    ).toBeLessThan(0.05)
+    await shown.renderer.unmount()
+    useMilitary.setState({ enabled: false })
+    const hidden = await render()
+    expect(
+      hidden.renderer.scene.findAll((node) =>
+        `${node.instance.name}`.startsWith('satellite-'),
+      ),
+    ).toHaveLength(0)
+    await hidden.renderer.unmount()
+  })
+
   it('카메라 조작 API로 돌리고, 확대·축소 범위를 지킨다', async () => {
     const { renderer, camera, api } = await render()
     const start: Vec3 = [camera().x, camera().y, camera().z]
@@ -400,7 +440,8 @@ describe('GlobeScene', () => {
     const onReady = vi.fn()
     const { renderer } = await render({ showStars: false, onReady })
     expect(seen.stars).toBeNull()
-    expect(seen.planet?.onReady).toBe(onReady)
+    await act(async () => seen.planet?.onReady?.())
+    expect(onReady).toHaveBeenCalledOnce()
     await renderer.unmount()
   })
 })

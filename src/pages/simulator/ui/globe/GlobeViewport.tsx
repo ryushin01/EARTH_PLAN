@@ -21,7 +21,9 @@ import { TrafficStatus } from './TrafficStatus'
 import { TodayStatus } from './TodayStatus'
 import { MigrationStatus } from './MigrationStatus'
 import { useToday } from '../../model/today/store'
-import { loadToday } from '../../api/loadToday'
+import { useMilitary } from '../../model/military/store'
+import { MilitaryStatus } from './MilitaryStatus'
+import { loadToday, loadTodaySnapshot } from '../../api/loadToday'
 import poster600 from './poster/earth-600.webp'
 import poster800 from './poster/earth-800.webp'
 import poster1200 from './poster/earth-1200.webp'
@@ -250,10 +252,15 @@ export function GlobeViewport({
   const [showTraffic, setShowTraffic] = useState(true)
   const [showMigration, setShowMigration] = useState(true)
   const todayEnabled = useToday((s) => s.enabled)
+  const militaryEnabled = useMilitary((s) => s.enabled)
+  const setMilitaryEnabled = useMilitary((s) => s.setEnabled)
   const setTodayEnabled = useToday((s) => s.setEnabled)
   // 오늘의 지구를 켜면 사이트 안 자료를 불러옴 (서비스 워커가 미리 받아 두어 오프라인에서도)
   useEffect(() => {
-    if (todayEnabled) void useToday.getState().ensureLoaded(() => loadToday())
+    if (todayEnabled)
+      void useToday
+        .getState()
+        .ensureLoaded(() => loadToday(), loadTodaySnapshot)
   }, [todayEnabled])
   // 모바일에서는 보기 토글을 접어 둠
   const [moreOpen, setMoreOpen] = useState(false)
@@ -379,6 +386,11 @@ export function GlobeViewport({
             <TrafficStatus />
           </div>
         ) : null}
+        {militaryEnabled ? (
+          <div className="sr-only lg:not-sr-only lg:self-center">
+            <MilitaryStatus />
+          </div>
+        ) : null}
         {todayEnabled ? (
           <div className="sr-only lg:not-sr-only lg:self-center">
             <TodayStatus />
@@ -447,6 +459,12 @@ export function GlobeViewport({
               onClick={() => setShowMigration((v) => !v)}
             >
               {t('globe.migration')}
+            </ToggleButton>
+            <ToggleButton
+              pressed={militaryEnabled}
+              onClick={() => setMilitaryEnabled(!militaryEnabled)}
+            >
+              {t('globe.military')}
             </ToggleButton>
             <ToggleButton
               pressed={todayEnabled}

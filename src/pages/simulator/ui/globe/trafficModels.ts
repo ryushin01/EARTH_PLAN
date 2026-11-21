@@ -27,7 +27,7 @@ type At = [number, number, number]
 const tint = new Color()
 
 /** 색인을 풀고 uv를 지운 뒤 정점 색을 칠함 (합치기 쉽게) */
-function paint(geometry: BufferGeometry, hex: string): BufferGeometry {
+export function paint(geometry: BufferGeometry, hex: string): BufferGeometry {
   const flat = geometry.index ? geometry.toNonIndexed() : geometry
   if (flat !== geometry) geometry.dispose()
   flat.deleteAttribute('uv')
@@ -43,7 +43,14 @@ function paint(geometry: BufferGeometry, hex: string): BufferGeometry {
   return flat
 }
 
-function box(w: number, h: number, l: number, hex: string, at: At, yaw = 0) {
+export function box(
+  w: number,
+  h: number,
+  l: number,
+  hex: string,
+  at: At,
+  yaw = 0,
+) {
   const g = new BoxGeometry(w, h, l)
   if (yaw) g.rotateY(yaw)
   g.translate(...at)
@@ -51,7 +58,13 @@ function box(w: number, h: number, l: number, hex: string, at: At, yaw = 0) {
 }
 
 /** Z축으로 누운 원기둥 (앞 반지름 front, 뒤 반지름 back) */
-function tube(front: number, back: number, l: number, hex: string, at: At) {
+export function tube(
+  front: number,
+  back: number,
+  l: number,
+  hex: string,
+  at: At,
+) {
   const g = new CylinderGeometry(front, back, l, 10)
   g.rotateX(Math.PI / 2)
   g.translate(...at)
@@ -59,7 +72,13 @@ function tube(front: number, back: number, l: number, hex: string, at: At) {
 }
 
 /** 원뿔: forward면 끝이 +Z, 아니면 -Z를 향함 */
-function cone(r: number, l: number, hex: string, at: At, forward = true) {
+export function cone(
+  r: number,
+  l: number,
+  hex: string,
+  at: At,
+  forward = true,
+) {
   const g = new ConeGeometry(r, l, 10)
   g.rotateX(forward ? Math.PI / 2 : -Math.PI / 2)
   g.translate(...at)
@@ -67,7 +86,7 @@ function cone(r: number, l: number, hex: string, at: At, forward = true) {
 }
 
 /** 높이 y인 XZ 평면의 볼록 다각형 (x > 0 쪽 꼭짓점을 주면 좌우 대칭으로 만듦) */
-function wings(points: [number, number][], y: number, hex: string) {
+export function wings(points: [number, number][], y: number, hex: string) {
   const position: number[] = []
   for (const side of [1, -1])
     for (let i = 1; i < points.length - 1; i++)
@@ -79,7 +98,7 @@ function wings(points: [number, number][], y: number, hex: string) {
   return paint(g, hex)
 }
 
-function merge(parts: BufferGeometry[]): BufferGeometry {
+export function merge(parts: BufferGeometry[]): BufferGeometry {
   const merged = mergeGeometries(parts)
   for (const p of parts) p.dispose()
   merged.computeBoundingSphere()

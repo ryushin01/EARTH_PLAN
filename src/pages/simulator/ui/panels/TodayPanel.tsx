@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
-import { loadToday } from '../../api/loadToday'
+import { loadToday, loadTodaySnapshot } from '../../api/loadToday'
 import { useToday } from '../../model/today/store'
 import { kpLevel, summarizeToday } from '../../model/today/today'
 import { useT } from '../i18n'
@@ -17,7 +17,8 @@ const SOURCES = [
   },
 ] as const
 
-const load = () => useToday.getState().ensureLoaded(() => loadToday())
+const load = () =>
+  useToday.getState().ensureLoaded(() => loadToday(), loadTodaySnapshot)
 
 /**
  * 탭 패널은 처음부터 모두 그려지고 감춰져 있으므로, 이 패널이 화면에 보일 때 자료를 불러옴.
@@ -51,6 +52,7 @@ export function TodayPanel() {
   const enabled = useToday((s) => s.enabled)
   const status = useToday((s) => s.status)
   const data = useToday((s) => s.data)
+  const fromSnapshot = useToday((s) => s.fromSnapshot)
   const setEnabled = useToday((s) => s.setEnabled)
   const focus = useToday((s) => s.focus)
   const summary = data ? summarizeToday(data) : null
@@ -92,6 +94,15 @@ export function TodayPanel() {
         <p role="status" className="text-sm text-muted">
           {t('today.loading')}
         </p>
+      ) : null}
+
+      {/* 사이트 자료를 받지 못해 코드에 넣어 둔 스냅숏으로 대신 보여 줄 때 */}
+      {/* 안내가 읽히도록 상태 영역은 늘 두고 내용만 바꿈 */}
+      <p role="status" className="text-sm text-warn empty:hidden">
+        {fromSnapshot ? t('today.snapshot') : ''}
+      </p>
+      {fromSnapshot ? (
+        <Button onClick={() => void load()}>{t('today.retry')}</Button>
       ) : null}
 
       {data && summary ? (

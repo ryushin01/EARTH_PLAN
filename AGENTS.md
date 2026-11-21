@@ -47,6 +47,7 @@ pnpm dev   # http://localhost:3000
 - CI(`.github/workflows/ci.yml`, PR·main 푸시) 순서: `lint` → `lint:fsd` → `format:check` → `typecheck` → `test` → Chromium 설치 → `test:storybook` → `build:all` → `test:e2e` → `lighthouse`.
 - 스토리 테스트와 E2E는 SwiftShader(소프트웨어 WebGL)로 돕니다. 처음 한 번 `pnpm exec playwright install chromium`.
 - 커밋 훅(husky 등)은 없으므로 PR 전에 위 검사를 직접 돌립니다.
+- **테스트 원칙: Testing Library.** 구현 세부가 아니라 사용자가 보는 동작을 검사하고, 요소는 역할·이름(`getByRole`)으로 찾습니다. 도구: 단위·컴포넌트는 Vitest + Testing Library(`@testing-library/react`·`user-event`), 3D 장면은 `@react-three/test-renderer`, 화면 흐름은 Playwright E2E, 접근성은 axe(`@axe-core/playwright`로 WCAG 2.2 AA, Storybook addon-a11y로 스토리마다).
 
 ## 5. 코드 스타일
 
@@ -55,12 +56,18 @@ pnpm dev   # http://localhost:3000
 - 화면 글자를 바꾸면 `pnpm fonts`를 다시 돌립니다(빠지면 `fonts.test.ts` 실패).
 - 버그를 고치면 고치기 전에 실패하는 테스트를 함께 넣습니다.
 - 접근성(KWCAG 2.2): 네이티브 요소 우선, 텍스트 대비 4.5:1 이상, 3D 지구도 키보드(화살표·`+`/`-`)와 같은 기능의 버튼·"지점으로 이동" 목록으로 쓸 수 있게, 초점 표시 유지(`outline: none` 단독 금지), 조작 크기 24px 이상, 입력 레이블과 오류 연결, 결과·사건 알림은 `role="status"`(3초 안의 사건은 한 번에 묶어 읽음), 탭은 APG 패턴, 슬라이더는 `aria-valuetext`, 상태는 색과 글자를 함께, 동작 줄이기면 자동 회전 끔.
+- **타입: TypeScript strict.** `tsconfig.json`에서 `strict`를 켭니다. `any`·`as` 단언·`@ts-ignore`는 피하고, 외부 입력(공유 링크 `?s=`, 저장값, 오늘의 지구 자료)은 범위·종류를 검사합니다.
+- **서식:** Prettier(`prettier.config.js`)를 그대로 따릅니다(Biome 없음).
+- **접근성 기준: WCAG 2.2·KWCAG 2.2.** 자동 검사는 axe(Storybook 스토리 테스트·Playwright E2E)와 Lighthouse 접근성 점수입니다. 표준과 다른 점: ESLint는 `@tanstack/eslint-config` + React Hooks 규칙이고 eslint-plugin-jsx-a11y는 쓰지 않습니다.
 
 ## 6. Git·PR
 
-- `main`에 직접 커밋·푸시하지 않습니다. 최신 `main`에서 `feat/…`, `fix/…`, `docs/…`, `chore/…` 브랜치를 만들고 PR을 올립니다.
-- 커밋·PR 제목: `<type>: 한국어 요약 (x.y.z)` 예) `feat: 오늘의 지구 — 실제 지진·지자기 Kp, 오프라인에서도 마지막 자료 (1.5.0)`. 본문 끝에 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, PR 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
-- 버전: 기능 PR은 `CHANGELOG.md`에 `## x.y.z - YYYY-MM-DD` 절을 더하고 README 버전 배지를 맞춥니다. 문서만 바뀐 PR은 보통 버전을 올리지 않습니다.
+- **흐름: GitHub Flow.** `main`에 직접 커밋·푸시하지 않습니다. 최신 `main`에서 브랜치를 만들어 PR로만 병합합니다. PR은 목적 하나로 작게, 본문에 무엇·왜·검사 결과를 적습니다.
+- **브랜치 이름:** `feat/…`, `fix/…`, `refactor/…`, `docs/…`, `test/…`, `chore/…`, `release/…`(예: `feat/today-earth`, `docs/readme-screens`).
+- **커밋 메시지: Conventional Commits.** `<타입>: <한국어 요약>`, 타입은 `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `style`, `chore`, `ci`, `build`. 버전을 올린 커밋·PR 제목은 끝에 `(x.y.z)`. 호환이 깨지면 본문에 `BREAKING CHANGE:`. 실제 예: `feat: 오늘의 지구 — 실제 지진·지자기 Kp, 오프라인에서도 마지막 자료 (1.5.0)`, `chore: 타입 검사를 TypeScript 7로, 단위 테스트를 vmThreads로`.
+  - 커밋 끝에 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, PR 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
+- **버전: Semantic Versioning.** 호환이 깨지면 주, 기능 추가는 부, 버그 수정·작은 개선은 수. `package.json`의 `version`, README 버전 배지(`version-x.y.z`), `CHANGELOG.md`를 한 번에 맞춥니다. 문서만 바뀐 PR은 보통 버전을 올리지 않습니다.
+- **변경 기록: Keep a Changelog.** `CHANGELOG.md`에 최신 버전을 위에 `## x.y.z - YYYY-MM-DD`로 적습니다. 표준과 다른 점: 추가·변경·수정·제거 소제목 대신 요약 한 문단과 `새 기능:`·`고침:`·`테스트:` 같은 머리말 목록으로 적고, `[Unreleased]` 절은 쓰지 않습니다(버전을 올리는 PR에서 바로 적음).
 - 병합은 squash(제목 끝 `(#번호)`). **CI가 통과하면 바로 병합**하고 CodeRabbit 리뷰는 기다리지 않습니다(이미 달린 맞는 지적은 반영). Dependabot PR도 CI 통과 뒤 병합합니다.
 - 공개 저장소라 Actions가 돕니다. Actions가 막히면 CI와 같은 검사를 로컬에서 돌려 대신합니다.
 

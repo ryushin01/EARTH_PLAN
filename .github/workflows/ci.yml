@@ -37,7 +37,8 @@ jobs:
       - run: pnpm test:storybook
       # 사이트와 Storybook(dist/client/storybook)을 함께 빌드
       - run: pnpm build:all
-      # 프로덕션 빌드를 띄워 화면 폭별 넘침, 접근성(axe), 키보드, 시뮬레이션 흐름을 검사
+      # 프로덕션 빌드를 띄워 화면 폭별 넘침, 접근성(axe), 키보드, 시뮬레이션 흐름과
+      # 외부 요청을 모두 막은 오프라인 동작(e2e/offline.spec.ts)을 검사
       - run: pnpm test:e2e
       # 접근성·권장사항·SEO 점수와 레이아웃 이동을 지키고, 성능·용량은 경고로 알림
       - run: pnpm lighthouse

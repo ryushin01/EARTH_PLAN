@@ -1,5 +1,5 @@
 import { TODAY_DATA } from '@/shared/config'
-import { loadToday } from './loadToday'
+import { loadToday, loadTodaySnapshot } from './loadToday'
 
 const data = {
   fetchedAt: '2026-11-20T21:00:00Z',
@@ -31,5 +31,14 @@ describe('loadToday', () => {
     await expect(loadToday()).resolves.toBeNull()
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
     await expect(loadToday()).resolves.toBeNull()
+  })
+})
+
+describe('loadTodaySnapshot', () => {
+  it('코드에 넣어 둔 스냅숏은 모양이 맞는 오늘의 지구 자료', async () => {
+    const snapshot = await loadTodaySnapshot()
+    expect(snapshot).not.toBeNull()
+    expect(snapshot?.quakes.length).toBeGreaterThan(0)
+    expect(Number.isNaN(Date.parse(snapshot?.fetchedAt ?? ''))).toBe(false)
   })
 })

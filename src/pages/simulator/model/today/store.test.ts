@@ -38,6 +38,22 @@ describe('오늘의 지구 상태', () => {
     expect(useToday.getState().status).toBe('ready')
   })
 
+  it('받지 못하면 스냅숏으로 대신 보여 주고, 다시 부르면 사이트 자료를 다시 시도한다', async () => {
+    const snapshot = { ...data, fetchedAt: '2026-11-01T00:00:00Z' }
+    await useToday
+      .getState()
+      .ensureLoaded(vi.fn().mockResolvedValue(null), async () => snapshot)
+    expect(useToday.getState()).toMatchObject({
+      status: 'ready',
+      data: snapshot,
+      fromSnapshot: true,
+    })
+    const loader = vi.fn().mockResolvedValue(data)
+    await useToday.getState().ensureLoaded(loader, async () => snapshot)
+    expect(loader).toHaveBeenCalledOnce()
+    expect(useToday.getState()).toMatchObject({ data, fromSnapshot: false })
+  })
+
   it('지진을 고르면 지구에 표시를 켜고 카메라가 갈 곳을 정한다', () => {
     useToday.getState().focus('q1')
     expect(useToday.getState()).toMatchObject({

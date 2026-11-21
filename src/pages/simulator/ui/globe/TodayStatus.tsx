@@ -7,6 +7,7 @@ import { formatKp, formatUtc } from '../todayFormat'
 export function TodayStatus() {
   const { t, locale } = useT()
   const data = useToday((s) => s.data)
+  const fromSnapshot = useToday((s) => s.fromSnapshot)
   if (!data) return null
   const summary = summarizeToday(data)
   const kp = summary.kpNow?.kp ?? 0
@@ -21,6 +22,7 @@ export function TodayStatus() {
         kp: formatKp(kp),
         level: t(`today.level.${kpLevel(kp)}`),
       })}
+      {fromSnapshot ? ` · ${t('today.snapshotShort')}` : ''}
     </p>
   )
 }

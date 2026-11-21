@@ -5,7 +5,7 @@ AI 코딩 에이전트(Codex, Claude Code 등)가 이 저장소에서 일할 때
 ## 1. 프로젝트 개요
 
 - 3D 지구 위에서 해수면 상승·화산·쓰나미·지진·소행성·태양 폭풍·산불·가뭄을 일으키고 거대 구조물로 막아 보는 웹 시뮬레이터입니다. 2026-11-20 EARTH_PLAN에서 이름을 바꿨습니다(1.0.1).
-- 화면 축 1개: 시뮬레이터(웹). 로그인 없음.
+- 화면 축: 시뮬레이터(웹). 로그인 없음.
 - 운영: https://ryushin01.github.io/TerraNova/ · Storybook https://ryushin01.github.io/TerraNova/storybook/
 
 ## 2. 기술 스택과 구조
